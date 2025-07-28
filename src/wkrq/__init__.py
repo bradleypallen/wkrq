@@ -5,35 +5,53 @@ A three-valued logic system with restricted quantifiers for first-order reasonin
 Based on Ferguson (2021) semantics with tableau-based theorem proving.
 """
 
+from .api import Inference, check_inference
 from .formula import (
-    Formula, PropositionalAtom, PredicateFormula, 
-    Variable, Constant, Term,
-    RestrictedExistentialFormula, RestrictedUniversalFormula
+    Constant,
+    Formula,
+    PredicateFormula,
+    PropositionalAtom,
+    RestrictedExistentialFormula,
+    RestrictedUniversalFormula,
+    Term,
+    Variable,
 )
-from .semantics import WeakKleeneSemantics, TruthValue
-from .signs import Sign, SignedFormula, T, F, M, N
-from .tableau import Tableau, TableauResult, solve, valid, entails
 from .parser import parse, parse_inference
-from .api import check_inference, Inference
+from .semantics import TruthValue, WeakKleeneSemantics
+from .signs import F, M, N, Sign, SignedFormula, T
+from .tableau import Tableau, TableauResult, entails, solve, valid
 
 __version__ = "1.0.0"
 
 __all__ = [
     # Core types
-    "Formula", "PropositionalAtom", "PredicateFormula",
-    "Variable", "Constant", "Term",
-    "RestrictedExistentialFormula", "RestrictedUniversalFormula",
-    
+    "Formula",
+    "PropositionalAtom",
+    "PredicateFormula",
+    "Variable",
+    "Constant",
+    "Term",
+    "RestrictedExistentialFormula",
+    "RestrictedUniversalFormula",
     # Semantics
-    "WeakKleeneSemantics", "TruthValue",
-    
+    "WeakKleeneSemantics",
+    "TruthValue",
     # Signs
-    "Sign", "SignedFormula", "T", "F", "M", "N",
-    
+    "Sign",
+    "SignedFormula",
+    "T",
+    "F",
+    "M",
+    "N",
     # Tableau
-    "Tableau", "TableauResult", 
-    
+    "Tableau",
+    "TableauResult",
     # Main functions
-    "solve", "valid", "entails", "parse", "parse_inference",
-    "check_inference", "Inference"
+    "solve",
+    "valid",
+    "entails",
+    "parse",
+    "parse_inference",
+    "check_inference",
+    "Inference",
 ]
