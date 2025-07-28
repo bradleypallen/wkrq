@@ -69,16 +69,74 @@ print(f"Can be undefined: {result.satisfiable}")  # True
 
 ## Three-Valued Logic Semantics
 
-wKrQ implements **weak Kleene** logic where undefined values propagate:
+### Formal Language Definition
 
-| Operation | Result |
-|-----------|--------|
-| t ∧ e | e |
-| t ∨ e | e |
-| ¬e | e |
-| e → t | e |
+The language of wKrQ is defined by the following BNF grammar:
 
-This differs from strong Kleene logic where `t ∨ e = t`.
+```
+⟨formula⟩ ::= ⟨atom⟩ | ⟨compound⟩ | ⟨quantified⟩
+
+⟨atom⟩ ::= p | q | r | ... | ⟨predicate⟩
+
+⟨predicate⟩ ::= P(⟨term⟩,...,⟨term⟩)
+
+⟨term⟩ ::= ⟨variable⟩ | ⟨constant⟩
+
+⟨variable⟩ ::= X | Y | Z | ...
+
+⟨constant⟩ ::= a | b | c | ...
+
+⟨compound⟩ ::= ¬⟨formula⟩ | (⟨formula⟩ ∧ ⟨formula⟩) | 
+               (⟨formula⟩ ∨ ⟨formula⟩) | (⟨formula⟩ → ⟨formula⟩)
+
+⟨quantified⟩ ::= [∃⟨variable⟩ ⟨formula⟩]⟨formula⟩ | 
+                 [∀⟨variable⟩ ⟨formula⟩]⟨formula⟩
+```
+
+### Truth Tables
+
+wKrQ implements **weak Kleene** three-valued logic with truth values:
+- **t** (true)
+- **f** (false)  
+- **e** (undefined/error)
+
+#### Negation (¬)
+| p | ¬p |
+|---|-----|
+| t | f |
+| f | t |
+| e | e |
+
+#### Conjunction (∧)
+| p \ q | t | f | e |
+|-------|---|---|---|
+| **t** | t | f | e |
+| **f** | f | f | e |
+| **e** | e | e | e |
+
+#### Disjunction (∨)
+| p \ q | t | f | e |
+|-------|---|---|---|
+| **t** | t | t | e |
+| **f** | t | f | e |
+| **e** | e | e | e |
+
+#### Material Implication (→)
+| p \ q | t | f | e |
+|-------|---|---|---|
+| **t** | t | f | e |
+| **f** | t | t | e |
+| **e** | e | e | e |
+
+### Quantifier Semantics
+
+#### Restricted Existential Quantification: [∃X φ(X)]ψ(X)
+The formula is true iff there exists a domain element d such that both φ(d) and ψ(d) are true. It is false iff for all domain elements d, either φ(d) is false or ψ(d) is false (but not undefined). It is undefined if any evaluation results in undefined.
+
+#### Restricted Universal Quantification: [∀X φ(X)]ψ(X)  
+The formula is true iff for all domain elements d, either φ(d) is false or ψ(d) is true. It is false iff there exists a domain element d such that φ(d) is true and ψ(d) is false. It is undefined if any evaluation results in undefined.
+
+The key principle of weak Kleene logic is that **any operation involving an undefined value produces an undefined result**. This differs from strong Kleene logic where, for example, `t ∨ e = t`.
 
 ## Documentation
 

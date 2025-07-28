@@ -7,7 +7,7 @@ name = "wkrq"
 version = "1.0.0"
 description = "Three-valued weak Kleene logic with restricted quantification"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Bradley P. Allen", email = "bradley.p.allen@gmail.com"},
 ]
