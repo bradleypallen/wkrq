@@ -6,7 +6,7 @@ Thank you for your interest in contributing to wKrQ! This document provides guid
 
 1. Fork and clone the repository:
 ```bash
-git clone https://github.com/yourusername/wkrq.git
+git clone https://github.com/bradleypallen/wkrq.git
 cd wkrq
 ```
 
