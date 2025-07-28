@@ -1,0 +1,20 @@
+# Development dependencies
+# Install with: pip install -r requirements-dev.txt
+
+pytest>=7.0
+pytest-cov>=4.0
+black>=23.0
+ruff>=0.1
+mypy>=1.0
+build>=0.10
+twine>=4.0
+
+# Documentation
+sphinx>=6.0
+sphinx-rtd-theme>=1.3
+sphinx-autodoc-typehints>=1.23
+
+# Testing utilities
+hypothesis>=6.0
+pytest-timeout>=2.1
+pytest-xdist>=3.0
