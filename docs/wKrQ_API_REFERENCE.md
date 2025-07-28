@@ -1,6 +1,6 @@
-# wKrQ API Reference: Three-Valued Weak Kleene Logic with Restricted Quantification
+# wKrQ API Reference: Python Implementation of a Semantic Tableau Calculus
 
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Last Updated**: July 2025  
 **License**: MIT  
 
@@ -20,7 +20,7 @@
 
 ## Overview
 
-The wKrQ API provides programmatic access to three-valued weak Kleene logic with restricted quantification. The API is designed for both research applications and industrial automated reasoning systems.
+The wKrQ API provides programmatic access to an implementation of a semantic tableau calculus for three-valued weak Kleene logic with restricted quantification. The API is designed for both research applications and industrial automated reasoning systems.
 
 ### Key Features
 

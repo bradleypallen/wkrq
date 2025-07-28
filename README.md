@@ -1,11 +1,11 @@
-# wKrQ: Three-Valued Weak Kleene Logic with Restricted Quantification
+# wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
 [![PyPI version](https://badge.fury.io/py/wkrq.svg)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
 
-A Python implementation of three-valued weak Kleene logic with restricted quantification, featuring a complete tableau-based theorem prover with industrial-grade performance optimizations.
+An implementation of a semantic tableau calculus for first-order weak Kleene logic with restricted quantification, featuring a complete tableau-based theorem prover with industrial-grade performance optimizations.
 
 ## Citation
 
@@ -239,7 +239,7 @@ If you use wKrQ in academic work, please cite:
 
 ```bibtex
 @software{wkrq2025,
-  title={wKrQ: Three-Valued Weak Kleene Logic with Restricted Quantification},
+  title={wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification},
   author={Allen, Bradley P.},
   year={2025},
   url={https://github.com/bradleypallen/wkrq}

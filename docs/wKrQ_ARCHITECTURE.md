@@ -1,6 +1,6 @@
-# wKrQ Architecture: Three-Valued Weak Kleene Logic System
+# wKrQ Architecture: Implementation of a Semantic Tableau Calculus for Weak Kleene Logic
 
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Last Updated**: July 2025  
 **License**: MIT  
 
@@ -19,7 +19,7 @@
 
 ## Overview
 
-The wKrQ (weak Kleene logic with restricted quantification) system is a research-grade implementation of three-valued logic with industrial performance characteristics. It combines theoretical rigor with practical efficiency, making it suitable for both academic research and real-world automated reasoning applications.
+The wKrQ (weak Kleene logic with restricted quantification) system is a research-grade Python implementation of a semantic tableau calculus for three-valued weak Kleene logic with industrial performance characteristics. It combines theoretical rigor with practical efficiency, making it suitable for both academic research and real-world automated reasoning applications.
 
 ### Design Principles
 

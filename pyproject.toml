@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wkrq"
-version = "1.0.0"
-description = "Three-valued weak Kleene logic with restricted quantification"
+version = "1.0.1"
+description = "A Python implementation of a semantic tableau calculus for weak Kleene logic with restricted quantification"
 readme = "README.md"
 license = "MIT"
 authors = [

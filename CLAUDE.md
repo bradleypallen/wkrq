@@ -60,7 +60,7 @@ twine upload dist/*
 
 ## Architecture Overview
 
-wKrQ implements three-valued weak Kleene logic with restricted quantification. The system is organized into these core components:
+wKrQ is a Python implementation of a semantic tableau calculus for three-valued weak Kleene logic with restricted quantification. The system is organized into these core components:
 
 ### Core Logic Engine (src/wkrq/)
 - **formula.py**: Formula representation hierarchy (PropositionalAtom, CompoundFormula, PredicateFormula, Restricted quantifiers)
