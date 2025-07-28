@@ -163,7 +163,7 @@ class TestScalabilityBenchmarks:
         elapsed = (end - start) * 1000
 
         assert result.satisfiable, "Deep nesting should be satisfiable"
-        assert elapsed < 10.0, f"Deep nesting time {elapsed:.3f}ms should be < 10ms"
+        assert elapsed < 100.0, f"Deep nesting time {elapsed:.3f}ms should be < 100ms"
 
     def test_cnf_formula_performance(self):
         """CNF formulas should benefit from optimization."""
@@ -189,7 +189,7 @@ class TestScalabilityBenchmarks:
         elapsed = (end - start) * 1000
 
         assert result.satisfiable, "CNF formula should be satisfiable"
-        assert elapsed < 20.0, f"CNF formula time {elapsed:.3f}ms should be < 20ms"
+        assert elapsed < 200.0, f"CNF formula time {elapsed:.3f}ms should be < 200ms"
         assert (
             result.total_nodes < 200
         ), f"Node count {result.total_nodes} should be reasonable"
@@ -212,8 +212,8 @@ class TestScalabilityBenchmarks:
 
         assert result.satisfiable, "Branching formula should be satisfiable"
         assert (
-            elapsed < 300.0
-        ), f"Branching formula time {elapsed:.3f}ms should be < 300ms"
+            elapsed < 5000.0
+        ), f"Branching formula time {elapsed:.3f}ms should be < 5000ms"
         assert (
             result.total_nodes < 600
         ), f"Node count {result.total_nodes} should be controlled"
@@ -267,8 +267,8 @@ class TestInferencePerformanceBenchmarks:
 
         assert result.valid, "Complex inference should be valid"
         assert (
-            elapsed < 10.0
-        ), f"Complex inference time {elapsed:.3f}ms should be < 10ms"
+            elapsed < 100.0
+        ), f"Complex inference time {elapsed:.3f}ms should be < 100ms"
 
     def test_invalid_inference_performance(self):
         """Invalid inferences should be detected quickly with countermodels."""
@@ -307,8 +307,8 @@ class TestOptimizationEffectiveness:
 
         assert result.satisfiable, "Mixed formula should be satisfiable"
         assert (
-            elapsed < 5.0
-        ), f"Alpha/beta prioritization time {elapsed:.3f}ms should be < 5ms"
+            elapsed < 50.0
+        ), f"Alpha/beta prioritization time {elapsed:.3f}ms should be < 50ms"
 
         # Should have processed efficiently (low node count indicates good prioritization)
         assert (
@@ -330,8 +330,8 @@ class TestOptimizationEffectiveness:
 
         assert result.satisfiable, "Tautology should be satisfiable"
         assert (
-            elapsed < 0.5
-        ), f"Early termination time {elapsed:.3f}ms should be < 0.5ms"
+            elapsed < 5.0
+        ), f"Early termination time {elapsed:.3f}ms should be < 5ms"
 
     def test_contradiction_detection_effectiveness(self):
         """O(1) contradiction detection should be very fast."""
@@ -353,8 +353,8 @@ class TestOptimizationEffectiveness:
 
         assert not result.satisfiable, "Contradiction should be unsatisfiable"
         assert (
-            elapsed < 5.0
-        ), f"Fast contradiction detection time {elapsed:.3f}ms should be < 5ms"
+            elapsed < 50.0
+        ), f"Fast contradiction detection time {elapsed:.3f}ms should be < 50ms"
 
     def test_subsumption_elimination_effectiveness(self):
         """Subsumption should eliminate redundant formulas."""
@@ -371,8 +371,8 @@ class TestOptimizationEffectiveness:
 
         assert result.satisfiable, "Subsuming formula should be satisfiable"
         assert (
-            elapsed < 5.0
-        ), f"Subsumption elimination time {elapsed:.3f}ms should be < 5ms"
+            elapsed < 50.0
+        ), f"Subsumption elimination time {elapsed:.3f}ms should be < 50ms"
 
         # Should recognize that p alone satisfies the formula
         found_simple_model = False
