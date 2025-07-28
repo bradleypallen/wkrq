@@ -11,7 +11,7 @@ A Python implementation of three-valued weak Kleene logic with restricted quanti
 
 This implementation is based on the wKrQ tableau system defined in:
 
-**Ferguson, Thomas Macaulay**. "Tableaux and restricted quantification." *Notre Dame Journal of Formal Logic* 62, no. 2 (2021): 307-329. DOI: [10.1215/00294527-2021-0012](https://doi.org/10.1215/00294527-2021-0012)
+**Ferguson, Thomas Macaulay**. "Tableaux and restricted quantification for systems related to weak Kleene logic." In *International Conference on Automated Reasoning with Analytic Tableaux and Related Methods*, pp. 3-19. Cham: Springer International Publishing, 2021.
 
 The tableau construction algorithms and four-sign system (T, F, M, N) implemented here follow Ferguson's formal definitions. This is a research implementation created for experimental and educational purposes.
 
