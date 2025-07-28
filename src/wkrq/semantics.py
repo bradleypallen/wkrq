@@ -157,7 +157,9 @@ class WeakKleeneSemantics:
         """Check if a truth value is designated (true)."""
         return value in self.designated_values
 
-    def all_valuations(self, atoms: set[str]) -> Generator[dict[str, TruthValue], None, None]:
+    def all_valuations(
+        self, atoms: set[str]
+    ) -> Generator[dict[str, TruthValue], None, None]:
         """Generate all possible truth valuations for a set of atoms."""
         import itertools
 

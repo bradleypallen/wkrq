@@ -316,7 +316,9 @@ Examples:
                     "type": "inference",
                     "inference": str(inference),
                     "valid": inference_result.valid,
-                    "countermodels": [asdict(m) for m in inference_result.countermodels],
+                    "countermodels": [
+                        asdict(m) for m in inference_result.countermodels
+                    ],
                 }
                 print(json.dumps(output, indent=2))
             else:
@@ -366,7 +368,9 @@ Examples:
                         args.highlight_closures,
                         args.compact,
                     )
-                    tree_str = render_tree(tableau_result.tableau, args.format, renderer)
+                    tree_str = render_tree(
+                        tableau_result.tableau, args.format, renderer
+                    )
                     print(tree_str)
 
     except ParseError as e:
