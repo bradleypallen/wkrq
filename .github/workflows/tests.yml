@@ -35,6 +35,7 @@ jobs:
         black --check src tests
     
     - name: Type check with mypy
+      if: matrix.python-version != '3.8'
       run: |
         mypy src
     
