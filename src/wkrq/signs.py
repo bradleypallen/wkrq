@@ -6,7 +6,6 @@ These map to truth value sets for semantic evaluation.
 """
 
 from dataclasses import dataclass
-from typing import Set
 
 from .formula import Formula
 from .semantics import FALSE, TRUE, UNDEFINED, TruthValue
@@ -31,7 +30,7 @@ class Sign:
             self.symbol == "F" and other.symbol == "T"
         )
 
-    def truth_conditions(self) -> Set[TruthValue]:
+    def truth_conditions(self) -> set[TruthValue]:
         """Get the set of truth values this sign represents."""
         if self.symbol == "T":
             return {TRUE}

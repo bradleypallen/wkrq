@@ -5,7 +5,7 @@ Provides high-level interface for working with wKrQ logic.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 from .formula import Formula
 from .parser import Inference, parse, parse_inference
@@ -19,7 +19,7 @@ class InferenceResult:
 
     valid: bool
     inference: Inference
-    countermodels: List[Model]
+    countermodels: list[Model]
     tableau_result: TableauResult
 
     def __str__(self) -> str:
@@ -83,14 +83,14 @@ def check_validity(formula: Formula) -> bool:
     return valid(formula)
 
 
-def check_entailment(premises: List[Formula], conclusion: Formula) -> bool:
+def check_entailment(premises: list[Formula], conclusion: Formula) -> bool:
     """Check if premises entail conclusion."""
     return entails(premises, conclusion)
 
 
 def find_models(
     formula: Formula, sign: Sign = T, limit: Optional[int] = None
-) -> List[Model]:
+) -> list[Model]:
     """
     Find models that satisfy the formula with the given sign.
 
@@ -135,7 +135,7 @@ class WkrqLogic:
         """Check if formula is valid."""
         return valid(formula)
 
-    def entails(self, premises: List[Formula], conclusion: Formula) -> bool:
+    def entails(self, premises: list[Formula], conclusion: Formula) -> bool:
         """Check entailment."""
         return entails(premises, conclusion)
 
@@ -147,13 +147,13 @@ class WkrqLogic:
         """Create a propositional atom."""
         return Formula.atom(name)
 
-    def atoms(self, *names: str) -> List[Formula]:
+    def atoms(self, *names: str) -> list[Formula]:
         """Create multiple propositional atoms."""
         return Formula.atoms(*names)
 
     def models(
         self, formula: Formula, sign: str = "T", limit: Optional[int] = None
-    ) -> List[Model]:
+    ) -> list[Model]:
         """Find models for a formula."""
         sign_obj = sign_from_string(sign)
         return find_models(formula, sign_obj, limit)

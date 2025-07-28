@@ -6,7 +6,7 @@ with restricted quantifiers.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Set
+from typing import Any
 
 
 class Formula(ABC):
@@ -28,12 +28,12 @@ class Formula(ABC):
         pass
 
     @abstractmethod
-    def get_atoms(self) -> Set[str]:
+    def get_atoms(self) -> set[str]:
         """Get all atomic formulas in this formula."""
         pass
 
     @abstractmethod
-    def substitute(self, mapping: Dict[str, "Formula"]) -> "Formula":
+    def substitute(self, mapping: dict[str, "Formula"]) -> "Formula":
         """Substitute atoms/terms according to mapping."""
         pass
 
@@ -67,7 +67,7 @@ class Formula(ABC):
         """Implication using method call."""
         return Implication(self, other)
 
-    def substitute_term(self, mapping: Dict[str, "Term"]) -> "Formula":
+    def substitute_term(self, mapping: dict[str, "Term"]) -> "Formula":
         """Substitute terms in the formula."""
         # Default implementation - override in subclasses that contain terms
         return self
@@ -79,7 +79,7 @@ class Formula(ABC):
         return PropositionalAtom(name)
 
     @staticmethod
-    def atoms(*names: str) -> List["PropositionalAtom"]:
+    def atoms(*names: str) -> list["PropositionalAtom"]:
         """Create multiple propositional atoms."""
         return [PropositionalAtom(name) for name in names]
 
@@ -94,7 +94,7 @@ class Formula(ABC):
         return Constant(name)
 
     @staticmethod
-    def predicate(name: str, terms: List["Term"]) -> "PredicateFormula":
+    def predicate(name: str, terms: list["Term"]) -> "PredicateFormula":
         """Create a predicate formula."""
         return PredicateFormula(name, terms)
 
@@ -130,10 +130,10 @@ class PropositionalAtom(Formula):
     def __hash__(self) -> int:
         return hash(("atom", self.name))
 
-    def get_atoms(self) -> Set[str]:
+    def get_atoms(self) -> set[str]:
         return {self.name}
 
-    def substitute(self, mapping: Dict[str, Formula]) -> Formula:
+    def substitute(self, mapping: dict[str, Formula]) -> Formula:
         return mapping.get(self.name, self)
 
     def is_atomic(self) -> bool:
@@ -156,7 +156,7 @@ class Term(ABC):
         pass
 
     @abstractmethod
-    def substitute_term(self, mapping: Dict[str, "Term"]) -> "Term":
+    def substitute_term(self, mapping: dict[str, "Term"]) -> "Term":
         """Substitute terms according to mapping."""
         pass
 
@@ -176,7 +176,7 @@ class Constant(Term):
     def __hash__(self) -> int:
         return hash(("constant", self.name))
 
-    def substitute_term(self, mapping: Dict[str, "Term"]) -> "Term":
+    def substitute_term(self, mapping: dict[str, "Term"]) -> "Term":
         return mapping.get(self.name, self)
 
 
@@ -195,14 +195,14 @@ class Variable(Term):
     def __hash__(self) -> int:
         return hash(("variable", self.name))
 
-    def substitute_term(self, mapping: Dict[str, "Term"]) -> "Term":
+    def substitute_term(self, mapping: dict[str, "Term"]) -> "Term":
         return mapping.get(self.name, self)
 
 
 class PredicateFormula(Formula):
     """A predicate applied to terms."""
 
-    def __init__(self, predicate_name: str, terms: List[Term]):
+    def __init__(self, predicate_name: str, terms: list[Term]):
         self.predicate_name = predicate_name
         self.terms = terms
 
@@ -222,19 +222,19 @@ class PredicateFormula(Formula):
     def __hash__(self) -> int:
         return hash(("predicate", self.predicate_name, tuple(self.terms)))
 
-    def get_atoms(self) -> Set[str]:
+    def get_atoms(self) -> set[str]:
         return {str(self)}
 
-    def substitute(self, mapping: Dict[str, Formula]) -> Formula:
+    def substitute(self, mapping: dict[str, Formula]) -> Formula:
         # For predicates, we might substitute the whole predicate
         return mapping.get(str(self), self)
 
-    def substitute_terms(self, mapping: Dict[str, "Term"]) -> "PredicateFormula":
+    def substitute_terms(self, mapping: dict[str, "Term"]) -> "PredicateFormula":
         """Substitute terms in the predicate."""
         new_terms = [t.substitute_term(mapping) for t in self.terms]
         return PredicateFormula(self.predicate_name, new_terms)
 
-    def substitute_term(self, mapping: Dict[str, "Term"]) -> "Formula":
+    def substitute_term(self, mapping: dict[str, "Term"]) -> "Formula":
         """Substitute terms in the predicate formula."""
         return self.substitute_terms(mapping)
 
@@ -245,7 +245,7 @@ class PredicateFormula(Formula):
 class CompoundFormula(Formula):
     """A compound formula with a connective."""
 
-    def __init__(self, connective: str, subformulas: List[Formula]):
+    def __init__(self, connective: str, subformulas: list[Formula]):
         self.connective = connective
         self.subformulas = subformulas
 
@@ -279,17 +279,17 @@ class CompoundFormula(Formula):
     def __hash__(self) -> int:
         return hash((self.connective, tuple(self.subformulas)))
 
-    def get_atoms(self) -> Set[str]:
+    def get_atoms(self) -> set[str]:
         atoms = set()
         for sub in self.subformulas:
             atoms.update(sub.get_atoms())
         return atoms
 
-    def substitute(self, mapping: Dict[str, Formula]) -> Formula:
+    def substitute(self, mapping: dict[str, Formula]) -> Formula:
         new_subs = [sub.substitute(mapping) for sub in self.subformulas]
         return CompoundFormula(self.connective, new_subs)
 
-    def substitute_term(self, mapping: Dict[str, "Term"]) -> "Formula":
+    def substitute_term(self, mapping: dict[str, "Term"]) -> "Formula":
         """Substitute terms in compound formula."""
         new_subs = [sub.substitute_term(mapping) for sub in self.subformulas]
         return CompoundFormula(self.connective, new_subs)
@@ -332,20 +332,20 @@ class RestrictedQuantifierFormula(Formula):
             )
         )
 
-    def get_atoms(self) -> Set[str]:
+    def get_atoms(self) -> set[str]:
         atoms = set()
         atoms.update(self.restriction.get_atoms())
         atoms.update(self.matrix.get_atoms())
         return atoms
 
-    def substitute(self, mapping: Dict[str, Formula]) -> Formula:
+    def substitute(self, mapping: dict[str, Formula]) -> Formula:
         # Don't substitute the bound variable
         filtered_mapping = {k: v for k, v in mapping.items() if k != str(self.variable)}
         new_restriction = self.restriction.substitute(filtered_mapping)
         new_matrix = self.matrix.substitute(filtered_mapping)
         return self.__class__(self.variable, new_restriction, new_matrix)
 
-    def substitute_term(self, mapping: Dict[str, "Term"]) -> "Formula":
+    def substitute_term(self, mapping: dict[str, "Term"]) -> "Formula":
         """Substitute terms in restricted quantifier formula."""
         # Don't substitute the bound variable
         filtered_mapping = {k: v for k, v in mapping.items() if k != str(self.variable)}

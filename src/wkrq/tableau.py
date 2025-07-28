@@ -7,7 +7,7 @@ Optimized tableau prover for wKrQ logic with industrial-grade performance.
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 from .formula import (
     CompoundFormula,
@@ -35,7 +35,7 @@ class RuleInfo:
     rule_type: RuleType
     priority: int  # Lower numbers = higher priority
     complexity_cost: int  # Estimated computational cost
-    conclusions: List[List[SignedFormula]]
+    conclusions: list[list[SignedFormula]]
 
     def __lt__(self, other):
         """Compare rules for priority ordering."""
@@ -60,7 +60,7 @@ class TableauNode:
     id: int
     formula: SignedFormula
     parent: Optional["TableauNode"] = None
-    children: List["TableauNode"] = field(default_factory=list)
+    children: list["TableauNode"] = field(default_factory=list)
     rule_applied: Optional[str] = None
     is_closed: bool = False
     closure_reason: Optional[str] = None
@@ -79,24 +79,24 @@ class Branch:
     """A branch in the tableau with industrial-grade optimizations."""
 
     id: int
-    nodes: List[TableauNode] = field(default_factory=list)
-    formulas: Set[SignedFormula] = field(default_factory=set)
+    nodes: list[TableauNode] = field(default_factory=list)
+    formulas: set[SignedFormula] = field(default_factory=set)
     is_closed: bool = False
     closure_reason: Optional[str] = None
 
     # Optimization: index formulas by sign and formula for O(1) lookup
-    formula_index: Dict[Sign, Dict[Formula, Set[int]]] = field(
+    formula_index: dict[Sign, dict[Formula, set[int]]] = field(
         default_factory=lambda: defaultdict(lambda: defaultdict(set))
     )
 
     # Constraint propagation: track unit literals and implications
-    unit_literals: Set[SignedFormula] = field(default_factory=set)
-    implications: List[Tuple[SignedFormula, SignedFormula]] = field(
+    unit_literals: set[SignedFormula] = field(default_factory=set)
+    implications: list[tuple[SignedFormula, SignedFormula]] = field(
         default_factory=list
     )
 
     # Subsumption: track subsumed formulas to avoid redundant work
-    subsumed_formulas: Set[SignedFormula] = field(default_factory=set)
+    subsumed_formulas: set[SignedFormula] = field(default_factory=set)
 
     # Performance metrics
     complexity_score: int = 0
@@ -199,8 +199,8 @@ class Branch:
 class Model:
     """A model extracted from an open branch."""
 
-    valuations: Dict[str, TruthValue]
-    constants: Dict[str, Set[Formula]]  # For first-order models
+    valuations: dict[str, TruthValue]
+    constants: dict[str, set[Formula]]  # For first-order models
 
     def __str__(self) -> str:
         val_str = ", ".join(f"{k}={v}" for k, v in sorted(self.valuations.items()))
@@ -218,7 +218,7 @@ class TableauResult:
     """Result of tableau construction."""
 
     satisfiable: bool
-    models: List[Model]
+    models: list[Model]
     closed_branches: int
     open_branches: int
     total_nodes: int
@@ -233,14 +233,14 @@ class TableauResult:
 class Tableau:
     """Industrial-grade optimized tableau for wKrQ logic."""
 
-    def __init__(self, initial_formulas: List[SignedFormula]):
+    def __init__(self, initial_formulas: list[SignedFormula]):
         self.root = TableauNode(0, initial_formulas[0] if initial_formulas else None)
-        self.nodes: List[TableauNode] = [self.root]
-        self.branches: List[Branch] = []
-        self.open_branches: List[Branch] = []
-        self.closed_branches: List[Branch] = []
+        self.nodes: list[TableauNode] = [self.root]
+        self.branches: list[Branch] = []
+        self.open_branches: list[Branch] = []
+        self.closed_branches: list[Branch] = []
         self.node_counter = 1
-        self.constants: Set[str] = set()  # Track introduced constants
+        self.constants: set[str] = set()  # Track introduced constants
 
         # Performance optimization settings
         self.max_branching_factor = 1000  # Prevent exponential explosion
@@ -248,11 +248,11 @@ class Tableau:
         self.early_termination = True  # Stop on first satisfying model
 
         # Advanced optimization state
-        self.global_processed_formulas: Set[SignedFormula] = set()
+        self.global_processed_formulas: set[SignedFormula] = set()
         self.branch_selection_strategy = (
             "least_complex"  # "least_complex", "depth_first", "breadth_first"
         )
-        self.rule_application_stats: Dict[str, int] = defaultdict(int)
+        self.rule_application_stats: dict[str, int] = defaultdict(int)
 
         # Initialize with first branch
         initial_branch = Branch(0)
@@ -685,7 +685,7 @@ class Tableau:
 
     def _get_prioritized_rules(
         self, branch: Branch
-    ) -> List[Tuple[TableauNode, RuleInfo]]:
+    ) -> list[tuple[TableauNode, RuleInfo]]:
         """Get all applicable rules for a branch, sorted by priority."""
         applicable_rules = []
 
@@ -723,7 +723,7 @@ def valid(formula: Formula) -> bool:
     return not result.satisfiable
 
 
-def entails(premises: List[Formula], conclusion: Formula) -> bool:
+def entails(premises: list[Formula], conclusion: Formula) -> bool:
     """Check if premises entail conclusion."""
     # P1, ..., Pn |- Q iff (P1 & ... & Pn & ~Q) is unsatisfiable
     from .formula import Conjunction, Negation

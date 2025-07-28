@@ -6,7 +6,6 @@ Truth values: t (true), e (undefined), f (false)
 """
 
 from dataclasses import dataclass
-from typing import Dict, Set
 
 
 @dataclass(frozen=True)
@@ -42,7 +41,7 @@ class WeakKleeneSemantics:
         self._negation_table = self._build_negation_table()
         self._implication_table = self._build_implication_table()
 
-    def _build_conjunction_table(self) -> Dict[tuple, TruthValue]:
+    def _build_conjunction_table(self) -> dict[tuple, TruthValue]:
         """Build weak Kleene conjunction truth table."""
         return {
             (TRUE, TRUE): TRUE,
@@ -68,7 +67,7 @@ class WeakKleeneSemantics:
             (FALSE, FALSE): FALSE,
         }
 
-    def _build_disjunction_table(self) -> Dict[tuple, TruthValue]:
+    def _build_disjunction_table(self) -> dict[tuple, TruthValue]:
         """Build weak Kleene disjunction truth table."""
         return {
             (TRUE, TRUE): TRUE,
@@ -94,11 +93,11 @@ class WeakKleeneSemantics:
             (FALSE, FALSE): FALSE,
         }
 
-    def _build_negation_table(self) -> Dict[TruthValue, TruthValue]:
+    def _build_negation_table(self) -> dict[TruthValue, TruthValue]:
         """Build weak Kleene negation truth table."""
         return {TRUE: FALSE, UNDEFINED: UNDEFINED, FALSE: TRUE}
 
-    def _build_implication_table(self) -> Dict[tuple, TruthValue]:
+    def _build_implication_table(self) -> dict[tuple, TruthValue]:
         """Build weak Kleene implication truth table."""
         return {
             (TRUE, TRUE): TRUE,
@@ -157,7 +156,7 @@ class WeakKleeneSemantics:
         """Check if a truth value is designated (true)."""
         return value in self.designated_values
 
-    def all_valuations(self, atoms: Set[str]) -> Dict[str, TruthValue]:
+    def all_valuations(self, atoms: set[str]) -> dict[str, TruthValue]:
         """Generate all possible truth valuations for a set of atoms."""
         import itertools
 

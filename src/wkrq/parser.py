@@ -7,7 +7,7 @@ Supports turnstile notation for inference testing.
 
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from .formula import (
     Conjunction,
@@ -28,7 +28,7 @@ from .formula import (
 class Inference:
     """Represents an inference with premises and conclusion."""
 
-    premises: List[Formula]
+    premises: list[Formula]
     conclusion: Formula
 
     def to_formula(self) -> Formula:
@@ -108,7 +108,7 @@ class FormulaParser:
 
         return formula
 
-    def _tokenize(self, input_str: str) -> List[str]:
+    def _tokenize(self, input_str: str) -> list[str]:
         """Tokenize the input string."""
         # Token patterns
         patterns = [

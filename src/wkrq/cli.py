@@ -8,7 +8,6 @@ import argparse
 import json
 import sys
 from dataclasses import asdict
-from typing import List
 
 from .api import InferenceResult, check_inference
 from .parser import ParseError, parse, parse_inference
@@ -41,7 +40,7 @@ class TableauTreeRenderer:
         return "\n".join(lines)
 
     def _render_node_ascii(
-        self, node: TableauNode, lines: List[str], prefix: str, is_last: bool
+        self, node: TableauNode, lines: list[str], prefix: str, is_last: bool
     ):
         """Recursively render node and children."""
         # Node representation
@@ -85,7 +84,7 @@ class TableauTreeRenderer:
         return "\n".join(lines)
 
     def _render_node_unicode(
-        self, node: TableauNode, lines: List[str], prefix: str, is_last: bool
+        self, node: TableauNode, lines: list[str], prefix: str, is_last: bool
     ):
         """Recursively render node with Unicode characters."""
         # Node representation
