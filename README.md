@@ -7,6 +7,18 @@
 
 A Python implementation of three-valued weak Kleene logic with restricted quantification, featuring a complete tableau-based theorem prover with industrial-grade performance optimizations.
 
+## Citation
+
+This implementation is based on the wKrQ tableau system defined in:
+
+**Ferguson, Thomas Macaulay**. "Tableaux and restricted quantification." *Notre Dame Journal of Formal Logic* 62, no. 2 (2021): 307-329. DOI: [10.1215/00294527-2021-0012](https://doi.org/10.1215/00294527-2021-0012)
+
+The tableau construction algorithms and four-sign system (T, F, M, N) implemented here follow Ferguson's formal definitions. This is a research implementation created for experimental and educational purposes.
+
+## Research Software Disclaimer
+
+⚠️ **This is research software.** While extensively tested, this implementation may contain errors or behave unexpectedly in edge cases. It is intended for research, education, and experimentation. Use in production systems is not recommended without thorough validation. Please report any issues or unexpected behavior through the [issue tracker](https://github.com/bradleypallen/wkrq/issues).
+
 ## Features
 
 - 🎯 **Three-valued semantics**: true (t), false (f), undefined (e)
