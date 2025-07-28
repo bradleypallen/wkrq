@@ -5,8 +5,8 @@ Implements the truth value system and semantic operations for wKrQ logic.
 Truth values: t (true), e (undefined), f (false)
 """
 
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Generator
 
 
 @dataclass(frozen=True)

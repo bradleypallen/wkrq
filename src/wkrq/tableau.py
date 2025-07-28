@@ -101,7 +101,7 @@ class Branch:
     # Performance metrics
     complexity_score: int = 0
     branching_factor: int = 0
-    
+
     # Track processed formulas to avoid reprocessing
     _processed_formulas: set[SignedFormula] = field(default_factory=set)
 
