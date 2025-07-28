@@ -19,7 +19,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Education",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -99,7 +98,7 @@ select = [
 ignore = ["E501"]  # line too long (handled by black)
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
