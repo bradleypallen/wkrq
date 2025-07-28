@@ -37,7 +37,7 @@ class RuleInfo:
     complexity_cost: int  # Estimated computational cost
     conclusions: list[list[SignedFormula]]
 
-    def __lt__(self, other):
+    def __lt__(self, other: "RuleInfo") -> bool:
         """Compare rules for priority ordering."""
         # Alpha rules always come first
         if self.rule_type == RuleType.ALPHA and other.rule_type != RuleType.ALPHA:
@@ -101,6 +101,9 @@ class Branch:
     # Performance metrics
     complexity_score: int = 0
     branching_factor: int = 0
+    
+    # Track processed formulas to avoid reprocessing
+    _processed_formulas: set[SignedFormula] = field(default_factory=set)
 
     def add_formula(self, signed_formula: SignedFormula, node: TableauNode) -> bool:
         """Add a formula to the branch with optimizations. Return True if branch closes."""
@@ -234,7 +237,9 @@ class Tableau:
     """Industrial-grade optimized tableau for wKrQ logic."""
 
     def __init__(self, initial_formulas: list[SignedFormula]):
-        self.root = TableauNode(0, initial_formulas[0] if initial_formulas else None)
+        if not initial_formulas:
+            raise ValueError("Cannot create tableau with empty formula list")
+        self.root = TableauNode(0, initial_formulas[0])
         self.nodes: list[TableauNode] = [self.root]
         self.branches: list[Branch] = []
         self.open_branches: list[Branch] = []
@@ -419,10 +424,10 @@ class Tableau:
 
                 # Substitute the variable with the fresh constant
                 restriction_inst = formula.restriction.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
                 matrix_inst = formula.matrix.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
 
                 # T:[∃X P(X)]Q(X) expands to: T:P(c) ∧ T:Q(c)
@@ -438,10 +443,10 @@ class Tableau:
                 # This creates a more complex expansion that we'll simplify for now
                 fresh_const = Constant(f"c_{len(branch.nodes)}")
                 restriction_inst = formula.restriction.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
                 matrix_inst = formula.matrix.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
 
                 # F:[∃X P(X)]Q(X) expands to: F:P(c) ∨ F:Q(c)
@@ -459,10 +464,10 @@ class Tableau:
 
                 # Substitute the variable with the fresh constant
                 restriction_inst = formula.restriction.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
                 matrix_inst = formula.matrix.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
 
                 # T:[∀X P(X)]Q(X) expands to: F:P(c) ∨ T:Q(c) (i.e., P(c) → Q(c))
@@ -476,10 +481,10 @@ class Tableau:
                 # F:[∀X P(X)]Q(X) - there exists an x such that P(x) but not Q(x)
                 fresh_const = Constant(f"c_{len(branch.nodes)}")
                 restriction_inst = formula.restriction.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
                 matrix_inst = formula.matrix.substitute_term(
-                    {formula.variable.name: fresh_const}
+                    {formula.var.name: fresh_const}
                 )
 
                 # F:[∀X P(X)]Q(X) expands to: T:P(c) ∧ F:Q(c)
@@ -619,7 +624,7 @@ class Tableau:
     def _extract_model(self, branch: Branch) -> Optional[Model]:
         """Extract a model from an open branch."""
         # Get all atoms
-        atoms = set()
+        atoms: set[str] = set()
         for node in branch.nodes:
             atoms.update(node.formula.formula.get_atoms())
 

@@ -114,7 +114,7 @@ def find_models(
 class WkrqLogic:
     """Main interface for wKrQ logic operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.name = "wkrq"
         self.description = "Weak Kleene logic with restricted quantification"
 
@@ -149,7 +149,7 @@ class WkrqLogic:
 
     def atoms(self, *names: str) -> list[Formula]:
         """Create multiple propositional atoms."""
-        return Formula.atoms(*names)
+        return list(Formula.atoms(*names))
 
     def models(
         self, formula: Formula, sign: str = "T", limit: Optional[int] = None

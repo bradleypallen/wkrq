@@ -305,18 +305,18 @@ class RestrictedQuantifierFormula(Formula):
         self, quantifier: str, variable: Variable, restriction: Formula, matrix: Formula
     ):
         self.quantifier = quantifier
-        self.variable = variable
+        self.var = variable
         self.restriction = restriction
         self.matrix = matrix
 
     def __str__(self) -> str:
-        return f"[{self.quantifier}{self.variable} {self.restriction}]{self.matrix}"
+        return f"[{self.quantifier}{self.var} {self.restriction}]{self.matrix}"
 
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, RestrictedQuantifierFormula)
             and self.quantifier == other.quantifier
-            and self.variable == other.variable
+            and self.var == other.var
             and self.restriction == other.restriction
             and self.matrix == other.matrix
         )
@@ -326,7 +326,7 @@ class RestrictedQuantifierFormula(Formula):
             (
                 "restricted_quantifier",
                 self.quantifier,
-                self.variable,
+                self.var,
                 self.restriction,
                 self.matrix,
             )
@@ -340,18 +340,18 @@ class RestrictedQuantifierFormula(Formula):
 
     def substitute(self, mapping: dict[str, Formula]) -> Formula:
         # Don't substitute the bound variable
-        filtered_mapping = {k: v for k, v in mapping.items() if k != str(self.variable)}
+        filtered_mapping = {k: v for k, v in mapping.items() if k != str(self.var)}
         new_restriction = self.restriction.substitute(filtered_mapping)
         new_matrix = self.matrix.substitute(filtered_mapping)
-        return self.__class__(self.variable, new_restriction, new_matrix)
+        return self.__class__(self.quantifier, self.var, new_restriction, new_matrix)
 
     def substitute_term(self, mapping: dict[str, "Term"]) -> "Formula":
         """Substitute terms in restricted quantifier formula."""
         # Don't substitute the bound variable
-        filtered_mapping = {k: v for k, v in mapping.items() if k != str(self.variable)}
+        filtered_mapping = {k: v for k, v in mapping.items() if k != str(self.var)}
         new_restriction = self.restriction.substitute_term(filtered_mapping)
         new_matrix = self.matrix.substitute_term(filtered_mapping)
-        return self.__class__(self.variable, new_restriction, new_matrix)
+        return self.__class__(self.quantifier, self.var, new_restriction, new_matrix)
 
     def is_atomic(self) -> bool:
         return False

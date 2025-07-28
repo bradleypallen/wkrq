@@ -6,6 +6,7 @@ Truth values: t (true), e (undefined), f (false)
 """
 
 from dataclasses import dataclass
+from typing import Generator
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,7 @@ FALSE = TruthValue("f", "false")
 class WeakKleeneSemantics:
     """Three-valued weak Kleene semantic system."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.truth_values = {TRUE, UNDEFINED, FALSE}
         self.designated_values = {TRUE}
 
@@ -156,7 +157,7 @@ class WeakKleeneSemantics:
         """Check if a truth value is designated (true)."""
         return value in self.designated_values
 
-    def all_valuations(self, atoms: set[str]) -> dict[str, TruthValue]:
+    def all_valuations(self, atoms: set[str]) -> Generator[dict[str, TruthValue], None, None]:
         """Generate all possible truth valuations for a set of atoms."""
         import itertools
 

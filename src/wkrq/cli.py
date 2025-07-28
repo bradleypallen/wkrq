@@ -35,13 +35,13 @@ class TableauTreeRenderer:
         if not tableau.nodes:
             return "Empty tableau"
 
-        lines = []
+        lines: list[str] = []
         self._render_node_ascii(tableau.nodes[0], lines, "", True)
         return "\n".join(lines)
 
     def _render_node_ascii(
         self, node: TableauNode, lines: list[str], prefix: str, is_last: bool
-    ):
+    ) -> None:
         """Recursively render node and children."""
         # Node representation
         node_str = f"{node.id}. {node.formula}"
@@ -79,13 +79,13 @@ class TableauTreeRenderer:
         if not tableau.nodes:
             return "Empty tableau"
 
-        lines = []
+        lines: list[str] = []
         self._render_node_unicode(tableau.nodes[0], lines, "", True)
         return "\n".join(lines)
 
     def _render_node_unicode(
         self, node: TableauNode, lines: list[str], prefix: str, is_last: bool
-    ):
+    ) -> None:
         """Recursively render node with Unicode characters."""
         # Node representation
         node_str = f"{node.id}. {node.formula}"
@@ -188,7 +188,7 @@ def display_result(
     show_models: bool = True,
     show_stats: bool = False,
     debug: bool = False,
-):
+) -> None:
     """Display tableau result."""
     print(f"Satisfiable: {result.satisfiable}")
 
@@ -211,7 +211,7 @@ def display_result(
             print(f"    Branch {i}: {status} ({len(branch.nodes)} nodes)")
 
 
-def display_inference_result(result: InferenceResult, explain: bool = False):
+def display_inference_result(result: InferenceResult, explain: bool = False) -> None:
     """Display inference test result."""
     if result.valid:
         print("✓ Valid inference")
@@ -228,7 +228,7 @@ def display_inference_result(result: InferenceResult, explain: bool = False):
         display_result(result.tableau_result, show_models=False, show_stats=True)
 
 
-def main():
+def main() -> None:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description="wKrQ - Weak Kleene logic with restricted quantification",
@@ -309,20 +309,20 @@ Examples:
         if "|-" in args.input:
             # Inference
             inference = parse_inference(args.input)
-            result = check_inference(inference)
+            inference_result = check_inference(inference)
 
             if args.json:
                 output = {
                     "type": "inference",
                     "inference": str(inference),
-                    "valid": result.valid,
-                    "countermodels": [asdict(m) for m in result.countermodels],
+                    "valid": inference_result.valid,
+                    "countermodels": [asdict(m) for m in inference_result.countermodels],
                 }
                 print(json.dumps(output, indent=2))
             else:
-                display_inference_result(result, args.explain or args.debug)
+                display_inference_result(inference_result, args.explain or args.debug)
 
-                if args.tree and result.tableau_result.tableau:
+                if args.tree and inference_result.tableau_result.tableau:
                     print("\nTableau tree:")
                     renderer = TableauTreeRenderer(
                         args.show_rules,
@@ -331,7 +331,7 @@ Examples:
                         args.compact,
                     )
                     tree_str = render_tree(
-                        result.tableau_result.tableau, args.format, renderer
+                        inference_result.tableau_result.tableau, args.format, renderer
                     )
                     print(tree_str)
 
@@ -339,26 +339,26 @@ Examples:
             # Formula
             formula = parse(args.input)
             sign = sign_from_string(args.sign)
-            result = solve(formula, sign)
+            tableau_result = solve(formula, sign)
 
             if args.json:
                 output = {
                     "type": "formula",
                     "formula": str(formula),
                     "sign": str(sign),
-                    "satisfiable": result.satisfiable,
-                    "models": [asdict(m) for m in result.models],
+                    "satisfiable": tableau_result.satisfiable,
+                    "models": [asdict(m) for m in tableau_result.models],
                     "stats": {
-                        "open_branches": result.open_branches,
-                        "closed_branches": result.closed_branches,
-                        "total_nodes": result.total_nodes,
+                        "open_branches": tableau_result.open_branches,
+                        "closed_branches": tableau_result.closed_branches,
+                        "total_nodes": tableau_result.total_nodes,
                     },
                 }
                 print(json.dumps(output, indent=2))
             else:
-                display_result(result, args.models, args.stats, args.debug)
+                display_result(tableau_result, args.models, args.stats, args.debug)
 
-                if args.tree and result.tableau:
+                if args.tree and tableau_result.tableau:
                     print("\nTableau tree:")
                     renderer = TableauTreeRenderer(
                         args.show_rules,
@@ -366,7 +366,7 @@ Examples:
                         args.highlight_closures,
                         args.compact,
                     )
-                    tree_str = render_tree(result.tableau, args.format, renderer)
+                    tree_str = render_tree(tableau_result.tableau, args.format, renderer)
                     print(tree_str)
 
     except ParseError as e:
@@ -396,7 +396,7 @@ def render_tree(
         raise ValueError(f"Unknown format: {format_type}")
 
 
-def interactive_mode():
+def interactive_mode() -> None:
     """Interactive REPL mode."""
     print("wKrQ Interactive Mode")
     print("Commands: formula, inference (P |- Q), help, quit")
@@ -428,8 +428,8 @@ def interactive_mode():
                 display_inference_result(result)
             else:
                 formula = parse(line)
-                result = solve(formula, T)
-                display_result(result)
+                tableau_result = solve(formula, T)
+                display_result(tableau_result)
 
         except ParseError as e:
             print(f"Parse error: {e}")

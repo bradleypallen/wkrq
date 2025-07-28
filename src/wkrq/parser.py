@@ -20,6 +20,7 @@ from .formula import (
     PropositionalAtom,
     RestrictedExistentialFormula,
     RestrictedUniversalFormula,
+    Term,
     Variable,
 )
 
@@ -59,11 +60,11 @@ class ParseError(Exception):
 class FormulaParser:
     """Parser for wKrQ formulas."""
 
-    def __init__(self):
-        self.tokens = []
-        self.pos = 0
-        self.constants = set()
-        self.variables = set()
+    def __init__(self) -> None:
+        self.tokens: list[str] = []
+        self.pos: int = 0
+        self.constants: set[str] = set()
+        self.variables: set[str] = set()
 
     def parse(self, input_str: str) -> Union[Formula, Inference]:
         """Parse a formula or inference string."""
@@ -248,7 +249,7 @@ class FormulaParser:
         args_str = match.group(2)
 
         # Parse arguments
-        terms = []
+        terms: list[Term] = []
         if args_str:
             for arg in args_str.split(","):
                 arg = arg.strip()
