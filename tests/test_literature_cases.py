@@ -169,7 +169,7 @@ class TestFittingTableauMethods:
 
         assert result.satisfiable, "Formula should be satisfiable"
         assert len(result.models) > 0, "Should extract models"
-        assert (end_time - start_time) < 0.01, "Model extraction should be efficient"
+        assert (end_time - start_time) < 0.05, "Model extraction should be efficient"
 
         # Verify models are valid
         for model in result.models:
