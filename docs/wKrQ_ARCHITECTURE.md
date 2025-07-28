@@ -1,6 +1,6 @@
 # wKrQ Architecture: Three-Valued Weak Kleene Logic System
 
-**Version**: 2.0  
+**Version**: 1.0.0  
 **Last Updated**: July 2025  
 **License**: MIT  
 

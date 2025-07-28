@@ -1,6 +1,6 @@
 # wKrQ API Reference: Three-Valued Weak Kleene Logic with Restricted Quantification
 
-**Version**: 2.0  
+**Version**: 1.0.0  
 **Last Updated**: July 2025  
 **License**: MIT  
 

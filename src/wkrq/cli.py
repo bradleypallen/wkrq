@@ -9,6 +9,7 @@ import json
 import sys
 from dataclasses import asdict
 
+from . import __version__
 from .api import InferenceResult, check_inference
 from .parser import ParseError, parse, parse_inference
 from .signs import T, sign_from_string
@@ -245,7 +246,7 @@ Examples:
     )
 
     parser.add_argument("input", nargs="?", help="Formula or inference to evaluate")
-    parser.add_argument("--version", action="version", version="wKrQ 2.0")
+    parser.add_argument("--version", action="version", version=f"wKrQ {__version__}")
     parser.add_argument(
         "--sign",
         default="T",
