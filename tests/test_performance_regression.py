@@ -329,9 +329,7 @@ class TestOptimizationEffectiveness:
         elapsed = (end - start) * 1000
 
         assert result.satisfiable, "Tautology should be satisfiable"
-        assert (
-            elapsed < 5.0
-        ), f"Early termination time {elapsed:.3f}ms should be < 5ms"
+        assert elapsed < 5.0, f"Early termination time {elapsed:.3f}ms should be < 5ms"
 
     def test_contradiction_detection_effectiveness(self):
         """O(1) contradiction detection should be very fast."""
