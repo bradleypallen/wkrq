@@ -20,11 +20,7 @@ class CLITestHelper:
         """Run wkrq CLI with given arguments."""
         cmd = [sys.executable, "-m", "wkrq"] + args
         return subprocess.run(
-            cmd,
-            input=input_text,
-            text=True,
-            capture_output=True,
-            timeout=30
+            cmd, input=input_text, text=True, capture_output=True, timeout=30
         )
 
     @staticmethod
@@ -35,12 +31,16 @@ class CLITestHelper:
     @staticmethod
     def assert_invalid_inference(output: str) -> None:
         """Assert that CLI output indicates invalid inference."""
-        assert "✗ Invalid inference" in output, f"Expected invalid inference, got: {output}"
+        assert (
+            "✗ Invalid inference" in output
+        ), f"Expected invalid inference, got: {output}"
 
     @staticmethod
     def assert_countermodel_shown(output: str) -> None:
         """Assert that countermodel is displayed."""
-        assert "Countermodels:" in output, f"Expected countermodel output, got: {output}"
+        assert (
+            "Countermodels:" in output
+        ), f"Expected countermodel output, got: {output}"
 
 
 class TestCLIQuantifierParsing:
@@ -48,7 +48,9 @@ class TestCLIQuantifierParsing:
 
     def test_universal_quantifier_unicode(self):
         """Test parsing universal quantifier with Unicode symbols."""
-        result = CLITestHelper.run_cli(["[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"])
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
@@ -60,25 +62,23 @@ class TestCLIQuantifierParsing:
 
     def test_mixed_quantifiers(self):
         """Test parsing mixed universal and existential quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), [∃Y God(Y)]Immortal(Y), Human(socrates) |- Mortal(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Mortal(X), [∃Y God(Y)]Immortal(Y), Human(socrates) |- Mortal(socrates)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_complex_quantifier_expressions(self):
         """Test parsing complex quantifier expressions."""
-        result = CLITestHelper.run_cli([
-            "[∀X (Human(X) & Rational(X))]Mortal(X)"
-        ])
+        result = CLITestHelper.run_cli(["[∀X (Human(X) & Rational(X))]Mortal(X)"])
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         assert "Satisfiable: True" in result.stdout
 
     def test_nested_quantifier_predicates(self):
         """Test parsing nested predicates in quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Student(X)](Studies(X) & Smart(X))"
-        ])
+        result = CLITestHelper.run_cli(["[∀X Student(X)](Studies(X) & Smart(X))"])
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         assert "Satisfiable: True" in result.stdout
 
@@ -88,51 +88,55 @@ class TestCLIUniversalQuantifierInference:
 
     def test_basic_universal_inference(self):
         """Test basic universal quantifier inference."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_universal_with_multiple_constants(self):
         """Test universal quantifier with multiple constants."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), Human(socrates), Human(plato), Human(aristotle) |- "
-            "Mortal(socrates) & Mortal(plato) & Mortal(aristotle)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Mortal(X), Human(socrates), Human(plato), Human(aristotle) |- "
+                "Mortal(socrates) & Mortal(plato) & Mortal(aristotle)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_universal_chain_reasoning(self):
         """Test chained universal quantifier reasoning."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Animal(X), [∀Y Animal(Y)]Living(Y), Human(darwin) |- Living(darwin)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Animal(X), [∀Y Animal(Y)]Living(Y), Human(darwin) |- Living(darwin)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_universal_contrapositive(self):
         """Test contrapositive reasoning with universal quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), ~Mortal(superman) |- ~Human(superman)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X)]Mortal(X), ~Mortal(superman) |- ~Human(superman)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_universal_invalid_inference(self):
         """Test invalid universal quantifier inference."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), Dog(lassie) |- Mortal(lassie)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X)]Mortal(X), Dog(lassie) |- Mortal(lassie)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_invalid_inference(result.stdout)
         CLITestHelper.assert_countermodel_shown(result.stdout)
 
     def test_universal_with_negation(self):
         """Test universal quantifier with negated predicates."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)](~Immortal(X)), Human(achilles) |- ~Immortal(achilles)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X)](~Immortal(X)), Human(achilles) |- ~Immortal(achilles)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
@@ -148,25 +152,25 @@ class TestCLIExistentialQuantifierInference:
 
     def test_existential_invalid_specific_inference(self):
         """Test that existential doesn't imply specific instance."""
-        result = CLITestHelper.run_cli([
-            "[∃X Human(X)]Wise(X), Human(socrates) |- Wise(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["[∃X Human(X)]Wise(X), Human(socrates) |- Wise(socrates)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_invalid_inference(result.stdout)
 
     def test_existential_with_unrelated_constant(self):
         """Test existential with unrelated constant."""
-        result = CLITestHelper.run_cli([
-            "[∃X Human(X)]Mortal(X), Dog(rover) |- Mortal(rover)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["[∃X Human(X)]Mortal(X), Dog(rover) |- Mortal(rover)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_invalid_inference(result.stdout)
 
     def test_existential_contradiction(self):
         """Test contradictory existential statements."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)](~Mortal(X)), [∃Y Human(Y)]Mortal(Y) |- False"
-        ])
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X)](~Mortal(X)), [∃Y Human(Y)]Mortal(Y) |- False"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         # This should be valid due to contradiction in premises
         CLITestHelper.assert_valid_inference(result.stdout)
@@ -177,25 +181,31 @@ class TestCLIMixedQuantifierScenarios:
 
     def test_universal_and_existential_combination(self):
         """Test combination of universal and existential quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), [∃Y Human(Y)]Wise(Y), Human(plato) |- Mortal(plato)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Mortal(X), [∃Y Human(Y)]Wise(Y), Human(plato) |- Mortal(plato)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_different_variable_names(self):
         """Test quantifiers with different variable names."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Rational(X), [∀Y Rational(Y)]Thinking(Y), Human(descartes) |- Thinking(descartes)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Rational(X), [∀Y Rational(Y)]Thinking(Y), Human(descartes) |- Thinking(descartes)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_quantifier_variable_scoping(self):
         """Test proper variable scoping in quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), [∃X God(X)]Immortal(X), Human(socrates) |- Mortal(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Mortal(X), [∃X God(X)]Immortal(X), Human(socrates) |- Mortal(socrates)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
@@ -205,25 +215,26 @@ class TestCLIQuantifierOutputFormats:
 
     def test_json_output_valid_inference(self):
         """Test JSON output for valid quantifier inference."""
-        result = CLITestHelper.run_cli([
-            "--json",
-            "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["--json", "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         # Parse and validate JSON
         data = json.loads(result.stdout)
         assert data["type"] == "inference"
         assert data["valid"] is True
-        assert data["inference"] == "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
+        assert (
+            data["inference"]
+            == "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
+        )
         assert data["countermodels"] == []
 
     def test_json_output_invalid_inference(self):
         """Test JSON output for invalid quantifier inference."""
-        result = CLITestHelper.run_cli([
-            "--json",
-            "[∀X Human(X)]Mortal(X), Dog(fido) |- Mortal(fido)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["--json", "[∀X Human(X)]Mortal(X), Dog(fido) |- Mortal(fido)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         data = json.loads(result.stdout)
@@ -233,10 +244,7 @@ class TestCLIQuantifierOutputFormats:
 
     def test_json_output_quantifier_formula(self):
         """Test JSON output for quantifier formula satisfiability."""
-        result = CLITestHelper.run_cli([
-            "--json",
-            "[∀X Human(X)]Mortal(X)"
-        ])
+        result = CLITestHelper.run_cli(["--json", "[∀X Human(X)]Mortal(X)"])
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         data = json.loads(result.stdout)
@@ -247,10 +255,9 @@ class TestCLIQuantifierOutputFormats:
 
     def test_explain_option_with_quantifiers(self):
         """Test --explain option with quantifier inference."""
-        result = CLITestHelper.run_cli([
-            "--explain",
-            "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["--explain", "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         assert "✓ Valid inference" in result.stdout
@@ -259,10 +266,7 @@ class TestCLIQuantifierOutputFormats:
 
     def test_models_option_with_quantifiers(self):
         """Test --models option with quantifier formulas."""
-        result = CLITestHelper.run_cli([
-            "--models",
-            "[∃X Human(X)]Wise(X)"
-        ])
+        result = CLITestHelper.run_cli(["--models", "[∃X Human(X)]Wise(X)"])
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         assert "Satisfiable: True" in result.stdout
@@ -270,10 +274,7 @@ class TestCLIQuantifierOutputFormats:
 
     def test_stats_option_with_quantifiers(self):
         """Test --stats option with quantifier reasoning."""
-        result = CLITestHelper.run_cli([
-            "--stats",
-            "[∀X Human(X)]Mortal(X)"
-        ])
+        result = CLITestHelper.run_cli(["--stats", "[∀X Human(X)]Mortal(X)"])
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         assert "Statistics:" in result.stdout
@@ -287,10 +288,9 @@ class TestCLIQuantifierTreeVisualization:
 
     def test_ascii_tree_universal_quantifier(self):
         """Test ASCII tree display for universal quantifier."""
-        result = CLITestHelper.run_cli([
-            "--tree",
-            "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["--tree", "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         assert "✓ Valid inference" in result.stdout
@@ -300,11 +300,9 @@ class TestCLIQuantifierTreeVisualization:
 
     def test_unicode_tree_quantifier(self):
         """Test Unicode tree display for quantifiers."""
-        result = CLITestHelper.run_cli([
-            "--tree",
-            "--format=unicode",
-            "[∀X Human(X)]Mortal(X)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["--tree", "--format=unicode", "[∀X Human(X)]Mortal(X)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         assert "Tableau tree:" in result.stdout
@@ -313,26 +311,27 @@ class TestCLIQuantifierTreeVisualization:
 
     def test_tree_with_rules_quantifier(self):
         """Test tree display with rules for quantifiers."""
-        result = CLITestHelper.run_cli([
-            "--tree",
-            "--show-rules",
-            "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "--tree",
+                "--show-rules",
+                "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)",
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         assert "Tableau tree:" in result.stdout
         # Should show rule names
-        assert any(rule in result.stdout for rule in [
-            "T-Conjunction", "T-Negation", "T-RestrictedForall"
-        ])
+        assert any(
+            rule in result.stdout
+            for rule in ["T-Conjunction", "T-Negation", "T-RestrictedForall"]
+        )
 
     def test_json_tree_quantifier(self):
         """Test JSON tree format for quantifiers."""
-        result = CLITestHelper.run_cli([
-            "--tree",
-            "--format=json",
-            "[∀X Human(X)]Mortal(X)"
-        ])
+        result = CLITestHelper.run_cli(
+            ["--tree", "--format=json", "[∀X Human(X)]Mortal(X)"]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         assert "Tableau tree:" in result.stdout
@@ -346,7 +345,9 @@ class TestCLIQuantifierErrorHandling:
 
     def test_malformed_quantifier_syntax(self):
         """Test error handling for truly malformed quantifier syntax."""
-        result = CLITestHelper.run_cli(["[∀X Human(X Mortal(X)"])  # Missing closing bracket entirely
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X Mortal(X)"]
+        )  # Missing closing bracket entirely
         assert result.returncode != 0
         assert "Parse error" in result.stderr
 
@@ -367,18 +368,17 @@ class TestCLIQuantifierErrorHandling:
 
     def test_complex_syntax_error_reporting(self):
         """Test detailed error reporting for complex syntax errors."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), Human(socrates) |--| Mortal(socrates)"
-        ])  # Invalid inference operator
+        result = CLITestHelper.run_cli(
+            ["[∀X Human(X)]Mortal(X), Human(socrates) |--| Mortal(socrates)"]
+        )  # Invalid inference operator
         assert result.returncode != 0
         assert "Parse error" in result.stderr
 
     def test_debug_mode_error_handling(self):
         """Test debug mode error handling."""
-        result = CLITestHelper.run_cli([
-            "--debug",
-            "[∀X Human(X Mortal(X)"  # Truly malformed
-        ])
+        result = CLITestHelper.run_cli(
+            ["--debug", "[∀X Human(X Mortal(X)"]  # Truly malformed
+        )
         assert result.returncode != 0
         # In debug mode, should get more detailed error information
 
@@ -388,10 +388,12 @@ class TestCLIQuantifierPerformance:
 
     def test_multiple_quantifiers_performance(self):
         """Test CLI performance with multiple quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), [∀Y Animal(Y)]Living(Y), [∃Z God(Z)]Immortal(Z), "
-            "Human(socrates), Animal(fido) |- Mortal(socrates) & Living(fido)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Mortal(X), [∀Y Animal(Y)]Living(Y), [∃Z God(Z)]Immortal(Z), "
+                "Human(socrates), Animal(fido) |- Mortal(socrates) & Living(fido)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
@@ -411,11 +413,13 @@ class TestCLIQuantifierPerformance:
 
     def test_complex_quantifier_nesting_performance(self):
         """Test performance with complex quantifier expressions."""
-        result = CLITestHelper.run_cli([
-            "[∀X (Human(X) & Rational(X))]Thinking(X), "
-            "[∀Y Thinking(Y)]Conscious(Y), "
-            "Human(descartes) & Rational(descartes) |- Conscious(descartes)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X (Human(X) & Rational(X))]Thinking(X), "
+                "[∀Y Thinking(Y)]Conscious(Y), "
+                "Human(descartes) & Rational(descartes) |- Conscious(descartes)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
@@ -434,7 +438,7 @@ class TestCLIQuantifierInteractiveMode:
         """Test interactive mode with quantifier inference."""
         result = CLITestHelper.run_cli(
             [],
-            input_text="[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)\nquit\n"
+            input_text="[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)\nquit\n",
         )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         assert "✓ Valid inference" in result.stdout
@@ -450,15 +454,14 @@ class TestCLIQuantifierInteractiveMode:
     def test_interactive_parse_error_recovery(self):
         """Test error recovery in interactive mode."""
         result = CLITestHelper.run_cli(
-            [],
-            input_text="[∀X Human(X Mortal(X)\n[∀X Human(X)]Mortal(X)\nquit\n"
+            [], input_text="[∀X Human(X Mortal(X)\n[∀X Human(X)]Mortal(X)\nquit\n"
         )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         # First command should fail, second should work
         # Output contains both error and success messages
         # Should contain both error and success
         output_text = result.stdout
-        assert ("Parse error" in output_text or "Error" in output_text)
+        assert "Parse error" in output_text or "Error" in output_text
         assert "Satisfiable: True" in output_text  # Second command should work
 
 
@@ -467,36 +470,44 @@ class TestCLIQuantifierIntegration:
 
     def test_real_world_philosophy_example(self):
         """Test real-world philosophical reasoning example."""
-        result = CLITestHelper.run_cli([
-            "[∀X Human(X)]Mortal(X), [∀Y Mortal(Y)]Finite(Y), Human(socrates) |- Finite(socrates)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Human(X)]Mortal(X), [∀Y Mortal(Y)]Finite(Y), Human(socrates) |- Finite(socrates)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_mathematical_reasoning_example(self):
         """Test mathematical reasoning with quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Number(X)]Real(X), [∀Y Real(Y)]Measurable(Y), Number(pi) |- Measurable(pi)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Number(X)]Real(X), [∀Y Real(Y)]Measurable(Y), Number(pi) |- Measurable(pi)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_scientific_reasoning_example(self):
         """Test scientific reasoning with quantifiers."""
-        result = CLITestHelper.run_cli([
-            "[∀X Organism(X)]Carbon(X), [∃Y Element(Y)]Essential(Y), Organism(bacteria) |- Carbon(bacteria)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "[∀X Organism(X)]Carbon(X), [∃Y Element(Y)]Essential(Y), Organism(bacteria) |- Carbon(bacteria)"
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
         CLITestHelper.assert_valid_inference(result.stdout)
 
     def test_combined_output_options(self):
         """Test combination of multiple CLI options."""
-        result = CLITestHelper.run_cli([
-            "--stats",
-            "--explain",
-            "--models",
-            "[∀X Human(X)]Rational(X), Human(aristotle) |- Rational(aristotle)"
-        ])
+        result = CLITestHelper.run_cli(
+            [
+                "--stats",
+                "--explain",
+                "--models",
+                "[∀X Human(X)]Rational(X), Human(aristotle) |- Rational(aristotle)",
+            ]
+        )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
 
         # Should contain all expected sections
@@ -513,6 +524,5 @@ class TestCLIQuantifierIntegration:
         assert any(char.isdigit() for char in result.stdout)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
-
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

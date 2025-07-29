@@ -258,6 +258,7 @@ class TestSubsumptionSoundness:
 
         # Test modus ponens: p, p → q ⊢ q
         from wkrq.api import entails
+
         premises = [p, p.implies(q)]
         conclusion = q
         assert entails(premises, conclusion)
@@ -269,6 +270,7 @@ class TestSubsumptionSoundness:
 
         # Test invalid: p ⊢ q
         from wkrq.api import entails
+
         premises = [p]
         conclusion = q
         assert not entails(premises, conclusion)
@@ -334,7 +336,9 @@ class TestSubsumptionIntegration:
         t_pa = SignedFormula(T, pa)
         pa_or_q = disjunction(pa, q)
         m_pa_or_q = SignedFormula(M, pa_or_q)
-        assert branch._signed_subsumes(t_pa, m_pa_or_q), "T:P(a) should subsume M:(P(a) ∨ q)"
+        assert branch._signed_subsumes(
+            t_pa, m_pa_or_q
+        ), "T:P(a) should subsume M:(P(a) ∨ q)"
 
         # Test 3: Branch integration with combined subsumption
         branch.add_formula(t_px, node)
@@ -342,7 +346,9 @@ class TestSubsumptionIntegration:
         # Try to add atomic formula - should be added despite subsumption (preserves completeness)
         result = branch.add_formula(m_pa, node)
         assert not result, "Should not close branch"
-        assert m_pa in branch.formulas, "Atomic formulas are always added for completeness"
+        assert (
+            m_pa in branch.formulas
+        ), "Atomic formulas are always added for completeness"
 
         # But it should be marked as subsumed afterward
         assert m_pa in branch.subsumed_formulas, "M:P(a) should be marked as subsumed"
@@ -350,4 +356,3 @@ class TestSubsumptionIntegration:
         # Verify direct subsumption relationships
         assert branch._signed_subsumes(t_px, m_pa)
         assert branch._signed_subsumes(t_pa, m_pa_or_q)
-

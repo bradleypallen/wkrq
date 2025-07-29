@@ -58,6 +58,9 @@ python -m build
 twine upload dist/*
 ```
 
+## Development Workflow
+- Before committing and pushing to GitHub, make sure the repo passes ruff, black, and mypy tests.
+
 ## Architecture Overview
 
 wKrQ is a Python implementation of a semantic tableau calculus for three-valued weak Kleene logic with restricted quantification. The system is organized into these core components:
@@ -77,7 +80,13 @@ wKrQ is a Python implementation of a semantic tableau calculus for three-valued 
    - M: Can be true or false
    - N: Must be undefined
 3. **Restricted Quantification**: `[∃X P(X)]Q(X)` and `[∀X P(X)]Q(X)` for domain-bounded reasoning
-4. **Performance Optimizations**:
+4. **Unification-Based Quantifier Instantiation**:
+   - Ground terms (constants) are tracked in each tableau branch (`branch.ground_terms`)
+   - Universal quantifiers are instantiated with existing constants before generating fresh ones
+   - Universal instantiation tracking (`branch._universal_instantiations`) prevents redundant applications
+   - Existential quantifiers use unification for witness selection
+   - Proper inference: `[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)` now works correctly
+5. **Performance Optimizations**:
    - Hash-based formula indexing for O(1) contradiction detection
    - Alpha (non-branching) rules prioritized over beta (branching) rules
    - "Least complex first" branch selection strategy
