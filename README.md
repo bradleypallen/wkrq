@@ -1,6 +1,6 @@
 # wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
-[![PyPI version](https://badge.fury.io/py/wkrq.svg)](https://badge.fury.io/py/wkrq)
+[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.0.7)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
