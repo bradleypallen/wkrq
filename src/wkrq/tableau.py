@@ -168,26 +168,13 @@ class Branch:
 
     def _should_check_forward_subsumption(self, signed_formula: SignedFormula) -> bool:
         """Determine if forward subsumption checking should be performed."""
-        # Always check forward subsumption for non-atomic formulas to ensure correctness
-        if not signed_formula.formula.is_atomic():
-            return True
-
-        # For atomic formulas, only skip if we have very large branches to avoid performance issues
-        if len(self.formulas) > 100:
-            return False
-
-        # Otherwise, check forward subsumption for correctness
-        return True
+        # TEMPORARY: Disable subsumption to debug quantifier issues
+        return False
 
     def _should_check_backward_subsumption(self, signed_formula: SignedFormula) -> bool:
         """Determine if backward subsumption checking should be performed."""
-        # Always check backward subsumption for non-atomic formulas
-        if not signed_formula.formula.is_atomic():
-            return True
-
-        # For atomic formulas, always check to ensure they get marked as subsumed when appropriate
-        # This is important for test correctness (e.g., T:P(X) should mark M:P(a) as subsumed)
-        return True
+        # TEMPORARY: Disable subsumption to debug quantifier issues
+        return False
 
     def _should_check_subsumption(self, signed_formula: SignedFormula) -> bool:
         """Determine if subsumption checking is worthwhile for this formula."""
