@@ -36,6 +36,7 @@ class RuleInfo:
     priority: int  # Lower numbers = higher priority
     complexity_cost: int  # Estimated computational cost
     conclusions: list[list[SignedFormula]]
+    instantiation_constant: Optional[str] = None  # For universal quantifier tracking
 
     def __lt__(self, other: "RuleInfo") -> bool:
         """Compare rules for priority ordering."""
@@ -105,11 +106,24 @@ class Branch:
     # Track processed formulas to avoid reprocessing
     _processed_formulas: set[SignedFormula] = field(default_factory=set)
 
+    # Track ground terms (constants) for unification
+    ground_terms: set[str] = field(default_factory=set)
+
+    # Track universal quantifier instantiations: formula -> set of constants used
+    _universal_instantiations: dict[SignedFormula, set[str]] = field(default_factory=dict)
+
     def add_formula(self, signed_formula: SignedFormula, node: TableauNode) -> bool:
         """Add a formula to the branch with optimizations. Return True if branch closes."""
-        # Skip if already subsumed
-        if self._is_subsumed(signed_formula):
+        # Skip if already exists (basic duplicate detection)
+        if signed_formula in self.formulas:
             return False
+            
+        # Forward subsumption: Skip if this formula would be subsumed by existing formulas
+        # Only apply this for non-atomic formulas to avoid breaking tableau completeness
+        if not signed_formula.formula.is_atomic():
+            for existing in self.formulas:
+                if self._signed_subsumes(existing, signed_formula):
+                    return False
 
         # Check for immediate contradiction (O(1) with indexing)
         if self._check_contradiction(signed_formula):
@@ -123,6 +137,9 @@ class Branch:
         self.formula_index[signed_formula.sign][signed_formula.formula].add(
             len(self.nodes) - 1
         )
+
+        # Extract ground terms from the formula
+        self._extract_ground_terms(signed_formula.formula)
 
         # Update complexity score for branch selection
         self.complexity_score += self._formula_complexity(signed_formula.formula)
@@ -152,11 +169,16 @@ class Branch:
 
     def _is_subsumed(self, signed_formula: SignedFormula) -> bool:
         """Check if formula is subsumed by existing formulas."""
-        # A formula is subsumed if a more general version already exists
-        # For now, simple duplicate detection (can be enhanced)
-        return (
-            signed_formula in self.subsumed_formulas or signed_formula in self.formulas
-        )
+        # Check if already marked as subsumed or exists exactly
+        if signed_formula in self.subsumed_formulas or signed_formula in self.formulas:
+            return True
+            
+        # Check if subsumed by any existing formula using three-valued logic
+        for existing in self.formulas:
+            if self._signed_subsumes(existing, signed_formula):
+                return True
+                
+        return False
 
     def _formula_complexity(self, formula: Formula) -> int:
         """Calculate complexity score of a formula."""
@@ -175,27 +197,372 @@ class Branch:
         # For now, just track it for future optimization
         pass
 
+    def _extract_ground_terms(self, formula: Formula) -> None:
+        """Extract ground terms (constants) from a formula for unification."""
+        from .formula import CompoundFormula, Constant, PredicateFormula
+
+        if isinstance(formula, PredicateFormula):
+            # Extract constants from predicate arguments
+            for term in formula.terms:
+                if isinstance(term, Constant):
+                    self.ground_terms.add(term.name)
+        elif isinstance(formula, CompoundFormula):
+            # Recursively extract from subformulas
+            for subformula in formula.subformulas:
+                self._extract_ground_terms(subformula)
+        elif hasattr(formula, 'restriction') and hasattr(formula, 'matrix'):
+            # Handle restricted quantifiers
+            self._extract_ground_terms(formula.restriction)
+            self._extract_ground_terms(formula.matrix)
+
     def _update_subsumption(self, signed_formula: SignedFormula) -> None:
         """Update subsumption relationships after adding formula."""
-        # Mark subsumed formulas for future reference
-        # This is a placeholder for more sophisticated subsumption
+        # Implement backward subsumption: check if newly added formula
+        # subsumes any existing formulas, making them redundant
 
-        # If we have a specific instance and add a more general one,
-        # mark the specific as potentially subsumed
+        # If the new formula is stronger/more specific than existing ones,
+        # mark the existing weaker formulas as subsumed
         for existing in list(self.formulas):
-            if (
-                existing.sign == signed_formula.sign
-                and existing.formula != signed_formula.formula
-                and self._subsumes(signed_formula.formula, existing.formula)
-            ):
+            if (existing != signed_formula and 
+                self._signed_subsumes(signed_formula, existing)):
                 self.subsumed_formulas.add(existing)
+        
+        # Also check if the new formula is subsumed by existing ones
+        # (This handles the case where atomic formulas are added despite subsumption)
+        for existing in self.formulas:
+            if (existing != signed_formula and 
+                self._signed_subsumes(existing, signed_formula)):
+                self.subsumed_formulas.add(signed_formula)
+                break  # Only need to find one subsumer
 
-    def _subsumes(self, general: Formula, specific: Formula) -> bool:
-        """Check if general formula subsumes specific formula."""
-        # Placeholder for subsumption logic
-        # In practice, this would check if general implies specific
-        # For propositional logic, this is mainly duplicate detection
+    def _subsumes(self, stronger: Formula, weaker: Formula) -> bool:
+        """Check if stronger formula subsumes weaker formula.
+        
+        A formula A subsumes formula B if A being satisfiable makes B redundant.
+        This means A is more specific/restrictive than B.
+        
+        Examples:
+        - p subsumes p ∨ q (atom subsumes disjunction containing it)  
+        - p ∧ q subsumes p (conjunction subsumes its conjuncts)
+        - P(a) subsumes P(X) (ground term subsumes variable)
+        """
+        # Handle identical formulas (trivial subsumption)
+        if stronger == weaker:
+            return True
+            
+        # Propositional subsumption patterns
+        if self._propositional_subsumes(stronger, weaker):
+            return True
+            
+        # First-order subsumption patterns  
+        if self._first_order_subsumes(stronger, weaker):
+            return True
+            
         return False
+    
+    def _signed_subsumes(self, stronger: SignedFormula, weaker: SignedFormula) -> bool:
+        """Check if stronger signed formula subsumes weaker signed formula.
+        
+        In three-valued weak Kleene logic, subsumption considers both formula
+        structure and sign relationships based on truth value sets.
+        
+        Sign subsumption relationships:
+        - T: {true} - most restrictive
+        - F: {false} - most restrictive for negation
+        - M: {true, false} - less restrictive than T or F
+        - N: {undefined} - orthogonal to others
+        
+        Examples:
+        - T:p subsumes M:p (true is more specific than maybe)
+        - F:p subsumes M:p (false is more specific than maybe)
+        - T:p subsumes T:(p ∨ q) (formula subsumption with same sign)
+        """
+        # Identical signed formulas don't subsume each other
+        if stronger == weaker:
+            return False
+            
+        # Formula subsumption with identical signs
+        if stronger.sign == weaker.sign:
+            return self._subsumes(stronger.formula, weaker.formula)
+        
+        # Three-valued logic sign subsumption
+        if stronger.formula == weaker.formula:
+            return self._sign_subsumes(stronger.sign, weaker.sign)
+            
+        # Combined formula and sign subsumption
+        # If formulas have subsumption relationship AND signs are compatible
+        if self._subsumes(stronger.formula, weaker.formula):
+            return self._sign_compatible_for_subsumption(stronger.sign, weaker.sign)
+            
+        return False
+    
+    def _sign_subsumes(self, stronger_sign: Sign, weaker_sign: Sign) -> bool:
+        """Check if stronger sign subsumes weaker sign in three-valued logic.
+        
+        Subsumption based on truth value set containment:
+        - More specific truth conditions subsume more general ones
+        - T: {true} subsumes M: {true, false} 
+        - F: {false} subsumes M: {true, false}
+        - N: {undefined} is orthogonal (doesn't subsume T, F, or M)
+        """
+        stronger_conditions = stronger_sign.truth_conditions()
+        weaker_conditions = weaker_sign.truth_conditions()
+        
+        # Stronger sign must have more restrictive (subset) truth conditions
+        # that are contained within the weaker sign's conditions
+        return (stronger_conditions.issubset(weaker_conditions) and 
+                stronger_conditions != weaker_conditions)
+    
+    def _sign_compatible_for_subsumption(self, stronger_sign: Sign, weaker_sign: Sign) -> bool:
+        """Check if signs are compatible for combined formula+sign subsumption.
+        
+        When formula subsumption exists, signs must be compatible:
+        - Same sign is always compatible
+        - T and F are compatible with M (they're more specific)
+        - N is only compatible with itself
+        """
+        if stronger_sign == weaker_sign:
+            return True
+            
+        # T and F are more specific than M
+        if weaker_sign.symbol == "M":
+            return stronger_sign.symbol in ["T", "F"]
+            
+        # N is orthogonal - only compatible with itself
+        if stronger_sign.symbol == "N" or weaker_sign.symbol == "N":
+            return stronger_sign == weaker_sign
+            
+        return False
+        
+    def _propositional_subsumes(self, stronger: Formula, weaker: Formula) -> bool:
+        """Check propositional subsumption patterns."""
+        from .formula import CompoundFormula
+        
+        # Pattern 1: p subsumes p ∨ q ∨ ... (atom subsumes disjunction containing it)
+        if (stronger.is_atomic() and 
+            isinstance(weaker, CompoundFormula) and 
+            weaker.connective == "|"):
+            return self._appears_in_disjunction(stronger, weaker)
+            
+        # Pattern 2: p ∧ q ∧ ... subsumes p (conjunction subsumes its conjuncts)  
+        if (isinstance(stronger, CompoundFormula) and 
+            stronger.connective == "&" and
+            weaker.is_atomic()):
+            return self._appears_in_conjunction(weaker, stronger)
+            
+        # Pattern 3: p ∧ q subsumes (p ∧ q) ∨ r (conjunction subsumes disjunction containing it)
+        if (isinstance(stronger, CompoundFormula) and 
+            stronger.connective == "&" and
+            isinstance(weaker, CompoundFormula) and 
+            weaker.connective == "|"):
+            return stronger in weaker.subformulas
+            
+        # Pattern 4: Complex conjunction subsumption - p ∧ q ∧ r subsumes p ∧ q
+        if (isinstance(stronger, CompoundFormula) and 
+            stronger.connective == "&" and
+            isinstance(weaker, CompoundFormula) and 
+            weaker.connective == "&"):
+            # Check if all conjuncts of weaker are in stronger
+            return all(conjunct in stronger.subformulas for conjunct in weaker.subformulas)
+            
+        # Pattern 5: Double negation - p subsumes ~~p  
+        if (isinstance(weaker, CompoundFormula) and 
+            weaker.connective == "~" and
+            len(weaker.subformulas) == 1 and
+            isinstance(weaker.subformulas[0], CompoundFormula) and
+            weaker.subformulas[0].connective == "~" and
+            len(weaker.subformulas[0].subformulas) == 1):
+            return stronger == weaker.subformulas[0].subformulas[0]
+            
+        return False
+        
+    def _appears_in_disjunction(self, atom: Formula, disjunction: Formula) -> bool:
+        """Check if an atom appears anywhere in a disjunctive formula (recursively)."""
+        from .formula import CompoundFormula
+        
+        # Base case: if disjunction is the atom itself
+        if disjunction == atom:
+            return True
+            
+        # If disjunction is not a compound formula, it can't contain the atom
+        if not isinstance(disjunction, CompoundFormula):
+            return False
+            
+        # If it's not a disjunction, it can't contain the atom in a disjunctive context
+        if disjunction.connective != "|":
+            return False
+            
+        # Recursively check each subformula
+        for subformula in disjunction.subformulas:
+            if subformula == atom:
+                return True
+            elif (isinstance(subformula, CompoundFormula) and 
+                  subformula.connective == "|"):
+                # Recursive case: subformula is also a disjunction
+                if self._appears_in_disjunction(atom, subformula):
+                    return True
+                    
+        return False
+        
+    def _appears_in_conjunction(self, atom: Formula, conjunction: Formula) -> bool:
+        """Check if an atom appears anywhere in a conjunctive formula (recursively)."""
+        from .formula import CompoundFormula
+        
+        # Base case: if conjunction is the atom itself
+        if conjunction == atom:
+            return True
+            
+        # If conjunction is not a compound formula, it can't contain the atom
+        if not isinstance(conjunction, CompoundFormula):
+            return False
+            
+        # If it's not a conjunction, it can't contain the atom in a conjunctive context
+        if conjunction.connective != "&":
+            return False
+            
+        # Recursively check each subformula
+        for subformula in conjunction.subformulas:
+            if subformula == atom:
+                return True
+            elif (isinstance(subformula, CompoundFormula) and 
+                  subformula.connective == "&"):
+                # Recursive case: subformula is also a conjunction
+                if self._appears_in_conjunction(atom, subformula):
+                    return True
+                    
+        return False
+        
+    def _first_order_subsumes(self, stronger: Formula, weaker: Formula) -> bool:
+        """Check first-order subsumption patterns.
+        
+        In first-order subsumption, formula A subsumes formula B if there exists
+        a substitution θ such that θ(A) ⊆ B. This means A is more general than B.
+        
+        Key principle: Variables are more general than constants.
+        """
+        from .formula import PredicateFormula, Constant, Variable
+        
+        # Pattern 1: P(X) subsumes P(a) (variable subsumes constant)
+        # This is the CORRECT direction: more general subsumes more specific
+        if (isinstance(stronger, PredicateFormula) and 
+            isinstance(weaker, PredicateFormula) and
+            stronger.predicate_name == weaker.predicate_name and
+            len(stronger.terms) == len(weaker.terms)):
+            
+            # Check if we can find a substitution from stronger to weaker
+            substitution = self._find_first_order_substitution(stronger, weaker)
+            if substitution is not None:
+                return True
+            
+        # Pattern 2: Complex predicates with mixed terms
+        # P(X, a) subsumes P(b, a) via substitution {X/b}
+        if (isinstance(stronger, PredicateFormula) and 
+            isinstance(weaker, PredicateFormula) and
+            stronger.predicate_name == weaker.predicate_name and
+            len(stronger.terms) == len(weaker.terms)):
+            
+            # Try to build substitution mapping
+            return self._can_substitute_to_match(stronger, weaker)
+            
+        # Pattern 3: Quantifier subsumption (simplified for now)
+        # This is complex and depends on the specific quantifier semantics
+        if (isinstance(stronger, RestrictedUniversalFormula) and
+            isinstance(weaker, PredicateFormula)):
+            # [∀X P(X)]Q(X) may subsume specific instances under certain conditions
+            # This requires careful analysis of the restriction and matrix
+            return self._universal_quantifier_subsumes_instance(stronger, weaker)
+            
+        return False
+        
+    def _find_first_order_substitution(self, general: "Formula", specific: "Formula") -> dict:
+        """Find substitution that transforms general formula to match specific formula.
+        
+        Returns substitution mapping if one exists, None otherwise.
+        """
+        from .formula import Variable, Constant, PredicateFormula
+        
+        # Only works for predicate formulas
+        if not (isinstance(general, PredicateFormula) and isinstance(specific, PredicateFormula)):
+            return None
+            
+        if general.predicate_name != specific.predicate_name:
+            return None
+            
+        if len(general.terms) != len(specific.terms):
+            return None
+            
+        substitution = {}
+        
+        for gen_term, spec_term in zip(general.terms, specific.terms):
+            if isinstance(gen_term, Variable):
+                # Variable can be substituted with anything
+                var_name = gen_term.name
+                if var_name in substitution:
+                    # Check consistency: same variable must map to same term
+                    if substitution[var_name] != spec_term:
+                        return None
+                else:
+                    substitution[var_name] = spec_term
+                    
+            elif isinstance(gen_term, Constant):
+                # Constant must match exactly
+                if gen_term != spec_term:
+                    return None
+            else:
+                # Other term types (functions, etc.) - exact match for now
+                if gen_term != spec_term:
+                    return None
+                    
+        return substitution
+        
+    def _can_substitute_to_match(self, general: "Formula", specific: "Formula") -> bool:
+        """Check if general formula can be substituted to match specific formula."""
+        substitution = self._find_first_order_substitution(general, specific)
+        return substitution is not None
+        
+    def _universal_quantifier_subsumes_instance(self, universal: "Formula", instance: "Formula") -> bool:
+        """Check if universal quantifier subsumes a specific instance.
+        
+        This is a simplified implementation. Full implementation would require
+        checking if the instance satisfies the restriction and if the matrix
+        can be unified appropriately.
+        """
+        # For now, return False to avoid incorrect subsumption
+        # This can be enhanced later with proper quantifier analysis
+        return False
+
+    def _find_best_instantiation_constant(self, variable_name: str) -> Optional[str]:
+        """Find the best constant to instantiate a quantified variable with.
+
+        Uses unification principles: prefer existing constants over fresh ones.
+        """
+        # First, try to find constants that appear in the restriction or matrix
+        # This implements a simple form of unification for tableau theorem proving
+        if self.ground_terms:
+            # Return the first available ground term
+            # In a more sophisticated implementation, we could rank these by relevance
+            return next(iter(self.ground_terms))
+
+        # If no ground terms available, we'll need to generate a fresh constant
+        return None
+
+    def _unify_with_existing_terms(self, formula: Formula) -> dict[str, str]:
+        """Attempt to unify quantified variables with existing ground terms.
+
+        This is a simplified unification that looks for opportunities to use
+        existing constants instead of always generating fresh ones.
+        """
+        from .formula import RestrictedQuantifierFormula
+
+        unification_map = {}
+
+        if isinstance(formula, RestrictedQuantifierFormula):
+            var_name = formula.var.name
+            best_constant = self._find_best_instantiation_constant(var_name)
+            if best_constant:
+                unification_map[var_name] = best_constant
+
+        return unification_map
 
 
 @dataclass
@@ -282,6 +649,10 @@ class Tableau:
                     self.closed_branches.append(initial_branch)
                     break
 
+        # Update global constants from all initial ground terms
+        for branch in self.branches:
+            self.constants.update(branch.ground_terms)
+
     def is_complete(self) -> bool:
         """Check if tableau construction is complete."""
         return len(self.open_branches) == 0 or all(
@@ -303,9 +674,12 @@ class Tableau:
         formula = signed_formula.formula
 
         # Check if this formula has already been processed
+        # Exception: Universal quantifiers should be re-instantiated with new constants
         if hasattr(branch, "_processed_formulas"):
             if signed_formula in branch._processed_formulas:
-                return None
+                # Allow re-processing of universal quantifiers for new constants
+                if not (isinstance(formula, RestrictedUniversalFormula) and sign == T):
+                    return None
         else:
             branch._processed_formulas = set()
 
@@ -414,20 +788,22 @@ class Tableau:
                     ]
                     return RuleInfo("N-Implication", RuleType.BETA, 32, 4, conclusions)
 
-        # Restricted quantifier rules (basic implementation)
+        # Restricted quantifier rules with unification
         if isinstance(formula, RestrictedExistentialFormula):
-            # T:[∃X P(X)]Q(X) - requires instantiation with new constants
-            # For now, we'll create a simple satisfiable result
+            # T:[∃X P(X)]Q(X) - there exists an x such that P(x) and Q(x)
             if sign == T:
-                # Generate a fresh constant for instantiation
-                fresh_const = Constant(f"c_{len(branch.nodes)}")
+                # For existentials, prefer fresh constants to avoid inappropriate witnesses
+                # Existentials assert existence of *some* individual, not necessarily existing ones
+                instantiation_const = Constant(f"c_{len(branch.nodes)}")
+                # Track the new constant
+                branch.ground_terms.add(instantiation_const.name)
 
-                # Substitute the variable with the fresh constant
+                # Substitute the variable with the chosen constant
                 restriction_inst = formula.restriction.substitute_term(
-                    {formula.var.name: fresh_const}
+                    {formula.var.name: instantiation_const}
                 )
                 matrix_inst = formula.matrix.substitute_term(
-                    {formula.var.name: fresh_const}
+                    {formula.var.name: instantiation_const}
                 )
 
                 # T:[∃X P(X)]Q(X) expands to: T:P(c) ∧ T:Q(c)
@@ -440,13 +816,22 @@ class Tableau:
 
             elif sign == F:
                 # F:[∃X P(X)]Q(X) - there's no x such that P(x) and Q(x)
-                # This creates a more complex expansion that we'll simplify for now
-                fresh_const = Constant(f"c_{len(branch.nodes)}")
+                # This requires universal instantiation over all existing constants
+                # For tableau efficiency, we use a witness constant
+                unification_map = branch._unify_with_existing_terms(formula)
+
+                if unification_map and formula.var.name in unification_map:
+                    const_name = unification_map[formula.var.name]
+                    instantiation_const = Constant(const_name)
+                else:
+                    instantiation_const = Constant(f"c_{len(branch.nodes)}")
+                    branch.ground_terms.add(instantiation_const.name)
+
                 restriction_inst = formula.restriction.substitute_term(
-                    {formula.var.name: fresh_const}
+                    {formula.var.name: instantiation_const}
                 )
                 matrix_inst = formula.matrix.substitute_term(
-                    {formula.var.name: fresh_const}
+                    {formula.var.name: instantiation_const}
                 )
 
                 # F:[∃X P(X)]Q(X) expands to: F:P(c) ∨ F:Q(c)
@@ -459,32 +844,79 @@ class Tableau:
         elif isinstance(formula, RestrictedUniversalFormula):
             # T:[∀X P(X)]Q(X) - for all x, if P(x) then Q(x)
             if sign == T:
-                # Generate a fresh constant for instantiation
-                fresh_const = Constant(f"c_{len(branch.nodes)}")
+                # Universal rules must be applied to ALL existing constants
+                # plus potentially one fresh constant for completeness
+                existing_constants = list(branch.ground_terms)
 
-                # Substitute the variable with the fresh constant
-                restriction_inst = formula.restriction.substitute_term(
-                    {formula.var.name: fresh_const}
-                )
-                matrix_inst = formula.matrix.substitute_term(
-                    {formula.var.name: fresh_const}
-                )
+                if existing_constants:
+                    # Check which constants we haven't instantiated this formula with yet
+                    if signed_formula not in branch._universal_instantiations:
+                        branch._universal_instantiations[signed_formula] = set()
 
-                # T:[∀X P(X)]Q(X) expands to: F:P(c) ∨ T:Q(c) (i.e., P(c) → Q(c))
-                conclusions = [
-                    [SignedFormula(F, restriction_inst)],
-                    [SignedFormula(T, matrix_inst)],
-                ]
-                return RuleInfo("T-RestrictedForall", RuleType.BETA, 42, 2, conclusions)
+                    used_constants = branch._universal_instantiations[signed_formula]
+                    unused_constants = [c for c in existing_constants if c not in used_constants]
+
+                    if unused_constants:
+                        # Use the first unused constant (don't mark as used yet - that happens during application)
+                        const_name = unused_constants[0]
+
+                        instantiation_const = Constant(const_name)
+                        restriction_inst = formula.restriction.substitute_term(
+                            {formula.var.name: instantiation_const}
+                        )
+                        matrix_inst = formula.matrix.substitute_term(
+                            {formula.var.name: instantiation_const}
+                        )
+
+                        # T:[∀X P(X)]Q(X) expands to: F:P(c) ∨ T:Q(c)
+                        conclusions = [
+                            [SignedFormula(F, restriction_inst)],
+                            [SignedFormula(T, matrix_inst)],
+                        ]
+                        # Store the constant name in the rule for later use during application
+                        rule_info = RuleInfo("T-RestrictedForall", RuleType.BETA, 42, 2, conclusions)
+                        rule_info.instantiation_constant = const_name  # Custom attribute
+                        return rule_info
+                    else:
+                        # All constants have been used - no more instantiations needed
+                        return None
+                else:
+                    # No existing constants, use fresh one
+                    fresh_const = Constant(f"c_{len(branch.nodes)}")
+                    branch.ground_terms.add(fresh_const.name)
+
+                    restriction_inst = formula.restriction.substitute_term(
+                        {formula.var.name: fresh_const}
+                    )
+                    matrix_inst = formula.matrix.substitute_term(
+                        {formula.var.name: fresh_const}
+                    )
+
+                    conclusions = [
+                        [SignedFormula(F, restriction_inst)],
+                        [SignedFormula(T, matrix_inst)],
+                    ]
+                    rule_info = RuleInfo("T-RestrictedForall", RuleType.BETA, 42, 2, conclusions)
+                    rule_info.instantiation_constant = fresh_const.name  # Track the fresh constant
+                    return rule_info
 
             elif sign == F:
                 # F:[∀X P(X)]Q(X) - there exists an x such that P(x) but not Q(x)
-                fresh_const = Constant(f"c_{len(branch.nodes)}")
+                # This is an existential witness - use unification to find the right constant
+                unification_map = branch._unify_with_existing_terms(formula)
+
+                if unification_map and formula.var.name in unification_map:
+                    const_name = unification_map[formula.var.name]
+                    instantiation_const = Constant(const_name)
+                else:
+                    instantiation_const = Constant(f"c_{len(branch.nodes)}")
+                    branch.ground_terms.add(instantiation_const.name)
+
                 restriction_inst = formula.restriction.substitute_term(
-                    {formula.var.name: fresh_const}
+                    {formula.var.name: instantiation_const}
                 )
                 matrix_inst = formula.matrix.substitute_term(
-                    {formula.var.name: fresh_const}
+                    {formula.var.name: instantiation_const}
                 )
 
                 # F:[∀X P(X)]Q(X) expands to: T:P(c) ∧ F:Q(c)
@@ -501,10 +933,25 @@ class Tableau:
         self, node: TableauNode, branch: Branch, rule_info: RuleInfo
     ) -> None:
         """Apply a tableau rule with optimization, creating new branches if needed."""
-        # Mark the formula as processed
+        # Skip applying rules to subsumed formulas (subsumption optimization)
+        if node.formula in branch.subsumed_formulas:
+            return
+            
+        # Mark the formula as processed (except for universal quantifiers which can be reprocessed)
         if not hasattr(branch, "_processed_formulas"):
             branch._processed_formulas = set()
-        branch._processed_formulas.add(node.formula)
+
+        # For universal quantifiers, mark the instantiation as used instead of marking formula as processed
+        if hasattr(rule_info, 'instantiation_constant') and rule_info.instantiation_constant is not None:
+            # This is a universal quantifier instantiation
+            if not hasattr(branch, '_universal_instantiations'):
+                branch._universal_instantiations = {}
+            if node.formula not in branch._universal_instantiations:
+                branch._universal_instantiations[node.formula] = set()
+            branch._universal_instantiations[node.formula].add(rule_info.instantiation_constant)
+        else:
+            # Regular formula processing
+            branch._processed_formulas.add(node.formula)
 
         # Update statistics
         self.rule_application_stats[rule_info.name] += 1
@@ -541,6 +988,14 @@ class Tableau:
                 # Copy existing formulas to new branch
                 for existing_node in branch.nodes:
                     new_branch.add_formula(existing_node.formula, existing_node)
+
+                # Copy ground terms from parent branch
+                new_branch.ground_terms = branch.ground_terms.copy()
+
+                # Copy universal instantiation tracking
+                new_branch._universal_instantiations = {
+                    sf: constants.copy() for sf, constants in branch._universal_instantiations.items()
+                }
 
                 # Copy processed formulas to avoid reprocessing
                 if hasattr(branch, "_processed_formulas"):

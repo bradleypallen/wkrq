@@ -1,6 +1,6 @@
 # wKrQ API Reference: Python Implementation of a Semantic Tableau Calculus
 
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Last Updated**: July 2025  
 **License**: MIT  
 

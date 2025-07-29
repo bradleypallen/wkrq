@@ -1,6 +1,6 @@
 # wKrQ CLI Guide: Command-Line Interface for the Tableau Calculus Implementation
 
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Last Updated**: July 2025  
 **License**: MIT  
 
