@@ -117,7 +117,7 @@ class Branch:
         # Skip if already exists (basic duplicate detection)
         if signed_formula in self.formulas:
             return False
-            
+
         # Forward subsumption: Skip if this formula would be subsumed by existing formulas
         # Only apply this for non-atomic formulas to avoid breaking tableau completeness
         if not signed_formula.formula.is_atomic():
@@ -172,12 +172,12 @@ class Branch:
         # Check if already marked as subsumed or exists exactly
         if signed_formula in self.subsumed_formulas or signed_formula in self.formulas:
             return True
-            
+
         # Check if subsumed by any existing formula using three-valued logic
         for existing in self.formulas:
             if self._signed_subsumes(existing, signed_formula):
                 return True
-                
+
         return False
 
     def _formula_complexity(self, formula: Formula) -> int:
@@ -223,55 +223,55 @@ class Branch:
         # If the new formula is stronger/more specific than existing ones,
         # mark the existing weaker formulas as subsumed
         for existing in list(self.formulas):
-            if (existing != signed_formula and 
+            if (existing != signed_formula and
                 self._signed_subsumes(signed_formula, existing)):
                 self.subsumed_formulas.add(existing)
-        
+
         # Also check if the new formula is subsumed by existing ones
         # (This handles the case where atomic formulas are added despite subsumption)
         for existing in self.formulas:
-            if (existing != signed_formula and 
+            if (existing != signed_formula and
                 self._signed_subsumes(existing, signed_formula)):
                 self.subsumed_formulas.add(signed_formula)
                 break  # Only need to find one subsumer
 
     def _subsumes(self, stronger: Formula, weaker: Formula) -> bool:
         """Check if stronger formula subsumes weaker formula.
-        
+
         A formula A subsumes formula B if A being satisfiable makes B redundant.
         This means A is more specific/restrictive than B.
-        
+
         Examples:
-        - p subsumes p ∨ q (atom subsumes disjunction containing it)  
+        - p subsumes p ∨ q (atom subsumes disjunction containing it)
         - p ∧ q subsumes p (conjunction subsumes its conjuncts)
         - P(a) subsumes P(X) (ground term subsumes variable)
         """
         # Handle identical formulas (trivial subsumption)
         if stronger == weaker:
             return True
-            
+
         # Propositional subsumption patterns
         if self._propositional_subsumes(stronger, weaker):
             return True
-            
-        # First-order subsumption patterns  
+
+        # First-order subsumption patterns
         if self._first_order_subsumes(stronger, weaker):
             return True
-            
+
         return False
-    
+
     def _signed_subsumes(self, stronger: SignedFormula, weaker: SignedFormula) -> bool:
         """Check if stronger signed formula subsumes weaker signed formula.
-        
+
         In three-valued weak Kleene logic, subsumption considers both formula
         structure and sign relationships based on truth value sets.
-        
+
         Sign subsumption relationships:
         - T: {true} - most restrictive
         - F: {false} - most restrictive for negation
         - M: {true, false} - less restrictive than T or F
         - N: {undefined} - orthogonal to others
-        
+
         Examples:
         - T:p subsumes M:p (true is more specific than maybe)
         - F:p subsumes M:p (false is more specific than maybe)
@@ -280,42 +280,42 @@ class Branch:
         # Identical signed formulas don't subsume each other
         if stronger == weaker:
             return False
-            
+
         # Formula subsumption with identical signs
         if stronger.sign == weaker.sign:
             return self._subsumes(stronger.formula, weaker.formula)
-        
+
         # Three-valued logic sign subsumption
         if stronger.formula == weaker.formula:
             return self._sign_subsumes(stronger.sign, weaker.sign)
-            
+
         # Combined formula and sign subsumption
         # If formulas have subsumption relationship AND signs are compatible
         if self._subsumes(stronger.formula, weaker.formula):
             return self._sign_compatible_for_subsumption(stronger.sign, weaker.sign)
-            
+
         return False
-    
+
     def _sign_subsumes(self, stronger_sign: Sign, weaker_sign: Sign) -> bool:
         """Check if stronger sign subsumes weaker sign in three-valued logic.
-        
+
         Subsumption based on truth value set containment:
         - More specific truth conditions subsume more general ones
-        - T: {true} subsumes M: {true, false} 
+        - T: {true} subsumes M: {true, false}
         - F: {false} subsumes M: {true, false}
         - N: {undefined} is orthogonal (doesn't subsume T, F, or M)
         """
         stronger_conditions = stronger_sign.truth_conditions()
         weaker_conditions = weaker_sign.truth_conditions()
-        
+
         # Stronger sign must have more restrictive (subset) truth conditions
         # that are contained within the weaker sign's conditions
-        return (stronger_conditions.issubset(weaker_conditions) and 
+        return (stronger_conditions.issubset(weaker_conditions) and
                 stronger_conditions != weaker_conditions)
-    
+
     def _sign_compatible_for_subsumption(self, stronger_sign: Sign, weaker_sign: Sign) -> bool:
         """Check if signs are compatible for combined formula+sign subsumption.
-        
+
         When formula subsumption exists, signs must be compatible:
         - Same sign is always compatible
         - T and F are compatible with M (they're more specific)
@@ -323,147 +323,147 @@ class Branch:
         """
         if stronger_sign == weaker_sign:
             return True
-            
+
         # T and F are more specific than M
         if weaker_sign.symbol == "M":
             return stronger_sign.symbol in ["T", "F"]
-            
+
         # N is orthogonal - only compatible with itself
         if stronger_sign.symbol == "N" or weaker_sign.symbol == "N":
             return stronger_sign == weaker_sign
-            
+
         return False
-        
+
     def _propositional_subsumes(self, stronger: Formula, weaker: Formula) -> bool:
         """Check propositional subsumption patterns."""
         from .formula import CompoundFormula
-        
+
         # Pattern 1: p subsumes p ∨ q ∨ ... (atom subsumes disjunction containing it)
-        if (stronger.is_atomic() and 
-            isinstance(weaker, CompoundFormula) and 
+        if (stronger.is_atomic() and
+            isinstance(weaker, CompoundFormula) and
             weaker.connective == "|"):
             return self._appears_in_disjunction(stronger, weaker)
-            
-        # Pattern 2: p ∧ q ∧ ... subsumes p (conjunction subsumes its conjuncts)  
-        if (isinstance(stronger, CompoundFormula) and 
+
+        # Pattern 2: p ∧ q ∧ ... subsumes p (conjunction subsumes its conjuncts)
+        if (isinstance(stronger, CompoundFormula) and
             stronger.connective == "&" and
             weaker.is_atomic()):
             return self._appears_in_conjunction(weaker, stronger)
-            
+
         # Pattern 3: p ∧ q subsumes (p ∧ q) ∨ r (conjunction subsumes disjunction containing it)
-        if (isinstance(stronger, CompoundFormula) and 
+        if (isinstance(stronger, CompoundFormula) and
             stronger.connective == "&" and
-            isinstance(weaker, CompoundFormula) and 
+            isinstance(weaker, CompoundFormula) and
             weaker.connective == "|"):
             return stronger in weaker.subformulas
-            
+
         # Pattern 4: Complex conjunction subsumption - p ∧ q ∧ r subsumes p ∧ q
-        if (isinstance(stronger, CompoundFormula) and 
+        if (isinstance(stronger, CompoundFormula) and
             stronger.connective == "&" and
-            isinstance(weaker, CompoundFormula) and 
+            isinstance(weaker, CompoundFormula) and
             weaker.connective == "&"):
             # Check if all conjuncts of weaker are in stronger
             return all(conjunct in stronger.subformulas for conjunct in weaker.subformulas)
-            
-        # Pattern 5: Double negation - p subsumes ~~p  
-        if (isinstance(weaker, CompoundFormula) and 
+
+        # Pattern 5: Double negation - p subsumes ~~p
+        if (isinstance(weaker, CompoundFormula) and
             weaker.connective == "~" and
             len(weaker.subformulas) == 1 and
             isinstance(weaker.subformulas[0], CompoundFormula) and
             weaker.subformulas[0].connective == "~" and
             len(weaker.subformulas[0].subformulas) == 1):
             return stronger == weaker.subformulas[0].subformulas[0]
-            
+
         return False
-        
+
     def _appears_in_disjunction(self, atom: Formula, disjunction: Formula) -> bool:
         """Check if an atom appears anywhere in a disjunctive formula (recursively)."""
         from .formula import CompoundFormula
-        
+
         # Base case: if disjunction is the atom itself
         if disjunction == atom:
             return True
-            
+
         # If disjunction is not a compound formula, it can't contain the atom
         if not isinstance(disjunction, CompoundFormula):
             return False
-            
+
         # If it's not a disjunction, it can't contain the atom in a disjunctive context
         if disjunction.connective != "|":
             return False
-            
+
         # Recursively check each subformula
         for subformula in disjunction.subformulas:
             if subformula == atom:
                 return True
-            elif (isinstance(subformula, CompoundFormula) and 
+            elif (isinstance(subformula, CompoundFormula) and
                   subformula.connective == "|"):
                 # Recursive case: subformula is also a disjunction
                 if self._appears_in_disjunction(atom, subformula):
                     return True
-                    
+
         return False
-        
+
     def _appears_in_conjunction(self, atom: Formula, conjunction: Formula) -> bool:
         """Check if an atom appears anywhere in a conjunctive formula (recursively)."""
         from .formula import CompoundFormula
-        
+
         # Base case: if conjunction is the atom itself
         if conjunction == atom:
             return True
-            
+
         # If conjunction is not a compound formula, it can't contain the atom
         if not isinstance(conjunction, CompoundFormula):
             return False
-            
+
         # If it's not a conjunction, it can't contain the atom in a conjunctive context
         if conjunction.connective != "&":
             return False
-            
+
         # Recursively check each subformula
         for subformula in conjunction.subformulas:
             if subformula == atom:
                 return True
-            elif (isinstance(subformula, CompoundFormula) and 
+            elif (isinstance(subformula, CompoundFormula) and
                   subformula.connective == "&"):
                 # Recursive case: subformula is also a conjunction
                 if self._appears_in_conjunction(atom, subformula):
                     return True
-                    
+
         return False
-        
+
     def _first_order_subsumes(self, stronger: Formula, weaker: Formula) -> bool:
         """Check first-order subsumption patterns.
-        
+
         In first-order subsumption, formula A subsumes formula B if there exists
         a substitution θ such that θ(A) ⊆ B. This means A is more general than B.
-        
+
         Key principle: Variables are more general than constants.
         """
-        from .formula import PredicateFormula, Constant, Variable
-        
+        from .formula import PredicateFormula
+
         # Pattern 1: P(X) subsumes P(a) (variable subsumes constant)
         # This is the CORRECT direction: more general subsumes more specific
-        if (isinstance(stronger, PredicateFormula) and 
+        if (isinstance(stronger, PredicateFormula) and
             isinstance(weaker, PredicateFormula) and
             stronger.predicate_name == weaker.predicate_name and
             len(stronger.terms) == len(weaker.terms)):
-            
+
             # Check if we can find a substitution from stronger to weaker
             substitution = self._find_first_order_substitution(stronger, weaker)
             if substitution is not None:
                 return True
-            
+
         # Pattern 2: Complex predicates with mixed terms
         # P(X, a) subsumes P(b, a) via substitution {X/b}
-        if (isinstance(stronger, PredicateFormula) and 
+        if (isinstance(stronger, PredicateFormula) and
             isinstance(weaker, PredicateFormula) and
             stronger.predicate_name == weaker.predicate_name and
             len(stronger.terms) == len(weaker.terms)):
-            
+
             # Try to build substitution mapping
             return self._can_substitute_to_match(stronger, weaker)
-            
+
         # Pattern 3: Quantifier subsumption (simplified for now)
         # This is complex and depends on the specific quantifier semantics
         if (isinstance(stronger, RestrictedUniversalFormula) and
@@ -471,58 +471,74 @@ class Branch:
             # [∀X P(X)]Q(X) may subsume specific instances under certain conditions
             # This requires careful analysis of the restriction and matrix
             return self._universal_quantifier_subsumes_instance(stronger, weaker)
-            
+
         return False
-        
+
     def _find_first_order_substitution(self, general: "Formula", specific: "Formula") -> dict:
         """Find substitution that transforms general formula to match specific formula.
-        
+
         Returns substitution mapping if one exists, None otherwise.
         """
-        from .formula import Variable, Constant, PredicateFormula
-        
-        # Only works for predicate formulas
+        # Validate inputs
+        if not self._are_compatible_predicates(general, specific):
+            return None
+
+        # Build substitution mapping
+        return self._build_substitution_mapping(general.terms, specific.terms)
+
+    def _are_compatible_predicates(self, general: "Formula", specific: "Formula") -> bool:
+        """Check if two formulas are compatible for substitution."""
+        from .formula import PredicateFormula
+
         if not (isinstance(general, PredicateFormula) and isinstance(specific, PredicateFormula)):
-            return None
-            
+            return False
+
         if general.predicate_name != specific.predicate_name:
-            return None
-            
+            return False
+
         if len(general.terms) != len(specific.terms):
-            return None
-            
+            return False
+
+        return True
+
+    def _build_substitution_mapping(self, general_terms: list, specific_terms: list) -> dict:
+        """Build substitution mapping from term pairs."""
+        from .formula import Constant, Variable
+
         substitution = {}
-        
-        for gen_term, spec_term in zip(general.terms, specific.terms):
+
+        for gen_term, spec_term in zip(general_terms, specific_terms):
             if isinstance(gen_term, Variable):
-                # Variable can be substituted with anything
-                var_name = gen_term.name
-                if var_name in substitution:
-                    # Check consistency: same variable must map to same term
-                    if substitution[var_name] != spec_term:
-                        return None
-                else:
-                    substitution[var_name] = spec_term
-                    
+                if not self._add_variable_substitution(substitution, gen_term, spec_term):
+                    return None
             elif isinstance(gen_term, Constant):
-                # Constant must match exactly
                 if gen_term != spec_term:
                     return None
             else:
-                # Other term types (functions, etc.) - exact match for now
+                # Other term types - exact match required
                 if gen_term != spec_term:
                     return None
-                    
+
         return substitution
-        
+
+    def _add_variable_substitution(self, substitution: dict, variable, term) -> bool:
+        """Add variable substitution to mapping, checking consistency."""
+        var_name = variable.name
+        if var_name in substitution:
+            # Check consistency: same variable must map to same term
+            return substitution[var_name] == term
+        else:
+            substitution[var_name] = term
+            return True
+
     def _can_substitute_to_match(self, general: "Formula", specific: "Formula") -> bool:
         """Check if general formula can be substituted to match specific formula."""
         substitution = self._find_first_order_substitution(general, specific)
         return substitution is not None
-        
+
     def _universal_quantifier_subsumes_instance(self, universal: "Formula", instance: "Formula") -> bool:
         """Check if universal quantifier subsumes a specific instance.
-        
+
         This is a simplified implementation. Full implementation would require
         checking if the instance satisfies the restriction and if the matrix
         can be unified appropriately.
@@ -936,7 +952,7 @@ class Tableau:
         # Skip applying rules to subsumed formulas (subsumption optimization)
         if node.formula in branch.subsumed_formulas:
             return
-            
+
         # Mark the formula as processed (except for universal quantifiers which can be reprocessed)
         if not hasattr(branch, "_processed_formulas"):
             branch._processed_formulas = set()
