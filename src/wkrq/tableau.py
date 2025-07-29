@@ -127,7 +127,11 @@ class Branch:
         # Forward subsumption: Skip if this formula would be subsumed by existing formulas
         if should_check_forward:
             # Only check against recent formulas to limit O(n²) behavior
-            recent_formulas = list(self.formulas)[-20:]  # Check only last 20 formulas
+            # Use sorted list for deterministic behavior across environments
+            sorted_formulas = sorted(
+                self.formulas, key=lambda f: (str(f.sign), str(f.formula))
+            )
+            recent_formulas = sorted_formulas[-20:]  # Check only last 20 formulas
             for existing in recent_formulas:
                 if self._signed_subsumes(existing, signed_formula):
                     return False
@@ -265,11 +269,18 @@ class Branch:
         # For larger branches, limit checking to avoid O(n²) overhead
         if len(self.formulas) <= 20:
             # Small branch: check all formulas for test accuracy
-            formulas_to_check = list(self.formulas)
+            # Use sorted list for deterministic behavior across environments
+            formulas_to_check = sorted(
+                self.formulas, key=lambda f: (str(f.sign), str(f.formula))
+            )
         else:
             # Large branch: limit checking for performance
             max_formulas_to_check = min(50, len(self.formulas))
-            formulas_to_check = list(self.formulas)[-max_formulas_to_check:]
+            # Use sorted list for deterministic behavior, then take the last N
+            sorted_formulas = sorted(
+                self.formulas, key=lambda f: (str(f.sign), str(f.formula))
+            )
+            formulas_to_check = sorted_formulas[-max_formulas_to_check:]
 
         # If the new formula is stronger/more specific than existing ones,
         # mark the existing weaker formulas as subsumed
