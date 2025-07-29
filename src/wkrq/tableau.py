@@ -120,10 +120,18 @@ class Branch:
         if signed_formula in self.formulas:
             return False
 
-        # Forward subsumption: Skip if this formula would be subsumed by existing formulas
-        # Only apply this for non-atomic formulas to avoid breaking tableau completeness
-        if not signed_formula.formula.is_atomic():
-            for existing in self.formulas:
+        # Fast path: Skip expensive subsumption checking for small branches or atomic formulas
+        if (
+            signed_formula.formula.is_atomic()
+            or len(self.formulas) < 10
+            or not self._should_check_subsumption(signed_formula)
+        ):
+            pass  # Skip subsumption checking for performance
+        else:
+            # Forward subsumption: Skip if this formula would be subsumed by existing formulas
+            # Only check against recent formulas to limit O(n²) behavior
+            recent_formulas = list(self.formulas)[-20:]  # Check only last 20 formulas
+            for existing in recent_formulas:
                 if self._signed_subsumes(existing, signed_formula):
                     return False
 
@@ -151,10 +159,25 @@ class Branch:
             self.unit_literals.add(signed_formula)
             self._propagate_unit_literal(signed_formula)
 
-        # Update subsumption relationships
-        self._update_subsumption(signed_formula)
+        # Update subsumption relationships (backward subsumption) - only for complex formulas
+        if (
+            not signed_formula.formula.is_atomic()
+            and len(self.formulas) < 100  # Skip for large branches to avoid overhead
+            and self._should_check_subsumption(signed_formula)
+        ):
+            self._update_subsumption(signed_formula)
 
         return False
+
+    def _should_check_subsumption(self, signed_formula: SignedFormula) -> bool:
+        """Determine if subsumption checking is worthwhile for this formula."""
+        # Skip subsumption for simple atomic formulas
+        if signed_formula.formula.is_atomic():
+            return False
+
+        # Only check subsumption for reasonably complex formulas
+        complexity = self._formula_complexity(signed_formula.formula)
+        return complexity > 2  # Only check for formulas with complexity > 2
 
     def _check_contradiction(self, new_formula: SignedFormula) -> bool:
         """Check if new formula contradicts existing formulas."""
@@ -222,9 +245,13 @@ class Branch:
         # Implement backward subsumption: check if newly added formula
         # subsumes any existing formulas, making them redundant
 
+        # Limit subsumption checking to avoid O(n²) overhead
+        max_formulas_to_check = min(50, len(self.formulas))
+        recent_formulas = list(self.formulas)[-max_formulas_to_check:]
+
         # If the new formula is stronger/more specific than existing ones,
         # mark the existing weaker formulas as subsumed
-        for existing in list(self.formulas):
+        for existing in recent_formulas:
             if existing != signed_formula and self._signed_subsumes(
                 signed_formula, existing
             ):
@@ -232,7 +259,7 @@ class Branch:
 
         # Also check if the new formula is subsumed by existing ones
         # (This handles the case where atomic formulas are added despite subsumption)
-        for existing in self.formulas:
+        for existing in recent_formulas:
             if existing != signed_formula and self._signed_subsumes(
                 existing, signed_formula
             ):
