@@ -1,11 +1,11 @@
 # wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
-[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.0.7)](https://badge.fury.io/py/wkrq)
+[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.0.8)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
 
-An implementation of a semantic tableau calculus for first-order weak Kleene logic with restricted quantification, featuring a complete tableau-based theorem prover with industrial-grade performance optimizations.
+An implementation of a semantic tableau calculus for first-order weak Kleene logic with restricted quantification, featuring a command-line interface for satisfiability and inference checking.
 
 ## Citation
 
@@ -54,6 +54,10 @@ wkrq --tree "p -> q"
 # First-order logic with restricted quantifiers
 wkrq "[∃X Student(X)]Human(X)"
 wkrq "[∀X Human(X)]Mortal(X)"
+
+# Inference checking
+wkrq --inference "p & q |- p"
+wkrq --inference "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
 ```
 
 ### Python API
@@ -223,7 +227,7 @@ wKrQ uses a tableau proof system with four signs:
 
 This enables systematic proof search in three-valued logic while maintaining classical reasoning as a special case.
 
-**Note**: Our implementation is validated against Ferguson (2021) and uses classical validity with weak Kleene semantics, meaning classical tautologies remain valid. See `FERGUSON_2021_ANALYSIS.md` for comprehensive validation details.
+**Note**: Our implementation is validated against Ferguson (2021) and uses classical validity with weak Kleene semantics, meaning classical tautologies remain valid. See [Ferguson (2021) Analysis - Key Findings](docs/FERGUSON_2021_ANALYSIS.md) for validation details.
 
 ## Performance
 

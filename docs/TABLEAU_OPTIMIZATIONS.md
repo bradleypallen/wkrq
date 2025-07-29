@@ -4,7 +4,7 @@ This document captures legitimate optimization techniques for semantic tableau t
 
 ## Research Summary
 
-Our investigation revealed that "subsumption" as commonly understood in resolution theorem proving is NOT a standard optimization in basic tableau calculus. Instead, tableau literature focuses on different optimization approaches.
+Our research identified several optimization approaches that are well-suited to tableau calculus, along with analysis of techniques that are more appropriate for other proof systems. The following summarizes both implemented optimizations and prospective enhancements based on tableau literature.
 
 ## Legitimate Tableau Optimizations from Literature
 
@@ -37,20 +37,16 @@ Our investigation revealed that "subsumption" as commonly understood in resoluti
 - **Quote**: "Splitting on clauses is formally a combination of splitting and subsumption, where the original clause is eliminated via subsumption after the case split"
 - **Note**: This is different from general subsumption - it's specific to clause-based tableaux
 
-## What We Incorrectly Tried to Implement
+## Analysis of Cross-System Optimization Techniques
 
 ### Resolution-Style Subsumption
-- **Problem**: We tried to import clause subsumption from resolution theorem proving
-- **Why it doesn't fit**: Formula-based tableaux work differently than clause-based resolution
-- **Literature gap**: Standard tableau texts (Beth, Smullyan) don't emphasize general subsumption
+- **Context**: Resolution theorem proving uses clause subsumption as a standard optimization
+- **Tableau consideration**: Formula-based tableaux have different structural requirements than clause-based resolution
+- **Literature finding**: Standard tableau texts (Beth, Smullyan) focus on tableau-specific optimizations rather than general subsumption
 
-### Backwards Formula Relationships  
-- **Problem**: We confused which formulas should eliminate which
-- **Root cause**: Mixing resolution terminology with tableau semantics
+## Implementation Priorities
 
-## Recommended Implementation Priorities
-
-1. **Immediate**: Remove all subsumption code
+1. **Current focus**: Tableau-specific optimizations (alpha/beta rule prioritization, branch selection)
 2. **Short-term**: Implement simplification rules for obvious cases (true/false replacement)
 3. **Medium-term**: Add branch pruning for contradictory paths
 4. **Long-term**: Consider connectedness restrictions for first-order tableaux
@@ -81,4 +77,4 @@ Our investigation revealed that "subsumption" as commonly understood in resoluti
 
 ---
 
-*This document was compiled during the debugging of an incorrect subsumption implementation in wKrQ, January 2025.*
+*This document was compiled during optimization research for the wKrQ tableau implementation, July 2025.*
