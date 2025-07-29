@@ -1,7 +1,7 @@
 # wKrQ Architecture: Implementation of a Semantic Tableau Calculus for Weak Kleene Logic
 
-**Version**: 1.0.6  
-**Last Updated**: January 2025  
+**Version**: 1.0.7  
+**Last Updated**: July 2025  
 **License**: MIT  
 
 ## Table of Contents
