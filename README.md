@@ -70,9 +70,9 @@ result = solve(formula, T)
 print(f"Satisfiable: {result.satisfiable}")
 print(f"Models: {result.models}")
 
-# Test validity
+# Test validity - Ferguson uses classical validity with weak Kleene semantics
 tautology = p | ~p
-print(f"Valid in weak Kleene: {valid(tautology)}")  # True (surprisingly!)
+print(f"Valid in Ferguson's system: {valid(tautology)}")  # True (classical tautologies are valid)
 
 # Three-valued reasoning
 result = solve(p | ~p, N)  # Can it be undefined?
@@ -223,15 +223,17 @@ wKrQ uses a tableau proof system with four signs:
 
 This enables systematic proof search in three-valued logic while maintaining classical reasoning as a special case.
 
+**Note**: Our implementation is validated against Ferguson (2021) and uses classical validity with weak Kleene semantics, meaning classical tautologies remain valid. See `FERGUSON_2021_ANALYSIS.md` for comprehensive validation details.
+
 ## Performance
 
 Industrial-grade optimizations include:
 
 - O(1) contradiction detection via hash indexing
-- Alpha/beta rule prioritization
+- Alpha/beta rule prioritization  
 - Intelligent branch selection
 - Early termination strategies
-- Subsumption elimination
+- Optimized tableau construction
 
 ## Citation
 

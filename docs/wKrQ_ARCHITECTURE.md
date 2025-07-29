@@ -1,7 +1,7 @@
 # wKrQ Architecture: Implementation of a Semantic Tableau Calculus for Weak Kleene Logic
 
-**Version**: 1.0.2  
-**Last Updated**: July 2025  
+**Version**: 1.0.6  
+**Last Updated**: January 2025  
 **License**: MIT  
 
 ## Table of Contents
@@ -21,6 +21,8 @@
 
 The wKrQ (weak Kleene logic with restricted quantification) system is a research-grade Python implementation of a semantic tableau calculus for three-valued weak Kleene logic with industrial performance characteristics. It combines theoretical rigor with practical efficiency, making it suitable for both academic research and real-world automated reasoning applications.
 
+**Implementation validated against Ferguson (2021)**: This implementation correctly follows Ferguson's specifications using classical validity with weak Kleene semantics. See `FERGUSON_2021_ANALYSIS.md` for comprehensive theoretical validation.
+
 ### Design Principles
 
 1. **Theoretical Correctness**: All tableau rules implement exact semantic conditions for weak Kleene logic
@@ -35,7 +37,7 @@ The wKrQ (weak Kleene logic with restricted quantification) system is a research
 - **Four-Sign Tableau System**: T, F, M, N signs enable proof construction in three-valued logic
 - **Restricted Quantification**: Domain-limited quantifiers for practical first-order reasoning
 - **Industrial Optimizations**: O(1) contradiction detection, alpha/beta rule prioritization, intelligent branch selection
-- **Comprehensive Testing**: 79 tests covering correctness, performance, and literature validation
+- **Comprehensive Testing**: 193 tests covering correctness, performance, and literature validation
 
 ## Theoretical Foundation
 
@@ -342,14 +344,15 @@ if self.early_termination and len(self.open_branches) > 0:
             break  # Found satisfying assignment
 ```
 
-### Subsumption Elimination
+### Performance Monitoring
 
-Redundant formulas are identified and eliminated:
+The system tracks performance metrics for optimization:
 
 ```python
-def _is_subsumed(self, signed_formula: SignedFormula) -> bool:
-    """Check if formula is subsumed by existing formulas."""
-    return signed_formula in self.subsumed_formulas or signed_formula in self.formulas
+def _track_performance_metrics(self, branch: Branch) -> None:
+    """Track performance metrics for optimization."""
+    branch.complexity_score += self._formula_complexity(formula)
+    self.rule_application_stats[rule_name] += 1
 ```
 
 ### Performance Metrics
@@ -429,10 +432,10 @@ def _select_highest_priority_branch(self) -> Optional[Branch]:
     """Select branch with highest priority formulas."""
     return max(self.open_branches, key=lambda b: self._calculate_priority(b))
 
-# Custom subsumption detection
-def _advanced_subsumption(self, general: Formula, specific: Formula) -> bool:
-    """Advanced subsumption checking."""
-    # Implement domain-specific subsumption logic
+# Custom optimization strategies
+def _advanced_optimization(self, branch: Branch) -> bool:
+    """Advanced optimization strategies."""
+    # Implement domain-specific optimization logic
     pass
 ```
 
@@ -450,11 +453,15 @@ def _advanced_subsumption(self, general: Formula, specific: Formula) -> bool:
 ### Test Structure
 
 ```
-tests/wkrq/
-├── test_wkrq_basic.py           # Core functionality (25 tests)
-├── test_first_order.py          # First-order features (12 tests)
-├── test_literature_cases.py     # Literature validation (34 tests)
-└── test_performance_regression.py  # Performance benchmarks (8 tests)
+tests/
+├── test_wkrq_basic.py                 # Core functionality (25 tests)
+├── test_first_order.py                # First-order features (12 tests)  
+├── test_literature_cases.py           # Literature validation (34 tests)
+├── test_performance_regression.py     # Performance benchmarks (19 tests)
+├── test_quantifier_unification.py     # Quantifier reasoning (32 tests)
+├── test_cli_quantifiers.py            # CLI interface tests (45 tests)
+├── test_ferguson_compliance.py        # Ferguson (2021) validation (17 tests)
+└── test_semantic_validation.py        # Semantic correctness (20 tests)
 ```
 
 ### Continuous Validation
