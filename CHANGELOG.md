@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2025-01-30
+
+### Added
+
+- **ACrQ Implementation Guide** - Comprehensive implementation plan for extending wKrQ with Analytic Containment
+  - Added `docs/ACrQ_IMPLEMENTATION_GUIDE.md` with complete architectural design for bilateral predicates
+  - 5-phase implementation strategy for paraconsistent and paracomplete reasoning
+  - External system integration framework for pluggable bilateral valuation providers
+  - Detailed tableau rules for ACrQ with bilateral predicate support
+  - Testing strategy and migration path preserving backward compatibility
+- **Enhanced CLAUDE.md** with ACrQ architecture overview and development workflow guidance
+
+### Documentation
+
+- **Future Extension Planning** - Detailed roadmap for ACrQ (Analytic Containment with restricted Quantification)
+  - Bilateral predicates (R/R*) for independent positive/negative evidence tracking
+  - Knowledge glut and knowledge gap handling for robust real-world reasoning
+  - Ferguson's translation framework from wKrQ to ACrQ systems
+  - Model extraction supporting bilateral valuations and consistency checking
+
 ## [1.0.6] - 2025-01-29
 
 ### Added
