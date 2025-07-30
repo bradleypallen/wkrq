@@ -1,5 +1,4 @@
-# wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak
-Kleene Logic with Restricted Quantification
+# wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
 [![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.0.8)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -98,7 +97,7 @@ result = solve(p | ~p, N)  # Can it be undefined?
 print(f"Can be undefined: {result.satisfiable}")  # True
 ```
 
-## Three-Valued Logic Semantics
+## Syntax and Semantics
 
 ### Formal Language Definition
 
