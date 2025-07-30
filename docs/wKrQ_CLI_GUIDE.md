@@ -42,16 +42,17 @@ python -m wkrq "p | ~p"
 # Check version and help
 python -m wkrq --version
 python -m wkrq --help
-```
+```text
 
 ### Expected Output
-```
+
+```text
 Testing formula: p | ~p
 Result: SATISFIABLE
 Models found: 1
   Model 1: {p=t}
 Tableau nodes: 3
-```
+```text
 
 ## Basic Usage
 
@@ -59,7 +60,7 @@ Tableau nodes: 3
 
 ```bash
 python -m wkrq [OPTIONS] "FORMULA"
-```
+```text
 
 ### Simple Examples
 
@@ -75,7 +76,7 @@ python -m wkrq "p & ~p"
 
 # Complex formulas
 python -m wkrq "(p & q) | (~p & r)"
-```
+```text
 
 ### Basic Options
 
@@ -94,7 +95,7 @@ python -m wkrq --models "p | q"
 
 # JSON output
 python -m wkrq --format=json "p & q"
-```
+```text
 
 ## Three-Valued Semantics
 
@@ -109,38 +110,42 @@ wKrQ implements **weak Kleene** three-valued logic where any operation involving
 ### Truth Tables
 
 #### Conjunction (∧)
-```
+
+```text
   ∧ | t | f | e
   --|---|---|---
   t | t | f | e
   f | f | f | e  
   e | e | e | e
-```
+```text
 
 #### Disjunction (∨)
-```
+
+```text
   ∨ | t | f | e
   --|---|---|---
   t | t | t | e
   f | t | f | e
   e | e | e | e
-```
+```text
 
 #### Negation (~)
-```
+
+```text
   ~ | t | f | e
   --|---|---|---
     | f | t | e
-```
+```text
 
 #### Implication (→)
-```
+
+```text
   → | t | f | e
   --|---|---|---
   t | t | f | e
   f | t | t | e
   e | e | e | e
-```
+```text
 
 ### Testing Three-Valued Behavior
 
@@ -155,7 +160,7 @@ python -m wkrq --sign=N "p | q"    # Can be undefined (unlike strong Kleene)
 
 # Test negation of undefined
 python -m wkrq --sign=N "~p"       # Can be undefined
-```
+```text
 
 ## Tableau Signs
 
@@ -180,7 +185,7 @@ python -m wkrq --sign=N "p"        # p must be undefined
 # Complex formulas with specific signs
 python -m wkrq --sign=N "p & q"    # Conjunction must be undefined
 python -m wkrq --sign=M "p | q"    # Disjunction has multiple possibilities
-```
+```text
 
 ### Sign Relationships
 
@@ -194,7 +199,7 @@ python -m wkrq --sign=M "p"        # Can be true or false
 
 # N requires undefined values
 python -m wkrq --sign=N "p"        # Must be undefined
-```
+```text
 
 ## First-Order Features
 
@@ -210,13 +215,14 @@ python -m wkrq "R(x, y)"
 # Complex predicate formulas
 python -m wkrq "P(a) & Q(b)"
 python -m wkrq "P(x) -> Q(x)"
-```
+```text
 
 ### Restricted Quantification
 
 wKrQ uses restricted quantifiers that limit the domain of quantification.
 
 #### Restricted Existential: [∃X P(X)]Q(X)
+
 "There exists an X such that P(X) and Q(X)"
 
 ```bash
@@ -225,9 +231,10 @@ python -m wkrq "[∃X Student(X)]Human(X)"
 
 # Complex restricted existential
 python -m wkrq "[∃X Student(X)]Human(X) & Smart(a)"
-```
+```text
 
 #### Restricted Universal: [∀X P(X)]Q(X)  
+
 "For all X, if P(X) then Q(X)"
 
 ```bash
@@ -236,7 +243,7 @@ python -m wkrq "[∀X Human(X)]Mortal(X)"
 
 # Complex restricted universal
 python -m wkrq "[∀X Human(X)]Mortal(X) & Human(socrates)"
-```
+```text
 
 ### First-Order Examples
 
@@ -247,7 +254,7 @@ python -m wkrq "[∀X Human(X)]Mortal(X)"
 
 # Complex reasoning
 python -m wkrq "[∃X Student(X)]Human(X) & [∀X Human(X)]Mortal(X)"
-```
+```text
 
 ## Interactive Mode
 
@@ -255,11 +262,11 @@ Launch interactive mode for exploratory reasoning:
 
 ```bash
 python -m wkrq
-```
+```text
 
 ### Interactive Commands
 
-```
+```text
 wKrQ> test p & q
 Testing formula: p & q
 Result: SATISFIABLE
@@ -297,7 +304,7 @@ Available commands:
   quit                 - Exit interactive mode
 
 wKrQ> quit
-```
+```text
 
 ### Interactive Features
 
@@ -323,7 +330,7 @@ python -m wkrq --debug "p -> q"
 
 # Combine multiple options
 python -m wkrq --verbose --models --stats "p & (q | r)"
-```
+```text
 
 ### Output Formats
 
@@ -336,7 +343,7 @@ python -m wkrq --format=compact "p | q"
 
 # Detailed human-readable (default)
 python -m wkrq --format=detailed "p -> q"
-```
+```text
 
 ### Performance Options
 
@@ -350,7 +357,7 @@ python -m wkrq --no-subsumption "p & (q | r)"
 
 # Benchmark mode
 python -m wkrq --benchmark "p & q & r & s"
-```
+```text
 
 ## Performance Features
 
@@ -376,7 +383,7 @@ python -m wkrq --benchmark "(p1 | q1) & (p2 | q2) & (p3 | q3)"
 # Compare with/without optimizations
 python -m wkrq --no-optimization --stats "complex_formula"
 python -m wkrq --stats "complex_formula"
-```
+```text
 
 ### Performance Monitoring
 
@@ -389,7 +396,7 @@ python -m wkrq --memory "large_formula"
 
 # Node count and branch statistics
 python -m wkrq --tableau-stats "p | (q & r & s)"
-```
+```text
 
 ## Examples
 
@@ -406,7 +413,7 @@ python -m wkrq "p & ~p"              # Always unsatisfiable
 # Contingent formulas
 python -m wkrq "p -> q"              # Satisfiable
 python -m wkrq --models "p -> q"     # Show all models
-```
+```text
 
 ### Three-Valued Reasoning
 
@@ -418,7 +425,7 @@ python -m wkrq --sign=N "~p"         # Negation of undefined
 
 # Mixed truth values
 python -m wkrq --models "p | q"      # Show classical and non-classical models
-```
+```text
 
 ### First-Order Logic
 
@@ -433,7 +440,7 @@ python -m wkrq "[∀X Human(X)]Mortal(X)"
 
 # Complex first-order reasoning
 python -m wkrq "[∃X Student(X)]Human(X) & [∀X Human(X)]Mortal(X) & Student(alice)"
-```
+```text
 
 ### Philosophical Examples
 
@@ -446,7 +453,7 @@ python -m wkrq "Bird(tweety) & (Bird(tweety) -> Flies(tweety)) & Penguin(tweety)
 
 # Vague predicates
 python -m wkrq --sign=N "Tall(person) & Short(person)"
-```
+```text
 
 ### Performance Testing
 
@@ -459,13 +466,14 @@ python -m wkrq --tableau-stats "(p1 | q1) & (p2 | q2) & (p3 | q3)"
 
 # Deep nesting
 python -m wkrq --stats "p -> (q -> (r -> (s -> t)))"
-```
+```text
 
 ## Troubleshooting
 
 ### Common Issues
 
 #### Parse Errors
+
 ```bash
 # Problem: Syntax error
 python -m wkrq "p &"
@@ -473,9 +481,10 @@ python -m wkrq "p &"
 
 # Solution: Check formula syntax
 python -m wkrq "p & q"  # Correct
-```
+```text
 
 #### Performance Issues
+
 ```bash
 # Problem: Formula takes too long
 python -m wkrq "very_complex_formula"
@@ -483,16 +492,17 @@ python -m wkrq "very_complex_formula"
 # Solutions:
 python -m wkrq --max-depth=20 "very_complex_formula"     # Limit depth
 python -m wkrq --timeout=5000 "very_complex_formula"     # Set timeout (ms)
-```
+```text
 
 #### Memory Issues
+
 ```bash
 # Problem: High memory usage
 
 # Solutions:
 python -m wkrq --no-models "complex_formula"             # Don't compute models
 python -m wkrq --early-termination "complex_formula"     # Stop early
-```
+```text
 
 ### Error Messages
 
@@ -518,7 +528,7 @@ python -m wkrq --version
 
 # Debug information
 python -m wkrq --debug "formula"
-```
+```text
 
 ### Contact and Support
 

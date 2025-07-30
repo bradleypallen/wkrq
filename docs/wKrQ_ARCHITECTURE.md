@@ -53,7 +53,7 @@ wKrQ implements **weak Kleene** three-valued logic with truth values:
 
 The defining characteristic of weak Kleene logic is that **any operation involving undefined produces undefined**:
 
-```
+```text
 Conjunction (∧):     Disjunction (∨):     Negation (~):
   ∧ | t | f | e        ∨ | t | f | e        ~ | t | f | e
   --|---|---|---       --|---|---|---       --|---|---|---
@@ -67,7 +67,7 @@ Implication (→):
   t | t | f | e
   f | t | t | e
   e | e | e | e
-```
+```text
 
 This differs from **strong Kleene** logic where, for example, `t ∨ e = t`. In weak Kleene, `t ∨ e = e`.
 
@@ -87,7 +87,7 @@ T.truth_conditions() = {t}        # Must be true
 F.truth_conditions() = {f}        # Must be false
 M.truth_conditions() = {t, f}     # Can be true or false
 N.truth_conditions() = {e}        # Must be undefined
-```
+```text
 
 ### Restricted Quantification
 
@@ -102,7 +102,7 @@ This provides more natural first-order reasoning than unrestricted quantificatio
 
 ### High-Level Structure
 
-```
+```text
 wKrQ System
 ├── Core Logic Engine
 │   ├── Formula Representation
@@ -121,11 +121,11 @@ wKrQ System
     ├── Correctness Tests
     ├── Performance Tests
     └── Literature Validation
-```
+```text
 
 ### Module Organization
 
-```
+```text
 src/wkrq/
 ├── __init__.py           # Public API exports
 ├── api.py               # High-level convenience API  
@@ -135,11 +135,11 @@ src/wkrq/
 ├── signs.py           # Tableau sign system
 ├── tableau.py         # Core tableau construction engine
 └── parser.py          # Formula parsing from strings
-```
+```text
 
 ### Data Flow
 
-```
+```text
 Input Formula (String or Python objects)
     ↓
 Formula Parser/Constructor
@@ -151,7 +151,7 @@ Tableau Engine
 Rule Application + Optimization
     ↓
 Result (Satisfiability + Models + Statistics)
-```
+```text
 
 ## Core Components
 
@@ -168,11 +168,12 @@ Formula (Abstract Base)
 Term (Abstract Base)
 ├── Variable                   # X, Y, Z
 └── Constant                   # a, b, c
-```
+```text
 
 #### Formula Operations
 
 All formulas support:
+
 - **Structural operations**: `get_atoms()`, `complexity()`, `is_atomic()`
 - **Operator overloading**: `p & q`, `p | q`, `~p`, `p.implies(q)`
 - **Substitution**: `substitute()`, `substitute_term()`
@@ -191,7 +192,7 @@ class WeakKleeneSemantics:
     def disjunction(self, a: TruthValue, b: TruthValue) -> TruthValue
     def negation(self, a: TruthValue) -> TruthValue
     def implication(self, a: TruthValue, b: TruthValue) -> TruthValue
-```
+```text
 
 The semantic system implements truth tables as lookup dictionaries for O(1) evaluation.
 
@@ -210,7 +211,7 @@ T = TrueSign()      # Must be true
 F = FalseSign()     # Must be false  
 M = MultipleSign()  # Can be true or false
 N = NeitherSign()   # Must be undefined
-```
+```text
 
 ## Tableau Engine
 
@@ -226,11 +227,12 @@ class Tableau:
     def construct(self) -> TableauResult
     def apply_rule(self, node: TableauNode, branch: Branch, rule: RuleInfo)
     def is_complete(self) -> bool
-```
+```text
 
 ### Rule Types
 
 #### Alpha Rules (Non-branching, High Priority)
+
 - **T-Conjunction**: `T: p ∧ q → T: p, T: q`
 - **F-Disjunction**: `F: p ∨ q → F: p, F: q`
 - **T-Negation**: `T: ~p → F: p`
@@ -238,11 +240,13 @@ class Tableau:
 - **F-Implication**: `F: p → q → T: p, F: q`
 
 #### Beta Rules (Branching, Lower Priority)
+
 - **F-Conjunction**: `F: p ∧ q → {F: p} | {F: q}`
 - **T-Disjunction**: `T: p ∨ q → {T: p} | {T: q}`  
 - **T-Implication**: `T: p → q → {F: p} | {T: q}`
 
 #### First-Order Rules
+
 - **T-RestrictedExists**: `T: [∃X P(X)]Q(X) → T: P(c), T: Q(c)` (for fresh constant c)
 - **F-RestrictedExists**: `F: [∃X P(X)]Q(X) → {F: P(c)} | {F: Q(c)}`
 - **T-RestrictedForall**: `T: [∀X P(X)]Q(X) → {F: P(c)} | {T: Q(c)}`  
@@ -272,7 +276,7 @@ class Branch:
     # Performance metrics
     complexity_score: int
     branching_factor: int
-```
+```text
 
 #### Node Structure
 
@@ -288,7 +292,7 @@ class TableauNode:
     rule_applied: Optional[str]
     is_closed: bool
     depth: int
-```
+```text
 
 ## Performance Optimizations
 
@@ -304,7 +308,7 @@ def _check_contradiction(self, new_formula: SignedFormula) -> bool:
     elif new_formula.sign == F:
         return len(self.formula_index[T][new_formula.formula]) > 0
     return False
-```
+```text
 
 ### Alpha/Beta Rule Prioritization
 
@@ -321,7 +325,7 @@ class RuleInfo:
             return self.priority < other.priority
         # Finally by complexity cost
         return self.complexity_cost < other.complexity_cost
-```
+```text
 
 ### Intelligent Branch Selection
 
@@ -331,7 +335,7 @@ Branches are selected using the "least complex first" strategy:
 def _select_optimal_branch(self) -> Optional[Branch]:
     if self.branch_selection_strategy == "least_complex":
         return min(self.open_branches, key=lambda b: b.complexity_score)
-```
+```text
 
 ### Early Termination
 
@@ -342,7 +346,7 @@ if self.early_termination and len(self.open_branches) > 0:
     for branch in self.open_branches:
         if all(node.formula.formula.is_atomic() for node in branch.nodes):
             break  # Found satisfying assignment
-```
+```text
 
 ### Performance Monitoring
 
@@ -353,7 +357,7 @@ def _track_performance_metrics(self, branch: Branch) -> None:
     """Track performance metrics for optimization."""
     branch.complexity_score += self._formula_complexity(formula)
     self.rule_application_stats[rule_name] += 1
-```
+```text
 
 ### Performance Metrics
 
@@ -368,7 +372,7 @@ class TableauResult:
     open_branches: int
     total_nodes: int
     tableau: Optional[Tableau]
-```
+```text
 
 ## Extension Points
 
@@ -377,22 +381,25 @@ class TableauResult:
 To add a new logical connective:
 
 1. **Extend Formula Classes**:
+
 ```python
 class BiconditionalFormula(CompoundFormula):
     def __init__(self, left: Formula, right: Formula):
         super().__init__("<->", [left, right])
-```
+```text
 
 2. **Define Semantic Operations**:
+
 ```python
 def biconditional(self, a: TruthValue, b: TruthValue) -> TruthValue:
     """Weak Kleene biconditional."""
     if a == UNDEFINED or b == UNDEFINED:
         return UNDEFINED
     return TRUE if a == b else FALSE
-```
+```text
 
 3. **Add Tableau Rules**:
+
 ```python
 # T-Biconditional: T: p <-> q → {T: p, T: q} | {F: p, F: q}
 if connective == "<->" and sign == T:
@@ -401,13 +408,14 @@ if connective == "<->" and sign == T:
         [SignedFormula(F, left), SignedFormula(F, right)]
     ]
     return RuleInfo("T-Biconditional", RuleType.BETA, 15, 4, conclusions)
-```
+```text
 
 ### Adding New Logic Systems
 
 The architecture supports extending to other many-valued logics:
 
 1. **Create New Semantic System**:
+
 ```python
 class StrongKleeneSemantics(ThreeValuedSemantics):
     def disjunction(self, a: TruthValue, b: TruthValue) -> TruthValue:
@@ -417,7 +425,7 @@ class StrongKleeneSemantics(ThreeValuedSemantics):
         if a == UNDEFINED or b == UNDEFINED:
             return UNDEFINED
         return FALSE
-```
+```text
 
 2. **Modify Tableau Rules**: Adjust rules to match new semantics
 3. **Update Tests**: Add test cases for new logic system
@@ -437,7 +445,7 @@ def _advanced_optimization(self, branch: Branch) -> bool:
     """Advanced optimization strategies."""
     # Implement domain-specific optimization logic
     pass
-```
+```text
 
 ## Testing Architecture
 
@@ -452,7 +460,7 @@ def _advanced_optimization(self, branch: Branch) -> bool:
 
 ### Test Structure
 
-```
+```text
 tests/
 ├── test_wkrq_basic.py                 # Core functionality (25 tests)
 ├── test_first_order.py                # First-order features (12 tests)  
@@ -462,11 +470,12 @@ tests/
 ├── test_cli_quantifiers.py            # CLI interface tests (45 tests)
 ├── test_ferguson_compliance.py        # Ferguson (2021) validation (17 tests)
 └── test_semantic_validation.py        # Semantic correctness (20 tests)
-```
+```text
 
 ### Continuous Validation
 
 All tests run automatically to ensure:
+
 - **Semantic Correctness**: Truth tables match weak Kleene specifications
 - **Tableau Soundness**: All tableau rules are semantically valid
 - **Performance Benchmarks**: No regression below acceptable thresholds

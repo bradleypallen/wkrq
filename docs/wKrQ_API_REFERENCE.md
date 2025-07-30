@@ -45,7 +45,7 @@ formula = p & (q | ~p)
 result = solve(formula, T)
 print(f"Satisfiable: {result.satisfiable}")
 print(f"Models: {result.models}")
-```
+```text
 
 ## Installation & Import
 
@@ -67,7 +67,7 @@ from wkrq import parse, parse_inference, check_inference
 # Advanced classes
 from wkrq.tableau import Tableau, TableauResult
 from wkrq.signs import SignedFormula
-```
+```text
 
 ### Comprehensive Import
 
@@ -87,7 +87,7 @@ from wkrq import (
     # Advanced
     Tableau, TableauResult, Model
 )
-```
+```text
 
 ## Core Classes
 
@@ -116,7 +116,7 @@ class Formula:
     # Utility methods
     def complexity(self) -> int: ...
     def substitute_term(self, mapping: Dict[str, 'Term']) -> 'Formula': ...
-```
+```text
 
 #### Static Constructors
 
@@ -136,7 +136,7 @@ loves_ab = Formula.predicate("Loves", [a, Formula.constant("b")])
 # Restricted quantifiers
 exists_formula = Formula.restricted_exists(x, student_x, human_x)
 forall_formula = Formula.restricted_forall(x, human_x, mortal_x)
-```
+```text
 
 ### TableauResult
 
@@ -157,7 +157,7 @@ class TableauResult:
     @property
     def valid(self) -> bool:       # True if formula is valid (no models)
         return not self.satisfiable
-```
+```text
 
 ### Model
 
@@ -172,7 +172,7 @@ class Model:
     constants: Dict[str, Set[Formula]]     # Constant interpretations (first-order)
     
     def __str__(self) -> str: ...
-```
+```text
 
 ### Signs
 
@@ -188,7 +188,7 @@ N  # Formula must be undefined (e)
 # Usage
 signed_formula = SignedFormula(T, formula)
 result = solve(formula, sign=T)
-```
+```text
 
 ## Formula Construction
 
@@ -215,7 +215,7 @@ nested_formula = p.implies(q.implies(r))
 
 # Parentheses are handled automatically
 formula = p & (q | r)  # Equivalent to: p ∧ (q ∨ r)
-```
+```text
 
 ### First-Order Logic
 
@@ -241,7 +241,7 @@ all_humans_mortal = Formula.restricted_forall(x, human_x, mortal_x)
 
 # Complex first-order formulas
 complex_fo = exists_human_mortal & all_humans_mortal & student_a
-```
+```text
 
 ### Formula Properties
 
@@ -262,7 +262,7 @@ formula1 = p & q
 formula2 = p & q
 print(formula1 == formula2)       # True
 print(hash(formula1))             # Hashable for use in sets/dicts
-```
+```text
 
 ## Tableau Operations
 
@@ -283,7 +283,7 @@ print(f"T: {result_t.satisfiable}")
 print(f"F: {result_f.satisfiable}")
 print(f"M: {result_m.satisfiable}")
 print(f"N: {result_n.satisfiable}")
-```
+```text
 
 ### Detailed Results
 
@@ -305,7 +305,7 @@ for i, model in enumerate(result.models, 1):
     p_value = model.valuations.get("p", UNDEFINED)
     q_value = model.valuations.get("q", UNDEFINED)
     print(f"  p = {p_value}, q = {q_value}")
-```
+```text
 
 ### Validity and Entailment
 
@@ -330,7 +330,7 @@ premises = [
 ]
 conclusion = s
 print(f"Chain entailment: {entails(premises, conclusion)}")
-```
+```text
 
 ### Advanced Tableau Construction
 
@@ -353,7 +353,7 @@ for i, branch in enumerate(tableau.branches):
     print(f"Branch {i}: {'CLOSED' if branch.is_closed else 'OPEN'}")
     if branch.is_closed:
         print(f"  Closure reason: {branch.closure_reason}")
-```
+```text
 
 ## Semantic Operations
 
@@ -379,7 +379,7 @@ print(f"¬e = {result}")     # Output: e (undefined)
 # Test implication
 result = semantics.implication(UNDEFINED, TRUE)
 print(f"e → t = {result}")  # Output: e (undefined)
-```
+```text
 
 ### Truth Value Properties
 
@@ -397,7 +397,7 @@ print(f"All truth values: {semantics.truth_values}")        # {TRUE, FALSE, UNDE
 print(f"TRUE is designated: {semantics.is_designated(TRUE)}")      # True
 print(f"FALSE is designated: {semantics.is_designated(FALSE)}")    # False
 print(f"UNDEFINED is designated: {semantics.is_designated(UNDEFINED)}") # False
-```
+```text
 
 ### Model Evaluation
 
@@ -415,7 +415,7 @@ for model in result.models:
     q_val = model.valuations["q"] 
     r_val = model.valuations.get("r", UNDEFINED)
     print(f"Model: p={p_val}, q={q_val}, r={r_val}")
-```
+```text
 
 ## First-Order Logic
 
@@ -436,7 +436,7 @@ between_xyz = Formula.predicate("Between", [x, y, Formula.constant("c")])  # Ter
 # Complex predicate formulas
 formula = student_x & loves_xy.substitute_term({"Y": alice})
 print(f"Formula: {formula}")
-```
+```text
 
 ### Term Substitution
 
@@ -454,7 +454,7 @@ print(f"Substituted: {substituted}")  # Loves(alice, bob)
 partial_substitution = {"X": alice}
 partial = formula.substitute_term(partial_substitution)
 print(f"Partial: {partial}")  # Loves(alice, Y)
-```
+```text
 
 ### Restricted Quantification
 
@@ -488,7 +488,7 @@ complex_reasoning = exists_student_human & all_humans_mortal & alice_student
 result = solve(complex_reasoning, T)
 print(f"Complex reasoning: {result.satisfiable}")
 print(f"Models: {len(result.models)}")
-```
+```text
 
 ### First-Order Model Extraction
 
@@ -507,7 +507,7 @@ result = solve(formula, T)
 for model in result.models:
     print(f"Valuations: {model.valuations}")
     print(f"Constants: {model.constants}")
-```
+```text
 
 ## Advanced Features
 
@@ -533,7 +533,7 @@ print(f"Conclusion: {inference.conclusion}")
 result = check_inference(inference)
 print(f"Valid: {result.valid}")
 print(f"Countermodels: {len(result.countermodels)}")
-```
+```text
 
 ### Performance Optimization
 
@@ -552,7 +552,7 @@ result = tableau.construct()
 # Performance statistics
 print(f"Nodes created: {result.total_nodes}")
 print(f"Branches: {result.open_branches + result.closed_branches}")
-```
+```text
 
 ### Custom Formula Construction
 
@@ -570,7 +570,7 @@ print(f"Manual construction: {conjunction}")
 automatic = Formula.atom("p") & Formula.atom("q")
 print(f"Automatic construction: {automatic}")
 print(f"Equal: {conjunction == automatic}")
-```
+```text
 
 ## Error Handling
 
@@ -592,7 +592,7 @@ def safe_parse(formula_str):
     except ParseError as e:
         print(f"Failed to parse '{formula_str}': {e}")
         return None
-```
+```text
 
 ### Runtime Errors
 
@@ -618,7 +618,7 @@ try:
     signal.alarm(0)  # Cancel timeout
 except TimeoutError:
     print("Formula too complex, timed out")
-```
+```text
 
 ### Validation
 
@@ -646,7 +646,7 @@ def validate_formula(formula):
 formula = p & (q | r)
 is_valid = validate_formula(formula)
 print(f"Formula valid: {is_valid}")
-```
+```text
 
 ## Performance Considerations
 
@@ -671,7 +671,7 @@ result = solve(formula, T)  # Stops at first model
 result = solve(formula, T)
 if len(result.models) > 100:
     print("Warning: Many models found, consider simplifying formula")
-```
+```text
 
 ### Memory Management
 
@@ -690,7 +690,7 @@ for formula in formulas:
     result = solve(formula, T)
     results.append(result.satisfiable)  # Store only what you need
     # Don't store the full result object if not needed
-```
+```text
 
 ### Performance Monitoring
 
@@ -721,7 +721,7 @@ formula = (p & q) | (r & s)
 stats = benchmark_formula(formula)
 print(f"Average time: {stats['average_time']:.3f}s")
 print(f"Nodes created: {stats['nodes']}")
-```
+```text
 
 ## Complete Examples
 
@@ -747,7 +747,7 @@ result = solve(biconditional, T)
 print(f"Models for De Morgan's law: {len(result.models)}")
 for model in result.models:
     print(f"  {model}")
-```
+```text
 
 ### Example 2: Three-Valued Logic Exploration
 
@@ -783,7 +783,7 @@ print("\nWeak Kleene property demonstration:")
 print(f"TRUE ∧ UNDEFINED = {semantics.conjunction(TRUE, UNDEFINED)}")
 print(f"TRUE ∨ UNDEFINED = {semantics.disjunction(TRUE, UNDEFINED)}")
 print(f"¬UNDEFINED = {semantics.negation(UNDEFINED)}")
-```
+```text
 
 ### Example 3: First-Order Reasoning
 
@@ -838,7 +838,7 @@ all_premises = all_premises & exists_human_student
 result = solve(all_premises, T)
 print(f"All premises together are satisfiable: {result.satisfiable}")
 print(f"Number of models: {len(result.models)}")
-```
+```text
 
 ### Example 4: Philosophical Logic Application
 
@@ -882,7 +882,7 @@ if result.satisfiable:
         print(f"  Model: {model}")
 else:
     print("Paradox leads to contradiction even in three-valued logic.")
-```
+```text
 
 ### Example 5: Performance Analysis
 
@@ -951,7 +951,7 @@ def memory_test():
         print(f"{size:<6} {len(result.models):<8} {total_branches:<10}")
 
 memory_test()
-```
+```text
 
 ---
 

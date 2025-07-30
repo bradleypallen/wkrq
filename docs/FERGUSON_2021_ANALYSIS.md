@@ -7,18 +7,22 @@ Our initial validation tests were designed for pure weak Kleene logic, but Fergu
 ## **Core Semantic Findings**
 
 ### **✅ Truth Tables Match Exactly**
+
 Ferguson's Definition 1 shows weak Kleene truth tables that **exactly match our implementation**:
+
 - **Contagious undefined**: Any operation with 'e' produces 'e'
 - **Negation**: ~t=f, ~e=e, ~f=t ✓
 - **Conjunction**: t∧e=e, e∧anything=e ✓  
 - **Disjunction**: t∨e=e (NOT t - this is weak Kleene) ✓
 
 ### **✅ Validity Definition Resolves Confusion**
+
 **Ferguson's Definition 6 (Critical!):**
 > "Validity in weak Kleene logic is defined as truth preservation, i.e.  
 > Γ ⊨wK φ if for all wK interpretations such that I[Γ] = {t}, I(φ) = t"
 
 This is **classical validity** adapted to weak Kleene semantics, meaning:
+
 - **Classical tautologies ARE valid** in Ferguson's system
 - **p ∨ ¬p should be unsatisfiable under F sign** ✓
 - **Our tableau reasoning is correct** ✓
@@ -26,22 +30,27 @@ This is **classical validity** adapted to weak Kleene semantics, meaning:
 ## **Quantifier System Findings**
 
 ### **✅ Restricted Quantifiers Are Intentional**
+
 Ferguson explains why he **rejected** both strong and weak Kleene quantifiers (Definitions 7-8) because they "conflict with intuitive understanding." Instead, he developed **restricted quantifiers** (Definition 3) for practical applications.
 
 ### **✅ Complex Restricted Quantifier Semantics**
+
 Ferguson's restricted quantifiers have sophisticated truth conditions that handle:
+
 - **Domain restrictions** properly
-- **Undefined value propagation** 
+- **Undefined value propagation**
 - **Practical knowledge representation** needs
 
 **Restricted Quantifier Truth Conditions:**
 
 #### **Existential [∃xφ(x)]ψ(x):**
+
 - **t** if there exists some c where both φ(c) = t AND ψ(c) = t
 - **e** if for all c, either φ(c) = e OR ψ(c) = e  
 - **f** if for all c where φ(c) = t, we have ψ(c) ≠ t AND there exists some c where φ(c) ≠ e AND ψ(c) ≠ e
 
 #### **Universal [∀xφ(x)]ψ(x):**
+
 - **t** if for all c where φ(c) = t, we have ψ(c) = t AND there exists some c where φ(c) ≠ e AND ψ(c) ≠ e
 - **e** if for all c, either φ(c) = e OR ψ(c) = e
 - **f** if there exists some c where φ(c) = t AND ψ(c) ≠ t AND there exists some c' where φ(c') ≠ e AND ψ(c') ≠ e
@@ -49,45 +58,53 @@ Ferguson's restricted quantifiers have sophisticated truth conditions that handl
 ## **System Architecture Understanding**
 
 ### **Ferguson's Hybrid Design:**
+
 1. **✅ Weak Kleene truth tables** for semantic operations
 2. **✅ Classical validity** for practical reasoning  
 3. **✅ Restricted quantifiers** for domain-specific reasoning
 4. **✅ Four-sign tableau system** (details to be analyzed)
 
 ### **Target Applications:**
+
 - Knowledge representation systems
 - Conversational agents  
 - Belief/goal cataloging
 - Intentional contexts that aren't closed under Boolean logic
 
 ### **Key Motivation (from Abstract):**
+>
 > "Logic-driven applications like knowledge representation typically operate with the tools of classical, first-order logic. In these applications' standard, extensional domains—e.g., knowledge bases representing product features—these deductive tools are suitable. However, there remain many domains for which these tools seem overly strong. If, e.g., an artificial conversational agent maintains a knowledge base cataloging e.g. an interlocutor's beliefs or goals, it is unlikely that the model's contents are closed under Boolean logic."
 
 ## **Validation Test Resolution**
 
 ### **Initial Test Design:**
+
 The initial validation tests were designed for pure weak Kleene logic, which would have **no tautologies**. However, Ferguson's system:
+
 - ✅ **Preserves classical reasoning patterns** for practical use
 - ✅ **Uses weak Kleene semantics** for handling undefined values
 - ✅ **Maintains truth preservation** as the validity criterion
 
 ### **Corrected Understanding:**
+
 - **F:(p ∨ ¬p) should be unsatisfiable** ✓ (no interpretation makes it false)
 - **T:(p ∧ ¬p) should be unsatisfiable** ✓ (contradictions can't be true)  
 - **Classical tautologies remain valid** ✓ (truth preservation)
 
 ### **Test Cases That Were Wrong:**
+
 ```python
 # INCORRECT expectation:
 assert result_f.satisfiable, "p ∨ ¬p should be satisfiable under F (can be false)"
 
 # CORRECT expectation (based on Ferguson's Definition 6):
 assert not result_f.satisfiable, "p ∨ ¬p should be unsatisfiable under F (cannot be false)"
-```
+```text
 
 ## **Implementation Status**
 
 ### **✅ What We Got Right:**
+
 1. **Weak Kleene truth tables** implementation
 2. **Restricted quantifier** basic structure
 3. **Tableau validity** checking
@@ -99,16 +116,19 @@ assert not result_f.satisfiable, "p ∨ ¬p should be unsatisfiable under F (can
 Ferguson's tableau system uses signs that directly correspond to truth values and branching behavior:
 
 #### **Basic Truth Value Signs:**
+
 - **t : φ** = "φ must be true" (corresponds to our **T** sign)
 - **f : φ** = "φ must be false" (corresponds to our **F** sign)  
 - **e : φ** = "φ must be undefined" (corresponds to our **N** sign)
 
 #### **Branching Signs:**
+
 - **m : φ** = "meaningful" - φ can branch between t and f (corresponds to our **M** sign)
 - **n : φ** = "nontrue" - φ can branch between f and e
 - **v : φ** = general branching based on availability
 
 #### **Sign Mapping to Our Implementation:**
+
 - **T** ↔ **t** (must be true)
 - **F** ↔ **f** (must be false)  
 - **M** ↔ **m** (meaningful - can be true or false)
@@ -117,34 +137,40 @@ Ferguson's tableau system uses signs that directly correspond to truth values an
 ### **✅ Tableau Rules and Construction:**
 
 #### **Conjunction/Disjunction Rules:**
-```
+
+```text
 v : φ ∧ ψ                    v : φ ∨ ψ
 ─────────                    ─────────
 v₀∧v₁={v₀ : φ ◦ v₁ : ψ}      v₀∨v₁={v₀ : φ ◦ v₁ : ψ}
-```
+```text
 
 #### **Restricted Quantifier Rules:**
+
 - **t : [∃φ(x)]ψ(x)** with complex truth conditions
 - **f : [∃φ(x)]ψ(x)** with falsity conditions  
 - **e : [∃φ(x)]ψ(x)** with undefined conditions
 - **m/e : [∀φ(x)]ψ(x)** with universal conditions
 
 #### **Branch Closure (Definition 10):**
+>
 > "A branch B closes if there is a sentence φ and distinct v, u ∈ V₃ such that both v : φ and u : φ appear on B."
 
 #### **Entailment (Definition 11):**
+>
 > "{φ₀, ..., φₙ₋₁} ⊨wKrQ φ when every branch of a tableau T with initial nodes {t : φ₀, ..., t : φₙ₋₁, n : φ} closes."
 
 This confirms classical entailment where premises are assumed true and conclusion tested as "nontrue."
 
 ### **✅ Soundness and Completeness Proven:**
 
-#### **Theorem 1 (Soundness):** 
+#### **Theorem 1 (Soundness):**
+>
 > "If Γ ⊢wKrQ φ then Γ ⊨wK φ"
 
 **Our tableau system is sound** - anything it derives is semantically valid.
 
-#### **Theorem 2 (Completeness):** 
+#### **Theorem 2 (Completeness):**
+>
 > "If Γ ⊨wK φ then Γ ⊢wKrQ φ"
 
 **Our tableau system is complete** - it can derive everything that's semantically valid.
@@ -154,23 +180,26 @@ This confirms classical entailment where premises are assumed true and conclusio
 Ferguson provides exact model extraction from open branches:
 
 #### **Branch Interpretation IB:**
+
 - **Domain CB**: All constants appearing on branch B
-- **Predicate Interpretation**: 
-  ```
+- **Predicate Interpretation**:
+
+  ```text
   R^IB(c₀^IB, ..., c_{n-1}^IB) = {
     v  if v : R(c₀, ..., c_{n-1}) is on B
     e  otherwise
   }
   ```
 
-#### **Lemma 1:** 
+#### **Lemma 1:**
+>
 > "For all sentences φ and v ∈ V₃, if v : φ is on B, then IB(φ) = v"
 
 **This confirms signs map directly to truth values in extracted models.**
 
 ### **✅ Sign Coexistence Clarified:**
 
-**Important Footnote:** 
+**Important Footnote:**
 > "The criterion for closure is that a formula appears signed with distinct truth values and not distinct signs. E.g., m : φ is merely a notational device for potential branching, so both m : φ and t : φ may harmoniously appear in an open branch."
 
 This explains why **M** (meaningful) and **T** (true) signs can coexist - **M** represents potential branching while **T** represents definite truth value.
@@ -182,14 +211,17 @@ This explains why **M** (meaningful) and **T** (true) signs can coexist - **M** 
 Ferguson analyzed both strong and weak Kleene quantifiers and found them unsuitable:
 
 #### **Strong Kleene Quantifiers (Definition 7):**
+
 - **∃(X):** t if t ∈ X, e if e ∈ X and t ∉ X, f if X = {f}
 - **∀(X):** t if X = {t}, e if e ∈ X and f ∉ X, f if f ∈ X
 
 #### **Weak Kleene Quantifiers (Definition 8):**
+
 - **∃(X):** t if t ∈ X and e ∉ X, e if e ∈ X, f if X = {f}  
 - **∀(X):** t if X = {t}, e if e ∈ X, f if f ∈ X and e ∉ X
 
 #### **Ferguson's Criticism:**
+>
 > "Upon examination, each set of quantifiers has properties that conflict with our intuitive understanding of the above first-order formulae, making neither account entirely suitable for our purposes."
 
 **Specific Problem with Universal Quantifiers:**
@@ -200,12 +232,14 @@ This explains why Ferguson developed restricted quantifiers instead.
 ## **Literature Context**
 
 ### **Paper Details:**
+
 - **Author:** Thomas Macaulay Ferguson  
 - **Title:** "Tableaux and Restricted Quantification for Systems Related to Weak Kleene Logic"
 - **Published:** TABLEAUX 2021, LNCS vol 12842, pp. 3-19
 - **Institution:** ILLC University of Amsterdam & Arché Research Centre University of St. Andrews
 
 ### **Key References Ferguson Builds On:**
+
 - Angell's AC (analytic containment) logic
 - Charles Daniel's S₁ₐ system
 - Halldén-Bochvar interpretation of undefined values
@@ -225,7 +259,7 @@ This explains why Ferguson developed restricted quantifiers instead.
 
 After correcting our validation tests based on Ferguson's actual specifications:
 
-```
+```text
 tests/test_ferguson_compliance.py::TestFergusonTruthTables::test_conjunction_matches_ferguson_definition_1 PASSED
 tests/test_ferguson_compliance.py::TestFergusonTruthTables::test_disjunction_matches_ferguson_definition_1 PASSED  
 tests/test_ferguson_compliance.py::TestFergusonTruthTables::test_negation_matches_ferguson_definition_1 PASSED
@@ -245,7 +279,7 @@ tests/test_ferguson_compliance.py::TestOverallFergusonCompliance::test_ferguson_
 tests/test_ferguson_compliance.py::TestOverallFergusonCompliance::test_ferguson_practical_applications PASSED
 
 ============================== 17 passed in 0.03s ==============================
-```
+```text
 
 ### **Key Corrections Made:**
 
@@ -256,7 +290,7 @@ tests/test_ferguson_compliance.py::TestOverallFergusonCompliance::test_ferguson_
 
 ## **Bottom Line**
 
-**✅ Our implementation correctly follows Ferguson (2021).** 
+**✅ Our implementation correctly follows Ferguson (2021).**
 
 After updating our validation tests to match Ferguson's specifications, we confirmed that our implementation correctly follows Ferguson's hybrid approach. Ferguson's system is a sophisticated framework that:
 

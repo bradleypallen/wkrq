@@ -1,23 +1,36 @@
-# wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
+# wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak
+Kleene Logic with Restricted Quantification
 
 [![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.0.8)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
 
-An implementation of a semantic tableau calculus for first-order weak Kleene logic with restricted quantification, featuring a command-line interface for satisfiability and inference checking.
+An implementation of a semantic tableau calculus for first-order weak
+Kleene logic with restricted quantification, featuring a command-line
+interface for satisfiability and inference checking.
 
 ## Citation
 
 This implementation is based on the wKrQ tableau system defined in:
 
-**Ferguson, Thomas Macaulay**. "Tableaux and restricted quantification for systems related to weak Kleene logic." In *International Conference on Automated Reasoning with Analytic Tableaux and Related Methods*, pp. 3-19. Cham: Springer International Publishing, 2021.
+**Ferguson, Thomas Macaulay**. "Tableaux and restricted quantification for
+systems related to weak Kleene logic." In *International Conference on
+Automated Reasoning with Analytic Tableaux and Related Methods*, pp. 3-19.
+Cham: Springer International Publishing, 2021.
 
-The tableau construction algorithms and four-sign system (T, F, M, N) implemented here follow Ferguson's formal definitions. This is a research implementation created for experimental and educational purposes.
+The tableau construction algorithms and four-sign system (T, F, M, N)
+implemented here follow Ferguson's formal definitions. This is a research
+implementation created for experimental and educational purposes.
 
 ## Research Software Disclaimer
 
-⚠️ **This is research software.** While extensively tested, this implementation may contain errors or behave unexpectedly in edge cases. It is intended for research, education, and experimentation. Use in production systems is not recommended without thorough validation. Please report any issues or unexpected behavior through the [issue tracker](https://github.com/bradleypallen/wkrq/issues).
+⚠️ **This is research software.** While extensively tested, this
+implementation may contain errors or behave unexpectedly in edge cases. It
+is intended for research, education, and experimentation. Use in production
+systems is not recommended without thorough validation. Please report any
+issues or unexpected behavior through the [issue
+tracker](https://github.com/bradleypallen/wkrq/issues).
 
 ## Features
 
@@ -74,9 +87,11 @@ result = solve(formula, T)
 print(f"Satisfiable: {result.satisfiable}")
 print(f"Models: {result.models}")
 
-# Test validity - Ferguson uses classical validity with weak Kleene semantics
+# Test validity - Ferguson uses classical validity with weak Kleene
+# semantics
 tautology = p | ~p
-print(f"Valid in Ferguson's system: {valid(tautology)}")  # True (classical tautologies are valid)
+print(f"Valid in Ferguson's system: {valid(tautology)}")  # True (classical
+                                                         # tautologies are valid)
 
 # Three-valued reasoning
 result = solve(p | ~p, N)  # Can it be undefined?
@@ -89,7 +104,7 @@ print(f"Can be undefined: {result.satisfiable}")  # True
 
 The language of wKrQ is defined by the following BNF grammar:
 
-```
+```bnf
 ⟨formula⟩ ::= ⟨atom⟩ | ⟨compound⟩ | ⟨quantified⟩
 
 ⟨atom⟩ ::= p | q | r | ... | ⟨predicate⟩
@@ -112,11 +127,13 @@ The language of wKrQ is defined by the following BNF grammar:
 ### Truth Tables
 
 wKrQ implements **weak Kleene** three-valued logic with truth values:
+
 - **t** (true)
 - **f** (false)  
 - **e** (undefined/error)
 
 #### Negation (¬)
+
 | p | ¬p |
 |---|-----|
 | t | f |
@@ -124,6 +141,7 @@ wKrQ implements **weak Kleene** three-valued logic with truth values:
 | e | e |
 
 #### Conjunction (∧)
+
 | p \ q | t | f | e |
 |-------|---|---|---|
 | **t** | t | f | e |
@@ -131,6 +149,7 @@ wKrQ implements **weak Kleene** three-valued logic with truth values:
 | **e** | e | e | e |
 
 #### Disjunction (∨)
+
 | p \ q | t | f | e |
 |-------|---|---|---|
 | **t** | t | t | e |
@@ -138,6 +157,7 @@ wKrQ implements **weak Kleene** three-valued logic with truth values:
 | **e** | e | e | e |
 
 #### Material Implication (→)
+
 | p \ q | t | f | e |
 |-------|---|---|---|
 | **t** | t | f | e |
@@ -147,12 +167,22 @@ wKrQ implements **weak Kleene** three-valued logic with truth values:
 ### Quantifier Semantics
 
 #### Restricted Existential Quantification: [∃X φ(X)]ψ(X)
-The formula is true iff there exists a domain element d such that both φ(d) and ψ(d) are true. It is false iff for all domain elements d, either φ(d) is false or ψ(d) is false (but not undefined). It is undefined if any evaluation results in undefined.
+
+The formula is true iff there exists a domain element d such that both
+φ(d) and ψ(d) are true. It is false iff for all domain elements d, either
+φ(d) is false or ψ(d) is false (but not undefined). It is undefined if any
+evaluation results in undefined.
 
 #### Restricted Universal Quantification: [∀X φ(X)]ψ(X)  
-The formula is true iff for all domain elements d, either φ(d) is false or ψ(d) is true. It is false iff there exists a domain element d such that φ(d) is true and ψ(d) is false. It is undefined if any evaluation results in undefined.
 
-The key principle of weak Kleene logic is that **any operation involving an undefined value produces an undefined result**. This differs from strong Kleene logic where, for example, `t ∨ e = t`.
+The formula is true iff for all domain elements d, either φ(d) is false
+or ψ(d) is true. It is false iff there exists a domain element d such that
+φ(d) is true and ψ(d) is false. It is undefined if any evaluation results
+in undefined.
+
+The key principle of weak Kleene logic is that **any operation involving
+an undefined value produces an undefined result**. This differs from strong
+Kleene logic where, for example, `t ∨ e = t`.
 
 ## Documentation
 
@@ -225,9 +255,13 @@ wKrQ uses a tableau proof system with four signs:
 - **M**: Can be true or false (t or f)
 - **N**: Must be undefined (e)
 
-This enables systematic proof search in three-valued logic while maintaining classical reasoning as a special case.
+This enables systematic proof search in three-valued logic while
+maintaining classical reasoning as a special case.
 
-**Note**: Our implementation is validated against Ferguson (2021) and uses classical validity with weak Kleene semantics, meaning classical tautologies remain valid. See [Ferguson (2021) Analysis - Key Findings](docs/FERGUSON_2021_ANALYSIS.md) for validation details.
+**Note**: Our implementation is validated against Ferguson (2021) and uses
+classical validity with weak Kleene semantics, meaning classical tautologies
+remain valid. See [Ferguson (2021) Analysis - Key
+Findings](docs/FERGUSON_2021_ANALYSIS.md) for validation details.
 
 ## Performance
 
@@ -245,7 +279,8 @@ If you use wKrQ in academic work, please cite:
 
 ```bibtex
 @software{wkrq2025,
-  title={wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification},
+  title={wKrQ: A Python Implementation of a Semantic Tableau Calculus for
+         Weak Kleene Logic with Restricted Quantification},
   author={Allen, Bradley P.},
   year={2025},
   url={https://github.com/bradleypallen/wkrq}
