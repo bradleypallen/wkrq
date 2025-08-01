@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-07-31
+
+### Added
+
+- **ACrQ Core Implementation** - First phase of Analytic Containment with restricted Quantification support
+  - `BilateralPredicateFormula` class for R/R* bilateral predicate pairs
+  - `BilateralTruthValue` class supporting four information states (true, false, gap, glut)
+  - Basic ACrQ parser with transparent mode supporting Ferguson's ¬P(x) → P*(x) translation
+  - Comprehensive bilateral predicate test suite (16 tests)
+  - Foundation for paraconsistent and paracomplete reasoning
+- **ACrQ Parser Infrastructure**
+  - `parse_acrq_formula()` function with syntax mode support
+  - `SyntaxMode` enum with TRANSPARENT, BILATERAL, and MIXED modes (transparent mode implemented)
+  - Automatic translation of negated predicates to bilateral form in transparent mode
+- **Development State Documentation**
+  - `ACRQ_DEVELOPMENT_STATE.md` for tracking implementation progress
+  - `ACRQ_QUICK_START.md` for easy development resumption
+
+### Changed
+
+- Updated package version to 1.1.0 to reflect significant new functionality
+- Enhanced package structure to support ACrQ development alongside existing wKrQ
+
 ## [1.0.9] - 2025-01-30
 
 ### Added

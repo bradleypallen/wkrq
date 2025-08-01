@@ -64,7 +64,21 @@ Ferguson provides a systematic translation τ:
 τ(φ ∨ ψ) = τ(φ) ∨ τ(ψ)            (disjunction preserved)
 τ(R(t₁,...,tₙ)) = R(t₁,...,tₙ)    (positive predicates unchanged)
 τ(¬R(t₁,...,tₙ)) = R*(t₁,...,tₙ)  (negated predicates become R*)
-```text
+```
+
+### Transparent Translation Approach
+
+The key innovation in our implementation is that this translation can be completely transparent to users. The system applies Ferguson's translation automatically, allowing users to:
+
+1. **Write formulas using familiar syntax**: Users continue to write `¬Human(x)` without knowing about `Human*(x)`
+2. **Get paraconsistent behavior automatically**: Knowledge gluts (`Human(x) ∧ ¬Human(x)`) are handled gracefully
+3. **See intuitive results**: Models show "both (glut)" or "undefined (gap)" rather than bilateral details
+4. **Access bilateral details when needed**: Advanced users can use `--show-bilateral` or direct API access
+
+This transparency is achieved through:
+- **Mode-aware parsing**: The parser translates `¬P(x)` to `P*(x)` in transparent mode
+- **Dual-view results**: Results can show either user-friendly or bilateral representations
+- **Progressive disclosure**: Complexity is available but not required
 
 ### Semantic Conditions
 
@@ -97,14 +111,16 @@ ACrQ System Architecture
 │   ├── Extended Truth Values
 │   ├── Translation Framework
 │   └── ACrQ-specific Rules
-├── System Selection Layer
-│   ├── Logic System Enum
-│   ├── Dynamic Rule Selection
-│   └── System-specific Behavior
+├── CLI Layer
+│   ├── Separate 'acrq' command
+│   ├── Mode-aware parser (transparent/bilateral/mixed)
+│   ├── Shared CLI utilities
+│   └── Result formatting
 └── API Layer
-    ├── Unified Interface
-    ├── System Configuration
-    └── Result Interpretation
+    ├── High-level API (transparent mode)
+    ├── Low-level API (direct bilateral access)
+    ├── Builder patterns
+    └── Migration utilities
 ```text
 
 ### Component Relationships
@@ -498,47 +514,410 @@ class ACrQModel(Model):
         super().__init__(standard_vals, {})
 ```text
 
-### Phase 5: API Integration
+### Phase 5: CLI and API Integration
 
-#### 5.1 System Selection
+#### 5.1 Separate CLI Command
+
+The ACrQ implementation will have its own `acrq` command-line tool, separate from `wkrq`:
+
+```toml
+# pyproject.toml
+[project.scripts]
+wkrq = "wkrq.cli:main"
+acrq = "wkrq.acrq_cli:main"  # New separate command
+```
+
+#### CLI Architecture
 
 ```python
+# src/wkrq/acrq_cli.py
 from enum import Enum
+import argparse
+from .cli_common import add_common_arguments, format_result
 
-class LogicalSystem(Enum):
-    """Available logical systems."""
-    WKRQ = "wKrQ"
-    ACRQ = "ACrQ"
-    SRQ = "SrQ"  # Future extension
+class SyntaxMode(Enum):
+    TRANSPARENT = "transparent"  # Default: ¬P(x) syntax
+    BILATERAL = "bilateral"      # Explicit: P*(x) syntax  
+    MIXED = "mixed"             # Both syntaxes allowed
 
-class SystemSelector:
-    """Selects appropriate tableau system based on formula content."""
+def main():
+    parser = argparse.ArgumentParser(
+        description='ACrQ: Analytic Containment with restricted Quantification'
+    )
+    
+    # Global syntax mode flag
+    parser.add_argument(
+        '--mode', 
+        type=SyntaxMode,
+        choices=list(SyntaxMode),
+        default=SyntaxMode.TRANSPARENT,
+        help='Formula syntax mode (default: transparent)'
+    )
+    
+    parser.add_argument(
+        '--show-bilateral',
+        action='store_true',
+        help='Show bilateral valuations in output (regardless of input mode)'
+    )
+    
+    # Common arguments
+    add_common_arguments(parser)
+    
+    # Subcommands
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Satisfiability
+    sat_parser = subparsers.add_parser('satisfiable')
+    sat_parser.add_argument('formula', help='Formula to check')
+    
+    args = parser.parse_args()
+    
+    # Parse based on mode
+    formula = parse_formula_with_mode(args.formula, args.mode)
+    # ... rest of implementation
+```
+
+#### Usage Examples by Mode
+
+**Transparent Mode (Default)**:
+```bash
+# Users write standard formulas - no R/R* visible
+$ acrq satisfiable "Human(x) ∧ ¬Human(x)"
+Formula is satisfiable
+Model:
+  Human(x) = both (glut)
+
+# System internally translates ¬Human(x) to Human*(x)
+```
+
+**Bilateral Mode**:
+```bash
+# Users must write R/R* explicitly
+$ acrq --mode bilateral satisfiable "Human(x) ∧ Human*(x)"
+Formula is satisfiable
+Bilateral Model:
+  Human(x): pos=true, neg=true
+
+# Negation not allowed in bilateral mode
+$ acrq --mode bilateral satisfiable "¬Human(x)"
+Error: Negation of predicates not allowed in bilateral mode. Use Human*(x) instead.
+```
+
+**Mixed Mode**:
+```bash
+# Accepts both syntaxes
+$ acrq --mode mixed satisfiable "Human(x) ∧ ¬Robot(x) ∧ Alien*(x)"
+Formula is satisfiable
+Model:
+  Human(x) = true
+  Robot(x) = false  
+  Alien(x) = false
+```
+
+#### 5.2 Mode-Aware Parser
+
+The parser must handle different syntax modes appropriately:
+
+```python
+# src/wkrq/acrq_parser.py
+from abc import ABC, abstractmethod
+
+class ParserMode(ABC):
+    """Abstract base for parser modes."""
+    
+    @abstractmethod
+    def can_parse_predicate_star(self) -> bool:
+        """Whether P* syntax is allowed."""
+        pass
+    
+    @abstractmethod
+    def can_parse_negated_predicate(self) -> bool:
+        """Whether ¬P(x) syntax is allowed."""
+        pass
+    
+    @abstractmethod
+    def transform_negated_predicate(self, pred: PredicateFormula) -> Formula:
+        """How to handle ¬P(x) when encountered."""
+        pass
+
+class TransparentMode(ParserMode):
+    """Standard syntax, auto-translates ¬P(x) to P*(x)."""
+    
+    def can_parse_predicate_star(self) -> bool:
+        return False  # P* not allowed in transparent mode
+    
+    def can_parse_negated_predicate(self) -> bool:
+        return True  # ¬P(x) is allowed and auto-translated
+    
+    def transform_negated_predicate(self, pred: PredicateFormula) -> Formula:
+        # Auto-translate to bilateral
+        return BilateralPredicateFormula(
+            positive_name=pred.predicate_name,
+            negative_name=f"{pred.predicate_name}*",
+            terms=pred.terms,
+            is_negative=True
+        )
+
+class BilateralMode(ParserMode):
+    """Explicit R/R* syntax only."""
+    
+    def can_parse_predicate_star(self) -> bool:
+        return True  # P* is required
+    
+    def can_parse_negated_predicate(self) -> bool:
+        return False  # ¬P(x) not allowed - must use P*(x)
+    
+    def transform_negated_predicate(self, pred: PredicateFormula) -> Formula:
+        raise ParseError(
+            f"Negation of predicates not allowed in bilateral mode. "
+            f"Use {pred.predicate_name}*(...) instead of ¬{pred.predicate_name}(...)"
+        )
+
+class MixedMode(ParserMode):
+    """Accepts both syntaxes."""
+    
+    def can_parse_predicate_star(self) -> bool:
+        return True  # P* allowed
+    
+    def can_parse_negated_predicate(self) -> bool:
+        return True  # ¬P(x) also allowed
+    
+    def transform_negated_predicate(self, pred: PredicateFormula) -> Formula:
+        # Same as transparent mode
+        return BilateralPredicateFormula(
+            positive_name=pred.predicate_name,
+            negative_name=f"{pred.predicate_name}*",
+            terms=pred.terms,
+            is_negative=True
+        )
+```
+
+#### Extended Parser Implementation
+
+```python
+class ACrQParser(Parser):
+    """Parser that supports multiple syntax modes."""
+    
+    def __init__(self, input_string: str, mode: ParserMode):
+        super().__init__(input_string)
+        self.mode = mode
+        
+    def parse_atomic(self) -> Formula:
+        """Parse atomic formula with mode awareness."""
+        
+        if self.current_token == '~' or self.current_token == '¬':
+            # Negation
+            self.consume_any(['~', '¬'])
+            
+            # Peek ahead to see if it's a predicate
+            if self.is_predicate_start():
+                if not self.mode.can_parse_negated_predicate():
+                    predicate_name = self.peek_predicate_name()
+                    raise ParseError(
+                        f"Negation of predicate '{predicate_name}' not allowed "
+                        f"in {self.mode.__class__.__name__}. "
+                        f"Use {predicate_name}*(...) instead."
+                    )
+                
+                # Parse the predicate
+                pred = self.parse_predicate_formula()
+                
+                # Transform according to mode
+                return self.mode.transform_negated_predicate(pred)
+            else:
+                # Negation of complex formula
+                sub = self.parse_atomic()
+                return Negation(sub)
+                
+        elif self.is_predicate_start():
+            return self.parse_predicate_with_star()
+            
+        # ... other cases
+    
+    def parse_predicate_with_star(self) -> Formula:
+        """Parse predicate that might have * suffix."""
+        
+        name = self.parse_identifier()
+        
+        # Check for star
+        has_star = False
+        if self.current_token == '*':
+            if not self.mode.can_parse_predicate_star():
+                raise ParseError(
+                    f"Bilateral predicate syntax '{name}*' not allowed "
+                    f"in {self.mode.__class__.__name__}. "
+                    f"Use ¬{name}(...) instead."
+                )
+            self.consume('*')
+            has_star = True
+        
+        # Parse terms
+        terms = self.parse_terms() if self.current_token == '(' else []
+        
+        # Create appropriate formula based on mode
+        if has_star:
+            # Explicit bilateral negative
+            return BilateralPredicateFormula(
+                positive_name=name,
+                negative_name=f"{name}*",
+                terms=terms,
+                is_negative=True
+            )
+        else:
+            # In transparent mode, return standard predicate for later translation
+            if isinstance(self.mode, TransparentMode):
+                return PredicateFormula(name, terms)
+            else:
+                # In other modes, create bilateral predicate
+                return BilateralPredicateFormula(
+                    positive_name=name,
+                    negative_name=f"{name}*",
+                    terms=terms,
+                    is_negative=False
+                )
+```
+
+#### 5.3 Dual-Mode Programmatic API
+
+The programmatic API supports both transparent usage (hiding R/R* complexity) and direct bilateral access:
+
+##### High-Level API (Transparent Mode)
+
+```python
+# src/wkrq/acrq/api.py
+from wkrq import parse
+from wkrq.acrq import solve, entails, valid
+
+# Users write standard formulas - no R/R* visible
+formula = parse("Human(socrates) ∧ ¬Human(socrates)")
+
+# ACrQ handles gluts gracefully
+result = solve(formula)
+print(result.satisfiable)  # True (not contradiction in ACrQ!)
+print(result.model)  # {"Human(socrates)": "both (glut)"}
+
+# Paraconsistent behavior - no explosion
+entails(
+    ["P(a)", "¬P(a)"],  # Contradictory premises
+    "Q(b)"              # Unrelated conclusion
+)  # Returns False (no explosion)
+```
+
+##### Low-Level API (Direct Bilateral Access)
+
+```python
+from wkrq.acrq.formula import BilateralPredicateFormula, Conjunction
+from wkrq.acrq.tableau import ACrQTableau
+from wkrq.acrq.semantics import BilateralTruthValue, TRUE, FALSE
+
+# Direct bilateral predicate construction
+human_pos = BilateralPredicateFormula(
+    positive_name="Human",
+    negative_name="Human*", 
+    terms=[Constant("socrates")],
+    is_negative=False
+)
+
+human_neg = BilateralPredicateFormula(
+    positive_name="Human",
+    negative_name="Human*",
+    terms=[Constant("socrates")],
+    is_negative=True  
+)
+
+# Create glut directly
+glut = Conjunction(human_pos, human_neg)
+
+# Direct tableau construction
+tableau = ACrQTableau([SignedFormula(T, glut)])
+result = tableau.construct()
+
+# Access bilateral valuations directly
+for pred, bilateral_val in result.model.bilateral_valuations.items():
+    print(f"{pred}: pos={bilateral_val.positive}, neg={bilateral_val.negative}")
+```
+
+##### API Functions with Mode Support
+
+```python
+def solve(formula: Union[str, Formula], 
+         show_bilateral: bool = False) -> ACrQResult:
+    """Solve using ACrQ with transparent translation."""
+    if isinstance(formula, str):
+        formula = parse(formula)
+    
+    # Automatic translation happens here
+    acrq_formula = TransparentTranslator().translate(formula)
+    
+    # Use bilateral machinery internally
+    tableau = ACrQTableau([SignedFormula(T, acrq_formula)])
+    result = tableau.construct()
+    
+    # Return user-friendly result by default
+    if not show_bilateral:
+        return UserFriendlyACrQResult(result)
+    else:
+        return result  # Full bilateral details
+
+# Direct bilateral access
+class BilateralAPI:
+    """Low-level API for direct bilateral predicate manipulation."""
     
     @staticmethod
-    def detect_system(formulas: List[Formula]) -> LogicalSystem:
-        """Auto-detect the required logical system."""
+    def create_glut(predicate: str, *terms) -> Formula:
+        """Create P(terms) ∧ P*(terms)."""
         
-        for formula in formulas:
-            if SystemSelector._contains_bilateral_predicate(formula):
-                return LogicalSystem.ACRQ
+    @staticmethod  
+    def create_gap(predicate: str, *terms) -> Formula:
+        """Create ¬P(terms) ∧ ¬P*(terms)."""
         
-        return LogicalSystem.WKRQ
-    
     @staticmethod
-    def _contains_bilateral_predicate(formula: Formula) -> bool:
-        """Check if formula contains bilateral predicates."""
-        if isinstance(formula, BilateralPredicateFormula):
-            return True
-        elif isinstance(formula, CompoundFormula):
-            return any(SystemSelector._contains_bilateral_predicate(sub) 
-                      for sub in formula.subformulas)
-        elif hasattr(formula, 'restriction') and hasattr(formula, 'matrix'):
-            return (SystemSelector._contains_bilateral_predicate(formula.restriction) or
-                    SystemSelector._contains_bilateral_predicate(formula.matrix))
-        return False
-```text
+    def from_bilateral_valuation(
+        predicate: str, 
+        terms: List[Term],
+        positive: TruthValue,
+        negative: TruthValue
+    ) -> Formula:
+        """Create formula from explicit bilateral valuation."""
+```
 
-#### 5.2 Extended API
+##### Result Objects with Dual Views
+
+```python
+@dataclass
+class ACrQResult:
+    """Result that supports both transparent and bilateral views."""
+    
+    satisfiable: bool
+    _bilateral_model: Optional[ACrQModel]
+    
+    @property
+    def model(self) -> Dict[str, str]:
+        """User-friendly model (transparent view)."""
+        if not self._bilateral_model:
+            return {}
+            
+        result = {}
+        for pred, bilateral in self._bilateral_model.bilateral_valuations.items():
+            if pred.endswith('*'):
+                continue
+                
+            if bilateral.positive == TRUE and bilateral.negative == FALSE:
+                result[pred] = "true"
+            elif bilateral.positive == FALSE and bilateral.negative == TRUE:
+                result[pred] = "false"
+            elif bilateral.is_gap():
+                result[pred] = "undefined (gap)"
+            elif bilateral.positive == TRUE and bilateral.negative == TRUE:
+                result[pred] = "both (glut)"
+                
+        return result
+    
+    @property
+    def bilateral_model(self) -> Optional[ACrQModel]:
+        """Direct access to bilateral valuations."""
+        return self._bilateral_model
+```
 
 ```python
 def solve_acrq(formula: Formula, sign: Sign = T, 
@@ -1186,5 +1565,21 @@ class TestFergusonACrQExamples:
 ## Conclusion
 
 The ACrQ extension provides a principled way to add paraconsistent and paracomplete reasoning to our wKrQ implementation while maintaining backward compatibility. The bilateral predicate approach elegantly handles both knowledge gluts and gaps, enabling robust reasoning in real-world scenarios with incomplete or conflicting information while preserving the computational efficiency of our tableau system.
+
+### Key Implementation Decisions
+
+1. **Separate CLI Command**: The `acrq` command is distinct from `wkrq`, following Unix philosophy and avoiding confusion
+2. **Transparent Translation**: Users can write familiar syntax while getting ACrQ's advanced reasoning capabilities
+3. **Mode Flexibility**: Three syntax modes (transparent/bilateral/mixed) accommodate different user expertise levels
+4. **Dual-API Design**: Both high-level (transparent) and low-level (bilateral) programmatic interfaces
+5. **Progressive Disclosure**: Complexity is available when needed but hidden by default
+
+### Benefits of This Approach
+
+- **Zero Learning Curve**: Users can start using ACrQ immediately with existing formula syntax
+- **Gradual Adoption**: Organizations can migrate from wKrQ to ACrQ incrementally
+- **Research Friendly**: Direct bilateral access supports academic work and experimentation
+- **Production Ready**: Transparent mode provides a clean, intuitive interface for applications
+- **Future Proof**: Architecture supports additional logical systems (SrQ, etc.)
 
 The phased implementation strategy ensures we can incrementally add ACrQ features without disrupting existing functionality, making this a low-risk, high-reward enhancement to the wKrQ system.

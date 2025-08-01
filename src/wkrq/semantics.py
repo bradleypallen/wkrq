@@ -29,6 +29,76 @@ UNDEFINED = TruthValue("e", "undefined")
 FALSE = TruthValue("f", "false")
 
 
+@dataclass
+class BilateralTruthValue:
+    """Truth value for bilateral predicates in ACrQ.
+
+    Each bilateral predicate has two independent truth values:
+    - positive: The truth value of R
+    - negative: The truth value of R*
+
+    This creates four possible information states:
+    - positive=TRUE, negative=FALSE: Standard true (determinate)
+    - positive=FALSE, negative=TRUE: Standard false (determinate)
+    - positive=FALSE, negative=FALSE: Knowledge gap (no information)
+    - positive=TRUE, negative=TRUE: Knowledge glut (conflicting information)
+
+    Note: The last case (both TRUE) violates consistency but is handled
+    paraconsistently in ACrQ.
+    """
+
+    positive: TruthValue  # Value for R
+    negative: TruthValue  # Value for R*
+
+    def __post_init__(self) -> None:
+        """Validate the bilateral truth value."""
+        # We don't enforce consistency here to allow paraconsistent reasoning
+        # but we could add a warning or flag
+        pass
+
+    def is_consistent(self) -> bool:
+        """Check if the bilateral value is consistent.
+
+        A bilateral value is inconsistent (a glut) when both R and R* are true.
+        """
+        return not (self.positive == TRUE and self.negative == TRUE)
+
+    def is_gap(self) -> bool:
+        """Check if neither R nor R* is true (truth value gap)."""
+        return self.positive == FALSE and self.negative == FALSE
+
+    def is_glut(self) -> bool:
+        """Check if both R and R* are true (knowledge glut)."""
+        return self.positive == TRUE and self.negative == TRUE
+
+    def is_determinate(self) -> bool:
+        """Check if exactly one of R or R* is true (classical behavior)."""
+        return (self.positive == TRUE and self.negative == FALSE) or (
+            self.positive == FALSE and self.negative == TRUE
+        )
+
+    def to_simple_value(self) -> str:
+        """Convert to a simple string representation for user display."""
+        if self.positive == TRUE and self.negative == FALSE:
+            return "true"
+        elif self.positive == FALSE and self.negative == TRUE:
+            return "false"
+        elif self.positive == UNDEFINED or self.negative == UNDEFINED:
+            return "undefined"
+        elif self.is_gap():
+            return "undefined (gap)"
+        elif self.is_glut():
+            return "both (glut)"
+        else:
+            return f"complex({self.positive}/{self.negative})"
+
+    def __str__(self) -> str:
+        return f"BilateralTruthValue(pos={self.positive}, neg={self.negative})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
 class WeakKleeneSemantics:
     """Three-valued weak Kleene semantic system."""
 

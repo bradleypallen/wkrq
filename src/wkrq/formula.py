@@ -6,7 +6,7 @@ with restricted quantifiers.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 
 class Formula(ABC):
@@ -240,6 +240,104 @@ class PredicateFormula(Formula):
 
     def is_atomic(self) -> bool:
         return True
+
+
+class BilateralPredicateFormula(PredicateFormula):
+    """A bilateral predicate R/R* for ACrQ.
+
+    In ACrQ, each predicate R has a dual R* for tracking falsity.
+    This creates four possible information states:
+    - R(a)=t, R*(a)=f: Positive evidence only (clearly true)
+    - R(a)=f, R*(a)=t: Negative evidence only (clearly false)
+    - R(a)=f, R*(a)=f: No evidence either way (knowledge gap)
+    - R(a)=t, R*(a)=t: Conflicting evidence (knowledge glut)
+    """
+
+    def __init__(
+        self,
+        positive_name: str,
+        terms: list[Term],
+        negative_name: Optional[str] = None,
+        is_negative: bool = False,
+    ):
+        """Initialize a bilateral predicate.
+
+        Args:
+            positive_name: The base predicate name (R)
+            terms: The terms applied to the predicate
+            negative_name: The negative predicate name (R*), auto-generated if None
+            is_negative: Whether this instance represents R* (True) or R (False)
+        """
+        # Call parent constructor with the appropriate name
+        name = negative_name or f"{positive_name}*" if is_negative else positive_name
+        super().__init__(name, terms)
+        
+        self.positive_name = positive_name
+        self.negative_name = negative_name or f"{positive_name}*"
+        self.is_negative = is_negative
+
+    def __str__(self) -> str:
+        name = self.negative_name if self.is_negative else self.positive_name
+        if not self.terms:
+            return name
+        term_str = ", ".join(str(t) for t in self.terms)
+        return f"{name}({term_str})"
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, BilateralPredicateFormula)
+            and self.positive_name == other.positive_name
+            and self.negative_name == other.negative_name
+            and self.terms == other.terms
+            and self.is_negative == other.is_negative
+        )
+
+    def __hash__(self) -> int:
+        return hash(
+            (
+                "bilateral",
+                self.positive_name,
+                self.negative_name,
+                tuple(self.terms),
+                self.is_negative,
+            )
+        )
+
+    def get_atoms(self) -> set[str]:
+        return {str(self)}
+
+    def substitute(self, mapping: dict[str, Formula]) -> Formula:
+        # For bilateral predicates, we might substitute the whole predicate
+        return mapping.get(str(self), self)
+
+    def substitute_terms(self, mapping: dict[str, Term]) -> "BilateralPredicateFormula":
+        """Substitute terms in the bilateral predicate."""
+        new_terms = [t.substitute_term(mapping) for t in self.terms]
+        return BilateralPredicateFormula(
+            self.positive_name, new_terms, self.negative_name, self.is_negative
+        )
+
+    def substitute_term(self, mapping: dict[str, Term]) -> Formula:
+        """Substitute terms in the bilateral predicate formula."""
+        return self.substitute_terms(mapping)
+
+    def is_atomic(self) -> bool:
+        return True
+
+    def get_dual(self) -> "BilateralPredicateFormula":
+        """Return the dual predicate (R ↔ R*)."""
+        return BilateralPredicateFormula(
+            positive_name=self.positive_name,
+            terms=self.terms,
+            negative_name=self.negative_name,
+            is_negative=not self.is_negative,
+        )
+
+    def to_standard_predicates(self) -> tuple[PredicateFormula, PredicateFormula]:
+        """Convert to pair of standard predicates (R, R*)."""
+        pos = PredicateFormula(self.positive_name, self.terms)
+        neg = PredicateFormula(self.negative_name, self.terms)
+        return (pos, neg)
 
 
 class CompoundFormula(Formula):

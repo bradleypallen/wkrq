@@ -5,8 +5,10 @@ A three-valued logic system with restricted quantifiers for first-order reasonin
 Based on Ferguson (2021) semantics with tableau-based theorem proving.
 """
 
+from .acrq_parser import SyntaxMode, parse_acrq_formula
 from .api import Inference, check_inference
 from .formula import (
+    BilateralPredicateFormula,
     Constant,
     Formula,
     PredicateFormula,
@@ -17,17 +19,18 @@ from .formula import (
     Variable,
 )
 from .parser import parse, parse_inference
-from .semantics import TruthValue, WeakKleeneSemantics
+from .semantics import BilateralTruthValue, TruthValue, WeakKleeneSemantics
 from .signs import F, M, N, Sign, SignedFormula, T
 from .tableau import Tableau, TableauResult, entails, solve, valid
 
-__version__ = "1.0.6"
+__version__ = "1.1.0"
 
 __all__ = [
     # Core types
     "Formula",
     "PropositionalAtom",
     "PredicateFormula",
+    "BilateralPredicateFormula",
     "Variable",
     "Constant",
     "Term",
@@ -36,6 +39,7 @@ __all__ = [
     # Semantics
     "WeakKleeneSemantics",
     "TruthValue",
+    "BilateralTruthValue",
     # Signs
     "Sign",
     "SignedFormula",
@@ -54,4 +58,7 @@ __all__ = [
     "parse_inference",
     "check_inference",
     "Inference",
+    # ACrQ parser (minimal)
+    "parse_acrq_formula",
+    "SyntaxMode",
 ]

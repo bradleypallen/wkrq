@@ -1,0 +1,235 @@
+"""
+ACrQ-specific tableau implementation with bilateral predicate support.
+
+This module extends the standard wKrQ tableau to handle bilateral predicates
+according to Ferguson's ACrQ system.
+"""
+
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set, Tuple
+
+from .formula import (
+    BilateralPredicateFormula,
+    CompoundFormula,
+    Formula,
+    PredicateFormula,
+)
+from .semantics import BilateralTruthValue, FALSE, TRUE, UNDEFINED
+from .signs import Sign, SignedFormula, F, M, N, T
+from .tableau import Branch, Model, RuleInfo, RuleType, Tableau, TableauNode
+
+
+@dataclass
+class ACrQModel(Model):
+    """Model for ACrQ with bilateral predicate support."""
+    
+    bilateral_valuations: Dict[str, BilateralTruthValue] = field(default_factory=dict)
+    
+    def __post_init__(self):
+        """Initialize bilateral valuations from standard valuations."""
+        super().__init__(self.valuations, self.constants)
+        self.bilateral_valuations = {}
+        
+        # Group predicates by base name
+        bilateral_predicates: Dict[str, Dict[str, TruthValue]] = {}
+        
+        for atom_str, value in self.valuations.items():
+            # Skip propositional atoms
+            if "(" not in atom_str:
+                continue
+                
+            # Extract predicate name and arguments
+            pred_name = atom_str.split("(")[0]
+            args = "(" + atom_str.split("(", 1)[1]
+            
+            # Determine base name
+            if pred_name.endswith("*"):
+                base_name = pred_name[:-1]
+                is_negative = True
+            else:
+                base_name = pred_name
+                is_negative = False
+            
+            # Initialize structure if needed
+            if base_name not in bilateral_predicates:
+                bilateral_predicates[base_name] = {}
+            
+            key = f"{base_name}{args}"
+            if key not in bilateral_predicates[base_name]:
+                bilateral_predicates[base_name][key] = {"positive": FALSE, "negative": FALSE}
+            
+            # Set the appropriate value
+            if is_negative:
+                bilateral_predicates[base_name][key]["negative"] = value
+            else:
+                bilateral_predicates[base_name][key]["positive"] = value
+        
+        # Create bilateral truth values
+        for base_name, pred_instances in bilateral_predicates.items():
+            for key, values in pred_instances.items():
+                btv = BilateralTruthValue(
+                    positive=values["positive"],
+                    negative=values["negative"]
+                )
+                self.bilateral_valuations[key] = btv
+
+
+class ACrQTableau(Tableau):
+    """Extended tableau for ACrQ with bilateral predicate support."""
+    
+    def __init__(self, initial_formulas: List[SignedFormula]):
+        """Initialize ACrQ tableau with bilateral predicate tracking."""
+        super().__init__(initial_formulas)
+        self.logic_system = "ACrQ"
+        self.bilateral_pairs: Dict[str, str] = {}  # Maps R to R*
+        
+        # Identify bilateral predicates in initial formulas
+        self._identify_bilateral_predicates(initial_formulas)
+    
+    def _identify_bilateral_predicates(self, formulas: List[SignedFormula]):
+        """Identify and register bilateral predicate pairs."""
+        for sf in formulas:
+            self._extract_bilateral_pairs(sf.formula)
+    
+    def _extract_bilateral_pairs(self, formula: Formula):
+        """Extract bilateral predicate pairs from a formula."""
+        if isinstance(formula, BilateralPredicateFormula):
+            # Register both R -> R* and R* -> R mappings
+            pos_name = formula.positive_name
+            neg_name = f"{formula.positive_name}*"
+            self.bilateral_pairs[pos_name] = neg_name
+            self.bilateral_pairs[neg_name] = pos_name
+            
+        elif isinstance(formula, CompoundFormula):
+            for sub in formula.subformulas:
+                self._extract_bilateral_pairs(sub)
+                
+        elif hasattr(formula, 'restriction') and hasattr(formula, 'matrix'):
+            # Handle quantified formulas
+            self._extract_bilateral_pairs(formula.restriction)
+            self._extract_bilateral_pairs(formula.matrix)
+    
+    def _check_contradiction(self, branch: Branch, new_formula: SignedFormula) -> bool:
+        """Check for contradictions including bilateral contradictions."""
+        # Standard contradiction check
+        if super()._check_contradiction(branch, new_formula):
+            return True
+        
+        # For ACrQ, we allow T:R(a) and T:R*(a) to coexist (paraconsistent)
+        # This represents a "glut" - conflicting information about a
+        # We only check for contradictions in the standard wKrQ sense
+        
+        # Note: In a full ACrQ implementation, we might want to track gluts
+        # and gaps explicitly, but for paraconsistency, we simply don't
+        # close branches on bilateral contradictions
+        
+        return False
+    
+    def _get_applicable_rule(self, signed_formula: SignedFormula, branch: Branch) -> Optional[RuleInfo]:
+        """Get applicable rule, including ACrQ-specific rules."""
+        # Try ACrQ-specific rules first
+        acrq_rule = self._get_acrq_rule(signed_formula, branch)
+        if acrq_rule:
+            return acrq_rule
+        
+        # Fall back to standard rules
+        return super()._get_applicable_rule(signed_formula, branch)
+    
+    def _get_acrq_rule(self, signed_formula: SignedFormula, branch: Branch) -> Optional[RuleInfo]:
+        """Get ACrQ-specific tableau rules for bilateral predicates."""
+        formula = signed_formula.formula
+        sign = signed_formula.sign
+        
+        # Handle bilateral predicates
+        if isinstance(formula, BilateralPredicateFormula):
+            # Check if already processed to avoid infinite loops
+            if hasattr(branch, "_processed_formulas") and signed_formula in branch._processed_formulas:
+                return None
+            pos_pred, neg_pred = formula.to_standard_predicates()
+            
+            if sign == T:
+                if formula.is_negative:
+                    # T: R*(x) means R(x) is false and R*(x) is true
+                    conclusions = [
+                        [SignedFormula(F, pos_pred), SignedFormula(T, neg_pred)]
+                    ]
+                    return RuleInfo("T-R*", RuleType.ALPHA, 1, 2, conclusions)
+                else:
+                    # T: R(x) means R(x) is true and R*(x) is false
+                    conclusions = [
+                        [SignedFormula(T, pos_pred), SignedFormula(F, neg_pred)]
+                    ]
+                    return RuleInfo("T-R", RuleType.ALPHA, 1, 2, conclusions)
+                    
+            elif sign == F:
+                if formula.is_negative:
+                    # F: R*(x) branches: either R(x) is true or both undefined
+                    conclusions = [
+                        [SignedFormula(T, pos_pred)],
+                        [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)]
+                    ]
+                    return RuleInfo("F-R*", RuleType.BETA, 10, 3, conclusions)
+                else:
+                    # F: R(x) branches: either R*(x) is true or both undefined
+                    conclusions = [
+                        [SignedFormula(T, neg_pred)],
+                        [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)]
+                    ]
+                    return RuleInfo("F-R", RuleType.BETA, 10, 3, conclusions)
+                    
+            elif sign == M:
+                # M: R(x) means R(x) can be true or false (but not undefined)
+                if formula.is_negative:
+                    # M: R*(x) - focus on R*
+                    conclusions = [
+                        [SignedFormula(T, neg_pred)],  # R* is true
+                        [SignedFormula(F, neg_pred)]   # R* is false
+                    ]
+                else:
+                    # M: R(x) - focus on R
+                    conclusions = [
+                        [SignedFormula(T, pos_pred)],  # R is true
+                        [SignedFormula(F, pos_pred)]   # R is false
+                    ]
+                return RuleInfo(f"M-R{'*' if formula.is_negative else ''}", 
+                              RuleType.BETA, 20, 2, conclusions)
+                              
+            elif sign == N:
+                # N: R(x) means R(x) is undefined
+                # In bilateral interpretation, this means gap (both false)
+                conclusions = [
+                    [SignedFormula(F, pos_pred), SignedFormula(F, neg_pred)]
+                ]
+                return RuleInfo(f"N-R{'*' if formula.is_negative else ''}", 
+                              RuleType.ALPHA, 5, 2, conclusions)
+        
+        # Handle negation of bilateral predicates
+        elif isinstance(formula, CompoundFormula) and formula.connective == "~":
+            sub = formula.subformulas[0]
+            if isinstance(sub, BilateralPredicateFormula):
+                # ¬R(x) becomes R*(x) and ¬R*(x) becomes R(x)
+                dual = BilateralPredicateFormula(
+                    positive_name=sub.positive_name,
+                    terms=sub.terms,
+                    is_negative=not sub.is_negative
+                )
+                conclusions = [[SignedFormula(sign, dual)]]
+                return RuleInfo("Bilateral-Negation", RuleType.ALPHA, 0, 1, conclusions)
+        
+        return None
+    
+    def _extract_model(self, branch: Branch) -> Optional[ACrQModel]:
+        """Extract an ACrQ model from an open branch."""
+        # Use base class to get standard model
+        base_model = super()._extract_model(branch)
+        
+        if base_model is None:
+            return None
+        
+        # Create ACrQ model with bilateral valuations
+        acrq_model = ACrQModel(
+            valuations=base_model.valuations,
+            constants=base_model.constants
+        )
+        
+        return acrq_model
