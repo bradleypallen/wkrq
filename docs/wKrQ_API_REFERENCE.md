@@ -13,10 +13,11 @@
 5. [Tableau Operations](#tableau-operations)
 6. [Semantic Operations](#semantic-operations)
 7. [First-Order Logic](#first-order-logic)
-8. [Advanced Features](#advanced-features)
-9. [Error Handling](#error-handling)
-10. [Performance Considerations](#performance-considerations)
-11. [Complete Examples](#complete-examples)
+8. [ACrQ Paraconsistent Reasoning](#acrq-paraconsistent-reasoning)
+9. [Advanced Features](#advanced-features)
+10. [Error Handling](#error-handling)
+11. [Performance Considerations](#performance-considerations)
+12. [Complete Examples](#complete-examples)
 
 ## Overview
 
@@ -507,7 +508,175 @@ result = solve(formula, T)
 for model in result.models:
     print(f"Valuations: {model.valuations}")
     print(f"Constants: {model.constants}")
-```text
+```
+
+## ACrQ Paraconsistent Reasoning
+
+ACrQ (Analytic Containment with restricted Quantification) extends wKrQ with bilateral predicates for handling contradictory and incomplete information. The API provides seamless integration with paraconsistent and paracomplete reasoning capabilities.
+
+### Importing ACrQ Components
+
+```python
+from wkrq import (
+    parse_acrq_formula, 
+    SyntaxMode, 
+    BilateralPredicateFormula, 
+    BilateralTruthValue,
+    solve, T, F, M, N
+)
+```
+
+### Basic ACrQ Formula Construction
+
+```python
+# Transparent mode: Standard syntax with automatic translation
+contradiction = parse_acrq_formula("Human(socrates) & ~Human(socrates)")
+print(f"Paraconsistent formula: {contradiction}")
+# Output: Human(socrates) & Human*(socrates)
+
+# Test paraconsistent satisfiability
+result = solve(contradiction, T)
+print(f"Contradiction satisfiable: {result.satisfiable}")  # True!
+
+# Bilateral mode: Explicit R/R* syntax
+bilateral_formula = parse_acrq_formula(
+    "Human(x) & Human*(x)", 
+    SyntaxMode.BILATERAL
+)
+
+# Mixed mode: Both syntaxes allowed
+mixed_formula = parse_acrq_formula(
+    "Human(a) & Robot*(b) & ~Alien(c)", 
+    SyntaxMode.MIXED
+)
+```
+
+### Working with Bilateral Predicates
+
+```python
+# Direct bilateral predicate construction
+from wkrq import Variable, Constant
+
+x = Variable("x")
+socrates = Constant("socrates")
+
+# Positive bilateral predicate: Human(socrates)
+human_pos = BilateralPredicateFormula(
+    positive_name="Human",
+    terms=[socrates],
+    is_negative=False
+)
+
+# Negative bilateral predicate: Human*(socrates)  
+human_neg = BilateralPredicateFormula(
+    positive_name="Human", 
+    terms=[socrates],
+    is_negative=True
+)
+
+# Create knowledge glut (conflicting information)
+glut = human_pos & human_neg
+result = solve(glut, T)
+print(f"Glut satisfiable: {result.satisfiable}")  # True (paraconsistent)
+```
+
+### Information States and Bilateral Truth Values
+
+```python
+# Working with bilateral truth values
+from wkrq.semantics import TRUE, FALSE, UNDEFINED
+
+# Four information states
+btv_true = BilateralTruthValue(positive=TRUE, negative=FALSE)   # True
+btv_false = BilateralTruthValue(positive=FALSE, negative=TRUE)  # False  
+btv_gap = BilateralTruthValue(positive=FALSE, negative=FALSE)   # Gap (no info)
+# Note: glut (TRUE, TRUE) would raise ValueError - handled by tableau
+
+print(f"Gap state: {btv_gap.to_simple_value()}")     # "undefined (gap)"
+print(f"Is gap: {btv_gap.is_gap()}")                 # True
+print(f"Is determinate: {btv_false.is_determinate()}")  # True
+```
+
+### Paraconsistent Reasoning Examples
+
+```python
+# Explosion principle doesn't hold (paraconsistency)
+premises = [
+    parse_acrq_formula("P(a)"),      # P(a) is true
+    parse_acrq_formula("~P(a)")      # P(a) is false (becomes P*(a))
+]
+
+arbitrary_conclusion = parse_acrq_formula("Q(b)")
+
+# In classical logic: contradiction entails everything
+# In ACrQ: contradictions don't entail arbitrary conclusions
+result = entails(premises, arbitrary_conclusion)
+print(f"Explosion prevented: {not result}")  # True
+
+# But valid inferences still work
+valid_conclusion = parse_acrq_formula("P(a) | R(c)")
+result = entails(premises, valid_conclusion)
+print(f"Valid inference: {result}")  # True
+```
+
+### Paracomplete Reasoning Examples
+
+```python
+# Handling incomplete information (gaps)
+incomplete_formula = parse_acrq_formula("Human(unknown_person)")
+
+# Check if it can be undefined (gap)
+result = solve(incomplete_formula, N)
+print(f"Can be undefined: {result.satisfiable}")  # True
+
+# Law of excluded middle may not hold for incomplete info
+lem = parse_acrq_formula("Human(x) | ~Human(x)")
+result = solve(lem, F)  # Can it be false?
+print(f"LEM can be false: {result.satisfiable}")  # True (paracomplete)
+```
+
+### Advanced ACrQ Operations
+
+```python
+# Complex paraconsistent formulas
+complex_acrq = parse_acrq_formula(
+    "(Human(a) & ~Human(a)) -> (Mortal(a) | ~Mortal(a))"
+)
+
+# Restricted quantification with bilateral predicates
+quantified_acrq = parse_acrq_formula(
+    "[∀X Human(X)]Mortal(X) & Human(socrates) & ~Human(socrates)"
+)
+
+# Mixed classical and paraconsistent reasoning  
+mixed_reasoning = parse_acrq_formula(
+    "Classical(p) & ~Classical(p) & (Paraconsistent(q) | Normal(r))"
+)
+
+for formula in [complex_acrq, quantified_acrq, mixed_reasoning]:
+    result = solve(formula, T)
+    print(f"Formula satisfiable: {result.satisfiable}")
+```
+
+### Error Handling in ACrQ
+
+```python
+from wkrq.parser import ParseError
+
+try:
+    # This fails in BILATERAL mode (¬ not allowed)
+    formula = parse_acrq_formula("~Human(x)", SyntaxMode.BILATERAL)
+except ParseError as e:
+    print(f"Expected error: {e}")
+    # Suggests using Human*(x) instead
+
+try:
+    # This fails in TRANSPARENT mode (* not allowed)  
+    formula = parse_acrq_formula("Human*(x)", SyntaxMode.TRANSPARENT)
+except ParseError as e:
+    print(f"Expected error: {e}")
+    # Suggests using ~Human(x) instead
+```
 
 ## Advanced Features
 

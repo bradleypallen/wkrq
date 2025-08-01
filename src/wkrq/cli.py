@@ -12,7 +12,7 @@ from dataclasses import asdict
 from . import __version__
 from .api import InferenceResult, check_inference
 from .parser import ParseError, parse, parse_inference
-from .signs import F, T, SignedFormula, sign_from_string
+from .signs import F, SignedFormula, T, sign_from_string
 from .tableau import Tableau, TableauNode, TableauResult, solve
 
 
@@ -242,7 +242,7 @@ Examples:
   wkrq --tree "p & (q | r)"        # Show tableau tree
   wkrq --models "p | q"            # Show all models
   wkrq --tree --format=unicode "p -> q"  # Unicode tree display
-  
+
   # ACrQ mode (bilateral predicates)
   wkrq --mode=acrq "Human(alice) & ¬Human(alice)"  # Transparent mode (default)
   wkrq --mode=acrq --syntax=bilateral "Human*(alice)"  # Bilateral mode
@@ -258,7 +258,7 @@ Examples:
         choices=["T", "F", "M", "N"],
         help="Sign to test (default: T)",
     )
-    
+
     # Logic mode selection
     parser.add_argument(
         "--mode",
@@ -330,7 +330,7 @@ Examples:
             # Import ACrQ components
             from .acrq_parser import SyntaxMode, parse_acrq_formula
             from .acrq_tableau import ACrQTableau
-            
+
             # Map syntax argument to enum
             syntax_map = {
                 "transparent": SyntaxMode.TRANSPARENT,
@@ -338,32 +338,32 @@ Examples:
                 "mixed": SyntaxMode.MIXED,
             }
             syntax_mode = syntax_map[args.syntax]
-            
+
             if "|-" in args.input:
                 # ACrQ inference
                 # Parse premises and conclusion separately
                 parts = args.input.split("|-")
                 if len(parts) != 2:
                     raise ParseError(f"Invalid inference format: {args.input}")
-                
+
                 # Parse premises
                 premises = []
                 if parts[0].strip():
                     for premise_str in parts[0].split(","):
                         premise = parse_acrq_formula(premise_str.strip(), syntax_mode)
                         premises.append(premise)
-                
+
                 # Parse conclusion
                 conclusion = parse_acrq_formula(parts[1].strip(), syntax_mode)
-                
+
                 # Create signed formulas for tableau
                 initial_formulas = [SignedFormula(T, p) for p in premises]
                 initial_formulas.append(SignedFormula(F, conclusion))
-                
+
                 # Construct ACrQ tableau
                 tableau = ACrQTableau(initial_formulas)
                 result = tableau.construct()
-                
+
                 # Display result
                 if args.json:
                     output = {
@@ -379,7 +379,7 @@ Examples:
                     print(f"  Premises: {', '.join(str(p) for p in premises)}")
                     print(f"  Conclusion: {conclusion}")
                     print(f"  Valid: {'Yes' if not result.satisfiable else 'No'}")
-                    
+
                     if args.tree and result.tableau:
                         print("\nTableau tree:")
                         renderer = TableauTreeRenderer(
@@ -388,18 +388,20 @@ Examples:
                             args.highlight_closures,
                             args.compact,
                         )
-                        tree_str = getattr(renderer, f"render_{args.format}")(result.tableau)
+                        tree_str = getattr(renderer, f"render_{args.format}")(
+                            result.tableau
+                        )
                         print(tree_str)
             else:
                 # Single ACrQ formula
                 formula = parse_acrq_formula(args.input, syntax_mode)
                 sign = sign_from_string(args.sign)
                 signed_formula = SignedFormula(sign, formula)
-                
+
                 # Construct ACrQ tableau
                 tableau = ACrQTableau([signed_formula])
                 result = tableau.construct()
-                
+
                 # Display result
                 if args.json:
                     output = {
@@ -416,18 +418,18 @@ Examples:
                     print(f"ACrQ Formula ({args.syntax} mode): {formula}")
                     print(f"Sign: {args.sign}")
                     print(f"Satisfiable: {result.satisfiable}")
-                    
+
                     if args.models and result.models:
                         print(f"\nModels ({len(result.models)}):")
                         for i, model in enumerate(result.models, 1):
                             print(f"  {i}. {model}")
-                    
+
                     if args.stats:
-                        print(f"\nStatistics:")
+                        print("\nStatistics:")
                         print(f"  Total nodes: {result.total_nodes}")
                         print(f"  Open branches: {result.open_branches}")
                         print(f"  Closed branches: {result.closed_branches}")
-                    
+
                     if args.tree and result.tableau:
                         print("\nTableau tree:")
                         renderer = TableauTreeRenderer(
@@ -436,7 +438,9 @@ Examples:
                             args.highlight_closures,
                             args.compact,
                         )
-                        tree_str = getattr(renderer, f"render_{args.format}")(result.tableau)
+                        tree_str = getattr(renderer, f"render_{args.format}")(
+                            result.tableau
+                        )
                         print(tree_str)
         else:
             # Standard wKrQ mode
@@ -456,7 +460,9 @@ Examples:
                     }
                     print(json.dumps(output, indent=2))
                 else:
-                    display_inference_result(inference_result, args.explain or args.debug)
+                    display_inference_result(
+                        inference_result, args.explain or args.debug
+                    )
 
                     if args.tree and inference_result.tableau_result.tableau:
                         print("\nTableau tree:")
@@ -467,7 +473,9 @@ Examples:
                             args.compact,
                         )
                         tree_str = render_tree(
-                            inference_result.tableau_result.tableau, args.format, renderer
+                            inference_result.tableau_result.tableau,
+                            args.format,
+                            renderer,
                         )
                         print(tree_str)
 

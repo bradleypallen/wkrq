@@ -39,6 +39,9 @@ keywords = [
     "many-valued-logic",
     "philosophical-logic",
     "theorem-proving",
+    "paraconsistent-logic",
+    "bilateral-predicates",
+    "acrq",
 ]
 
 [project.urls]

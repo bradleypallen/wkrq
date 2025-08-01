@@ -271,7 +271,7 @@ class BilateralPredicateFormula(PredicateFormula):
         # Call parent constructor with the appropriate name
         name = negative_name or f"{positive_name}*" if is_negative else positive_name
         super().__init__(name, terms)
-        
+
         self.positive_name = positive_name
         self.negative_name = negative_name or f"{positive_name}*"
         self.is_negative = is_negative

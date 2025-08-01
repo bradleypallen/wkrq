@@ -36,6 +36,7 @@ tracker](https://github.com/bradleypallen/wkrq/issues).
 - 🎯 **Three-valued semantics**: true (t), false (f), undefined (e)
 - 🔤 **Weak Kleene logic**: Operations with undefined propagate undefinedness
 - 🔢 **Restricted quantification**: Domain-bounded first-order reasoning
+- 🔄 **ACrQ extension**: Analytic Containment for paraconsistent/paracomplete reasoning
 - ⚡ **Industrial performance**: Optimized tableau with sub-millisecond response
 - 🖥️ **CLI and API**: Both command-line and programmatic interfaces
 - 📚 **Comprehensive docs**: Full documentation with examples
@@ -70,6 +71,9 @@ wkrq "[∀X Human(X)]Mortal(X)"
 # Inference checking
 wkrq --inference "p & q |- p"
 wkrq --inference "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
+
+# ACrQ paraconsistent reasoning (handles contradictions gracefully)
+wkrq "Human(x) & ~Human(x)"  # Shows paraconsistent model with "glut"
 ```
 
 ### Python API
@@ -95,6 +99,18 @@ print(f"Valid in Ferguson's system: {valid(tautology)}")  # True (classical
 # Three-valued reasoning
 result = solve(p | ~p, N)  # Can it be undefined?
 print(f"Can be undefined: {result.satisfiable}")  # True
+
+# ACrQ paraconsistent reasoning
+from wkrq import parse_acrq_formula, SyntaxMode
+
+# Handle contradictions gracefully (no explosion)
+contradiction = parse_acrq_formula("Human(x) & ~Human(x)")
+result = solve(contradiction, T)
+print(f"Contradiction satisfiable: {result.satisfiable}")  # True (glut allowed)
+
+# Different syntax modes for ACrQ
+transparent = parse_acrq_formula("~Human(x)", SyntaxMode.TRANSPARENT)  # Standard syntax
+bilateral = parse_acrq_formula("Human*(x)", SyntaxMode.BILATERAL)      # Explicit bilateral
 ```
 
 ## Syntax and Semantics
@@ -183,11 +199,48 @@ The key principle of weak Kleene logic is that **any operation involving
 an undefined value produces an undefined result**. This differs from strong
 Kleene logic where, for example, `t ∨ e = t`.
 
+## ACrQ: Analytic Containment with restricted Quantification
+
+ACrQ extends wKrQ with **bilateral predicates** for paraconsistent and paracomplete reasoning:
+
+### Key Features
+
+- **Paraconsistent**: Handle contradictory information without explosion
+- **Paracomplete**: Handle incomplete information without classical assumptions  
+- **Bilateral predicates**: Each predicate R has a dual R* for independent positive/negative tracking
+- **Information states**: Distinguishes true, false, gaps (missing info), and gluts (conflicting info)
+
+### Usage Modes
+
+```python
+from wkrq import parse_acrq_formula, SyntaxMode
+
+# Transparent mode (default): Standard syntax, automatic translation
+formula1 = parse_acrq_formula("Human(x) & ~Human(x)")  # Handles gluts
+
+# Bilateral mode: Explicit R/R* syntax required
+formula2 = parse_acrq_formula("Human(x) & Human*(x)", SyntaxMode.BILATERAL)
+
+# Mixed mode: Both syntaxes allowed
+formula3 = parse_acrq_formula("Human(x) & Robot*(y)", SyntaxMode.MIXED)
+```
+
+### Information States
+
+| State | R(a) | R*(a) | Meaning |
+|-------|------|-------|---------|
+| True | t | f | Positive evidence only |
+| False | f | t | Negative evidence only |
+| Gap | f | f | No evidence (incomplete) |
+| Glut | t | t | Conflicting evidence (paraconsistent) |
+
 ## Documentation
 
-- 📖 [CLI Guide](docs/wKrQ_CLI_GUIDE.md) - Complete command-line reference
-- 🔧 [API Reference](docs/wKrQ_API_REFERENCE.md) - Full Python API documentation
-- 🏗️ [Architecture](docs/wKrQ_ARCHITECTURE.md) - System design and theory
+- 📖 [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_CLI_GUIDE.md) - Complete command-line reference
+- 🔧 [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_API_REFERENCE.md) - Full Python API documentation
+- 🏗️ [Architecture](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_ARCHITECTURE.md) - System design and theory
+- 🔄 [ACrQ Implementation Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/ACrQ_IMPLEMENTATION_GUIDE.md) - Complete ACrQ system documentation
+- 📋 [ACrQ Examples](https://github.com/bradleypallen/wkrq/blob/main/docs/ACrQ_BILATERAL_EXAMPLE.md) - Bilateral predicate examples
 
 ## Examples
 
@@ -260,7 +313,7 @@ maintaining classical reasoning as a special case.
 **Note**: Our implementation is validated against Ferguson (2021) and uses
 classical validity with weak Kleene semantics, meaning classical tautologies
 remain valid. See [Ferguson (2021) Analysis - Key
-Findings](docs/FERGUSON_2021_ANALYSIS.md) for validation details.
+Findings](https://github.com/bradleypallen/wkrq/blob/main/docs/FERGUSON_2021_ANALYSIS.md) for validation details.
 
 ## Performance
 
@@ -272,7 +325,7 @@ Industrial-grade optimizations include:
 - Early termination strategies
 - Optimized tableau construction
 
-## Citation
+## Academic Citation
 
 If you use wKrQ in academic work, please cite:
 
@@ -288,7 +341,7 @@ If you use wKrQ in academic work, please cite:
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](https://github.com/bradleypallen/wkrq/blob/main/LICENSE) file for details.
 
 ## Links
 

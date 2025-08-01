@@ -12,11 +12,12 @@
 4. [Three-Valued Semantics](#three-valued-semantics)
 5. [Tableau Signs](#tableau-signs)
 6. [First-Order Features](#first-order-features)
-7. [Interactive Mode](#interactive-mode)
-8. [Advanced Options](#advanced-options)
-9. [Performance Features](#performance-features)
-10. [Examples](#examples)
-11. [Troubleshooting](#troubleshooting)
+7. [ACrQ Paraconsistent Reasoning](#acrq-paraconsistent-reasoning)
+8. [Interactive Mode](#interactive-mode)
+9. [Advanced Options](#advanced-options)
+10. [Performance Features](#performance-features)
+11. [Examples](#examples)
+12. [Troubleshooting](#troubleshooting)
 
 ## Overview
 
@@ -254,7 +255,74 @@ python -m wkrq "[∀X Human(X)]Mortal(X)"
 
 # Complex reasoning
 python -m wkrq "[∃X Student(X)]Human(X) & [∀X Human(X)]Mortal(X)"
+```
+
+## ACrQ Paraconsistent Reasoning
+
+ACrQ (Analytic Containment with restricted Quantification) extends wKrQ with bilateral predicates to handle contradictory and incomplete information gracefully. The CLI automatically detects and processes ACrQ formulas using the underlying `parse_acrq_formula` functionality.
+
+### Key ACrQ Features
+
+- **Paraconsistent**: Handle contradictions without system explosion
+- **Paracomplete**: Handle incomplete information without classical assumptions
+- **Bilateral predicates**: Each R has a dual R* for independent positive/negative tracking
+- **Information states**: True, False, Gaps (missing), Gluts (conflicting)
+
+### Basic ACrQ Usage
+
+```bash
+# Contradictions don't cause explosion (paraconsistent)
+python -m wkrq "Human(socrates) & ~Human(socrates)"
+# Output shows "glut" - conflicting information
+
+# Mixed reasoning with gaps and gluts
+python -m wkrq "Human(x) & ~Robot(y)" --models
+# Shows models with bilateral truth values
+
+# Complex paraconsistent reasoning
+python -m wkrq "(P(a) & ~P(a)) -> Q(b)" --sign=T
+# Paraconsistent implication handling
+```
+
+### ACrQ with Quantifiers
+
+```bash
+# Paraconsistent universal reasoning
+python -m wkrq "[∀X Human(X)]Mortal(X) & Human(socrates) & ~Human(socrates)"
+
+# Existential with contradictory information
+python -m wkrq "[∃X Student(X)]Human(X) & ~Human(john)"
+```
+
+### Understanding ACrQ Output
+
+ACrQ extends standard output with bilateral information states:
+
 ```text
+Formula: Human(x) & ~Human(x)
+Result: Satisfiable
+Model:
+  Human(x) = glut (both positive and negative evidence)
+```
+
+**Information State Meanings:**
+
+- `true`: Only positive evidence (R=t, R*=f)
+- `false`: Only negative evidence (R=f, R*=t)  
+- `gap`: No evidence (R=f, R*=f)
+- `glut`: Conflicting evidence (R=t, R*=t) - paraconsistent
+
+### Advanced ACrQ Usage
+
+```bash
+# Show detailed bilateral values
+python -m wkrq "Human(x) & ~Human(x)" --models --json
+# JSON output includes bilateral_valuations
+
+# Complex paraconsistent entailment
+python -m wkrq --inference "P(a) & ~P(a), Q(b) |- R(c)"
+# Contradictory premises don't entail arbitrary conclusions
+```
 
 ## Interactive Mode
 

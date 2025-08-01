@@ -11,17 +11,16 @@
 3. [System Architecture](#system-architecture)
 4. [Core Components](#core-components)
 5. [Tableau Engine](#tableau-engine)
-6. [Semantic System](#semantic-system)
-7. [Performance Optimizations](#performance-optimizations)
-8. [Extension Points](#extension-points)
-9. [Testing Architecture](#testing-architecture)
-10. [Future Directions](#future-directions)
+6. [Performance Optimizations](#performance-optimizations)
+7. [Extension Points](#extension-points)
+8. [Testing Architecture](#testing-architecture)
+9. [Future Directions](#future-directions)
 
 ## Overview
 
 The wKrQ (weak Kleene logic with restricted quantification) system is a research-grade Python implementation of a semantic tableau calculus for three-valued weak Kleene logic with industrial performance characteristics. It combines theoretical rigor with practical efficiency, making it suitable for both academic research and real-world automated reasoning applications.
 
-**Implementation validated against Ferguson (2021)**: This implementation correctly follows Ferguson's specifications using classical validity with weak Kleene semantics. See `FERGUSON_2021_ANALYSIS.md` for comprehensive theoretical validation.
+**Implementation validated against Ferguson (2021)**: This implementation correctly follows Ferguson's specifications using classical validity with weak Kleene semantics. See [FERGUSON_2021_ANALYSIS.md](https://github.com/bradleypallen/wkrq/blob/main/docs/FERGUSON_2021_ANALYSIS.md) for comprehensive theoretical validation.
 
 ### Design Principles
 
