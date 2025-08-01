@@ -174,3 +174,7 @@ The architecture is prepared for this extension through:
   BilateralPredicateFormula
 - Extensible tableau engine with pluggable rule systems
 - System selection layer for choosing between wKrQ and ACrQ
+
+## Documentation Guidelines
+
+- All documentation save the README.md and CONTRIBUTING.md files need to go in the docs directory.
