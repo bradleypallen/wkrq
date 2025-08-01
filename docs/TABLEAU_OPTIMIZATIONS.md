@@ -87,4 +87,4 @@ Our research identified several optimization approaches that are well-suited to 
 
 ---
 
-*This document was compiled during optimization research for the wKrQ tableau implementation, July 2025.*
+*This document was compiled during optimization research for the wKrQ tableau implementation, August 2025.*

@@ -12,6 +12,7 @@ from .formula import (
     BilateralPredicateFormula,
     CompoundFormula,
     Formula,
+    PredicateFormula,
 )
 from .semantics import FALSE, BilateralTruthValue, TruthValue
 from .signs import F, M, N, SignedFormula, T
@@ -158,94 +159,150 @@ class ACrQTableau(Tableau):
     ) -> Optional[RuleInfo]:
         """Get ACrQ-specific tableau rules for bilateral predicates."""
         formula = signed_formula.formula
-        sign = signed_formula.sign
 
         # Handle bilateral predicates
         if isinstance(formula, BilateralPredicateFormula):
-            # Check if already processed to avoid infinite loops
-            if (
-                hasattr(branch, "_processed_formulas")
-                and signed_formula in branch._processed_formulas
-            ):
-                return None
-            pos_pred, neg_pred = formula.to_standard_predicates()
-
-            if sign == T:
-                if formula.is_negative:
-                    # T: R*(x) means R(x) is false and R*(x) is true
-                    conclusions = [
-                        [SignedFormula(F, pos_pred), SignedFormula(T, neg_pred)]
-                    ]
-                    return RuleInfo("T-R*", RuleType.ALPHA, 1, 2, conclusions)
-                else:
-                    # T: R(x) means R(x) is true and R*(x) is false
-                    conclusions = [
-                        [SignedFormula(T, pos_pred), SignedFormula(F, neg_pred)]
-                    ]
-                    return RuleInfo("T-R", RuleType.ALPHA, 1, 2, conclusions)
-
-            elif sign == F:
-                if formula.is_negative:
-                    # F: R*(x) branches: either R(x) is true or both undefined
-                    conclusions = [
-                        [SignedFormula(T, pos_pred)],
-                        [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)],
-                    ]
-                    return RuleInfo("F-R*", RuleType.BETA, 10, 3, conclusions)
-                else:
-                    # F: R(x) branches: either R*(x) is true or both undefined
-                    conclusions = [
-                        [SignedFormula(T, neg_pred)],
-                        [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)],
-                    ]
-                    return RuleInfo("F-R", RuleType.BETA, 10, 3, conclusions)
-
-            elif sign == M:
-                # M: R(x) means R(x) can be true or false (but not undefined)
-                if formula.is_negative:
-                    # M: R*(x) - focus on R*
-                    conclusions = [
-                        [SignedFormula(T, neg_pred)],  # R* is true
-                        [SignedFormula(F, neg_pred)],  # R* is false
-                    ]
-                else:
-                    # M: R(x) - focus on R
-                    conclusions = [
-                        [SignedFormula(T, pos_pred)],  # R is true
-                        [SignedFormula(F, pos_pred)],  # R is false
-                    ]
-                return RuleInfo(
-                    f"M-R{'*' if formula.is_negative else ''}",
-                    RuleType.BETA,
-                    20,
-                    2,
-                    conclusions,
-                )
-
-            elif sign == N:
-                # N: R(x) means R(x) is undefined
-                # In bilateral interpretation, this means gap (both false)
-                conclusions = [[SignedFormula(F, pos_pred), SignedFormula(F, neg_pred)]]
-                return RuleInfo(
-                    f"N-R{'*' if formula.is_negative else ''}",
-                    RuleType.ALPHA,
-                    5,
-                    2,
-                    conclusions,
-                )
+            return self._get_bilateral_predicate_rule(signed_formula, branch)
 
         # Handle negation of bilateral predicates
         elif isinstance(formula, CompoundFormula) and formula.connective == "~":
-            sub = formula.subformulas[0]
-            if isinstance(sub, BilateralPredicateFormula):
-                # ¬R(x) becomes R*(x) and ¬R*(x) becomes R(x)
-                dual = BilateralPredicateFormula(
-                    positive_name=sub.positive_name,
-                    terms=sub.terms,
-                    is_negative=not sub.is_negative,
-                )
-                conclusions = [[SignedFormula(sign, dual)]]
-                return RuleInfo("Bilateral-Negation", RuleType.ALPHA, 0, 1, conclusions)
+            return self._get_bilateral_negation_rule(signed_formula)
+
+        return None
+
+    def _get_bilateral_predicate_rule(
+        self, signed_formula: SignedFormula, branch: Branch
+    ) -> Optional[RuleInfo]:
+        """Get tableau rules for bilateral predicates."""
+        formula = signed_formula.formula
+        if not isinstance(formula, BilateralPredicateFormula):
+            return None
+
+        sign = signed_formula.sign
+
+        # Check if already processed to avoid infinite loops
+        if (
+            hasattr(branch, "_processed_formulas")
+            and signed_formula in branch._processed_formulas
+        ):
+            return None
+
+        pos_pred, neg_pred = formula.to_standard_predicates()
+
+        if sign == T:
+            return self._get_t_bilateral_rule(formula, pos_pred, neg_pred)
+        elif sign == F:
+            return self._get_f_bilateral_rule(formula, pos_pred, neg_pred)
+        elif sign == M:
+            return self._get_m_bilateral_rule(formula, pos_pred, neg_pred)
+        elif sign == N:
+            return self._get_n_bilateral_rule(formula, pos_pred, neg_pred)
+
+        return None
+
+    def _get_t_bilateral_rule(
+        self,
+        formula: BilateralPredicateFormula,
+        pos_pred: PredicateFormula,
+        neg_pred: PredicateFormula,
+    ) -> RuleInfo:
+        """Get T-sign rule for bilateral predicates."""
+        if formula.is_negative:
+            # T: R*(x) means R(x) is false and R*(x) is true
+            conclusions = [[SignedFormula(F, pos_pred), SignedFormula(T, neg_pred)]]
+            return RuleInfo("T-R*", RuleType.ALPHA, 1, 2, conclusions)
+        else:
+            # T: R(x) means R(x) is true and R*(x) is false
+            conclusions = [[SignedFormula(T, pos_pred), SignedFormula(F, neg_pred)]]
+            return RuleInfo("T-R", RuleType.ALPHA, 1, 2, conclusions)
+
+    def _get_f_bilateral_rule(
+        self,
+        formula: BilateralPredicateFormula,
+        pos_pred: PredicateFormula,
+        neg_pred: PredicateFormula,
+    ) -> RuleInfo:
+        """Get F-sign rule for bilateral predicates."""
+        if formula.is_negative:
+            # F: R*(x) branches: either R(x) is true or both undefined
+            conclusions = [
+                [SignedFormula(T, pos_pred)],
+                [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)],
+            ]
+            return RuleInfo("F-R*", RuleType.BETA, 10, 3, conclusions)
+        else:
+            # F: R(x) branches: either R*(x) is true or both undefined
+            conclusions = [
+                [SignedFormula(T, neg_pred)],
+                [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)],
+            ]
+            return RuleInfo("F-R", RuleType.BETA, 10, 3, conclusions)
+
+    def _get_m_bilateral_rule(
+        self,
+        formula: BilateralPredicateFormula,
+        pos_pred: PredicateFormula,
+        neg_pred: PredicateFormula,
+    ) -> RuleInfo:
+        """Get M-sign rule for bilateral predicates."""
+        if formula.is_negative:
+            # M: R*(x) - focus on R*
+            conclusions = [
+                [SignedFormula(T, neg_pred)],  # R* is true
+                [SignedFormula(F, neg_pred)],  # R* is false
+            ]
+        else:
+            # M: R(x) - focus on R
+            conclusions = [
+                [SignedFormula(T, pos_pred)],  # R is true
+                [SignedFormula(F, pos_pred)],  # R is false
+            ]
+        return RuleInfo(
+            f"M-R{'*' if formula.is_negative else ''}",
+            RuleType.BETA,
+            20,
+            2,
+            conclusions,
+        )
+
+    def _get_n_bilateral_rule(
+        self,
+        formula: BilateralPredicateFormula,
+        pos_pred: PredicateFormula,
+        neg_pred: PredicateFormula,
+    ) -> RuleInfo:
+        """Get N-sign rule for bilateral predicates."""
+        # N: R(x) means R(x) is undefined
+        # In bilateral interpretation, this means gap (both false)
+        conclusions = [[SignedFormula(F, pos_pred), SignedFormula(F, neg_pred)]]
+        return RuleInfo(
+            f"N-R{'*' if formula.is_negative else ''}",
+            RuleType.ALPHA,
+            5,
+            2,
+            conclusions,
+        )
+
+    def _get_bilateral_negation_rule(
+        self, signed_formula: SignedFormula
+    ) -> Optional[RuleInfo]:
+        """Get rule for negation of bilateral predicates."""
+        formula = signed_formula.formula
+        if not isinstance(formula, CompoundFormula):
+            return None
+
+        sign = signed_formula.sign
+
+        sub = formula.subformulas[0]
+        if isinstance(sub, BilateralPredicateFormula):
+            # ¬R(x) becomes R*(x) and ¬R*(x) becomes R(x)
+            dual = BilateralPredicateFormula(
+                positive_name=sub.positive_name,
+                terms=sub.terms,
+                is_negative=not sub.is_negative,
+            )
+            conclusions = [[SignedFormula(sign, dual)]]
+            return RuleInfo("Bilateral-Negation", RuleType.ALPHA, 0, 1, conclusions)
 
         return None
 

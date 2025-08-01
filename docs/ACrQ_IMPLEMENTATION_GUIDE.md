@@ -1,7 +1,7 @@
 # ACrQ Implementation Guide: Extending wKrQ with Analytic Containment
 
-**Version**: 1.0.9  
-**Date**: July 2025  
+**Version**: 1.1.0  
+**Date**: August 2025  
 **Based on**: Ferguson, T.M. (2021). "Tableaux and Restricted Quantification for Systems Related to Weak Kleene Logic"
 
 ## Table of Contents

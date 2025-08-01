@@ -128,56 +128,64 @@ class ACrQEvaluator:
         connective = formula.connective
 
         if connective == "~":
-            # Negation
-            sub_val = self.evaluate(formula.subformulas[0])
-            if sub_val == TRUE:
-                return FALSE
-            elif sub_val == FALSE:
-                return TRUE
-            else:
-                return UNDEFINED
-
+            return self._eval_negation(formula)
         elif connective == "&":
-            # Conjunction (weak Kleene)
-            left_val = self.evaluate(formula.subformulas[0])
-            right_val = self.evaluate(formula.subformulas[1])
-
-            # Weak Kleene: any undefined makes result undefined
-            if left_val == UNDEFINED or right_val == UNDEFINED:
-                return UNDEFINED
-            elif left_val == TRUE and right_val == TRUE:
-                return TRUE
-            else:
-                return FALSE
-
+            return self._eval_conjunction(formula)
         elif connective == "|":
-            # Disjunction (weak Kleene)
-            left_val = self.evaluate(formula.subformulas[0])
-            right_val = self.evaluate(formula.subformulas[1])
-
-            # Weak Kleene: any undefined makes result undefined
-            if left_val == UNDEFINED or right_val == UNDEFINED:
-                return UNDEFINED
-            elif left_val == TRUE or right_val == TRUE:
-                return TRUE
-            else:
-                return FALSE
-
+            return self._eval_disjunction(formula)
         elif connective == "->":
-            # Implication (weak Kleene)
-            ant_val = self.evaluate(formula.subformulas[0])
-            cons_val = self.evaluate(formula.subformulas[1])
-
-            # Weak Kleene: any undefined makes result undefined
-            if ant_val == UNDEFINED or cons_val == UNDEFINED:
-                return UNDEFINED
-            elif ant_val == FALSE or cons_val == TRUE:
-                return TRUE
-            else:
-                return FALSE
-
+            return self._eval_implication(formula)
         else:
             raise ValueError(f"Unknown connective: {connective}")
+
+    def _eval_negation(self, formula: CompoundFormula) -> TruthValue:
+        """Evaluate negation using weak Kleene semantics."""
+        sub_val = self.evaluate(formula.subformulas[0])
+        if sub_val == TRUE:
+            return FALSE
+        elif sub_val == FALSE:
+            return TRUE
+        else:
+            return UNDEFINED
+
+    def _eval_conjunction(self, formula: CompoundFormula) -> TruthValue:
+        """Evaluate conjunction using weak Kleene semantics."""
+        left_val = self.evaluate(formula.subformulas[0])
+        right_val = self.evaluate(formula.subformulas[1])
+
+        # Weak Kleene: any undefined makes result undefined
+        if left_val == UNDEFINED or right_val == UNDEFINED:
+            return UNDEFINED
+        elif left_val == TRUE and right_val == TRUE:
+            return TRUE
+        else:
+            return FALSE
+
+    def _eval_disjunction(self, formula: CompoundFormula) -> TruthValue:
+        """Evaluate disjunction using weak Kleene semantics."""
+        left_val = self.evaluate(formula.subformulas[0])
+        right_val = self.evaluate(formula.subformulas[1])
+
+        # Weak Kleene: any undefined makes result undefined
+        if left_val == UNDEFINED or right_val == UNDEFINED:
+            return UNDEFINED
+        elif left_val == TRUE or right_val == TRUE:
+            return TRUE
+        else:
+            return FALSE
+
+    def _eval_implication(self, formula: CompoundFormula) -> TruthValue:
+        """Evaluate implication using weak Kleene semantics."""
+        ant_val = self.evaluate(formula.subformulas[0])
+        cons_val = self.evaluate(formula.subformulas[1])
+
+        # Weak Kleene: any undefined makes result undefined
+        if ant_val == UNDEFINED or cons_val == UNDEFINED:
+            return UNDEFINED
+        elif ant_val == FALSE or cons_val == TRUE:
+            return TRUE
+        else:
+            return FALSE
 
     def _eval_quantified(self, formula: RestrictedQuantifierFormula) -> TruthValue:
         """Evaluate a restricted quantified formula."""

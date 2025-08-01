@@ -8,12 +8,16 @@ import argparse
 import json
 import sys
 from dataclasses import asdict
+from typing import TYPE_CHECKING
 
 from . import __version__
 from .api import InferenceResult, check_inference
 from .parser import ParseError, parse, parse_inference
 from .signs import F, SignedFormula, T, sign_from_string
 from .tableau import Tableau, TableauNode, TableauResult, solve
+
+if TYPE_CHECKING:
+    from .acrq_parser import SyntaxMode
 
 
 class TableauTreeRenderer:
@@ -229,8 +233,8 @@ def display_inference_result(result: InferenceResult, explain: bool = False) -> 
         display_result(result.tableau_result, show_models=False, show_stats=True)
 
 
-def main() -> None:
-    """Main CLI entry point."""
+def create_argument_parser() -> argparse.ArgumentParser:
+    """Create and configure the argument parser."""
     parser = argparse.ArgumentParser(
         description="wKrQ - Weak Kleene logic with restricted quantification",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -317,6 +321,215 @@ Examples:
     # Output formats
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
 
+    return parser
+
+
+def handle_acrq_mode(args: argparse.Namespace) -> None:
+    """Handle ACrQ mode processing."""
+    from .acrq_parser import SyntaxMode
+
+    # Map syntax argument to enum
+    syntax_map = {
+        "transparent": SyntaxMode.TRANSPARENT,
+        "bilateral": SyntaxMode.BILATERAL,
+        "mixed": SyntaxMode.MIXED,
+    }
+    syntax_mode = syntax_map[args.syntax]
+
+    if "|-" in args.input:
+        handle_acrq_inference(args, syntax_mode)
+    else:
+        handle_acrq_formula(args, syntax_mode)
+
+
+def handle_acrq_inference(args: argparse.Namespace, syntax_mode: "SyntaxMode") -> None:
+    """Handle ACrQ inference processing."""
+    from .acrq_parser import parse_acrq_formula
+    from .acrq_tableau import ACrQTableau
+
+    # Parse premises and conclusion separately
+    parts = args.input.split("|-")
+    if len(parts) != 2:
+        raise ParseError(f"Invalid inference format: {args.input}")
+
+    # Parse premises
+    premises = []
+    if parts[0].strip():
+        for premise_str in parts[0].split(","):
+            premise = parse_acrq_formula(premise_str.strip(), syntax_mode)
+            premises.append(premise)
+
+    # Parse conclusion
+    conclusion = parse_acrq_formula(parts[1].strip(), syntax_mode)
+
+    # Create signed formulas for tableau
+    initial_formulas = [SignedFormula(T, p) for p in premises]
+    initial_formulas.append(SignedFormula(F, conclusion))
+
+    # Construct ACrQ tableau
+    tableau = ACrQTableau(initial_formulas)
+    result = tableau.construct()
+
+    # Display result
+    if args.json:
+        output = {
+            "type": "acrq_inference",
+            "premises": [str(p) for p in premises],
+            "conclusion": str(conclusion),
+            "valid": not result.satisfiable,
+            "syntax_mode": args.syntax,
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        print(f"ACrQ Inference ({args.syntax} mode):")
+        print(f"  Premises: {', '.join(str(p) for p in premises)}")
+        print(f"  Conclusion: {conclusion}")
+        print(f"  Valid: {'Yes' if not result.satisfiable else 'No'}")
+
+        if args.tree and result.tableau:
+            print("\nTableau tree:")
+            renderer = TableauTreeRenderer(
+                args.show_rules,
+                args.show_steps,
+                args.highlight_closures,
+                args.compact,
+            )
+            tree_str = getattr(renderer, f"render_{args.format}")(result.tableau)
+            print(tree_str)
+
+
+def handle_acrq_formula(args: argparse.Namespace, syntax_mode: "SyntaxMode") -> None:
+    """Handle ACrQ single formula processing."""
+    from .acrq_parser import parse_acrq_formula
+    from .acrq_tableau import ACrQTableau
+
+    # Single ACrQ formula
+    formula = parse_acrq_formula(args.input, syntax_mode)
+    sign = sign_from_string(args.sign)
+    signed_formula = SignedFormula(sign, formula)
+
+    # Construct ACrQ tableau
+    tableau = ACrQTableau([signed_formula])
+    result = tableau.construct()
+
+    # Display result
+    if args.json:
+        output = {
+            "type": "acrq_formula",
+            "formula": str(formula),
+            "sign": args.sign,
+            "satisfiable": result.satisfiable,
+            "syntax_mode": args.syntax,
+        }
+        if result.models and args.models:
+            output["models"] = [str(m) for m in result.models]
+        print(json.dumps(output, indent=2))
+    else:
+        print(f"ACrQ Formula ({args.syntax} mode): {formula}")
+        print(f"Sign: {args.sign}")
+        print(f"Satisfiable: {result.satisfiable}")
+
+        if args.models and result.models:
+            print(f"\nModels ({len(result.models)}):")
+            for i, model in enumerate(result.models, 1):
+                print(f"  {i}. {model}")
+
+        if args.stats:
+            print("\nStatistics:")
+            print(f"  Total nodes: {result.total_nodes}")
+            print(f"  Open branches: {result.open_branches}")
+            print(f"  Closed branches: {result.closed_branches}")
+
+        if args.tree and result.tableau:
+            print("\nTableau tree:")
+            renderer = TableauTreeRenderer(
+                args.show_rules,
+                args.show_steps,
+                args.highlight_closures,
+                args.compact,
+            )
+            tree_str = getattr(renderer, f"render_{args.format}")(result.tableau)
+            print(tree_str)
+
+
+def handle_wkrq_mode(args: argparse.Namespace) -> None:
+    """Handle standard wKrQ mode processing."""
+    if "|-" in args.input:
+        handle_wkrq_inference(args)
+    else:
+        handle_wkrq_formula(args)
+
+
+def handle_wkrq_inference(args: argparse.Namespace) -> None:
+    """Handle wKrQ inference processing."""
+    inference = parse_inference(args.input)
+    inference_result = check_inference(inference)
+
+    if args.json:
+        output = {
+            "type": "inference",
+            "inference": str(inference),
+            "valid": inference_result.valid,
+            "countermodels": [asdict(m) for m in inference_result.countermodels],
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        display_inference_result(inference_result, args.explain or args.debug)
+
+        if args.tree and inference_result.tableau_result.tableau:
+            print("\nTableau tree:")
+            renderer = TableauTreeRenderer(
+                args.show_rules,
+                args.show_steps,
+                args.highlight_closures,
+                args.compact,
+            )
+            tree_str = render_tree(
+                inference_result.tableau_result.tableau,
+                args.format,
+                renderer,
+            )
+            print(tree_str)
+
+
+def handle_wkrq_formula(args: argparse.Namespace) -> None:
+    """Handle wKrQ single formula processing."""
+    formula = parse(args.input)
+    sign = sign_from_string(args.sign)
+    tableau_result = solve(formula, sign)
+
+    if args.json:
+        output = {
+            "type": "formula",
+            "formula": str(formula),
+            "sign": str(sign),
+            "satisfiable": tableau_result.satisfiable,
+            "models": [asdict(m) for m in tableau_result.models],
+            "stats": {
+                "open_branches": tableau_result.open_branches,
+                "closed_branches": tableau_result.closed_branches,
+                "total_nodes": tableau_result.total_nodes,
+            },
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        display_result(tableau_result, args.models, args.stats, args.debug)
+
+        if args.tree and tableau_result.tableau:
+            print("\nTableau tree:")
+            renderer = TableauTreeRenderer(
+                args.show_rules,
+                args.show_steps,
+                args.highlight_closures,
+                args.compact,
+            )
+            tree_str = render_tree(tableau_result.tableau, args.format, renderer)
+            print(tree_str)
+
+
+def main() -> None:
+    """Main CLI entry point."""
+    parser = create_argument_parser()
     args = parser.parse_args()
 
     # Interactive mode if no input
@@ -327,193 +540,9 @@ Examples:
     try:
         # Parse input based on mode
         if args.mode == "acrq":
-            # Import ACrQ components
-            from .acrq_parser import SyntaxMode, parse_acrq_formula
-            from .acrq_tableau import ACrQTableau
-
-            # Map syntax argument to enum
-            syntax_map = {
-                "transparent": SyntaxMode.TRANSPARENT,
-                "bilateral": SyntaxMode.BILATERAL,
-                "mixed": SyntaxMode.MIXED,
-            }
-            syntax_mode = syntax_map[args.syntax]
-
-            if "|-" in args.input:
-                # ACrQ inference
-                # Parse premises and conclusion separately
-                parts = args.input.split("|-")
-                if len(parts) != 2:
-                    raise ParseError(f"Invalid inference format: {args.input}")
-
-                # Parse premises
-                premises = []
-                if parts[0].strip():
-                    for premise_str in parts[0].split(","):
-                        premise = parse_acrq_formula(premise_str.strip(), syntax_mode)
-                        premises.append(premise)
-
-                # Parse conclusion
-                conclusion = parse_acrq_formula(parts[1].strip(), syntax_mode)
-
-                # Create signed formulas for tableau
-                initial_formulas = [SignedFormula(T, p) for p in premises]
-                initial_formulas.append(SignedFormula(F, conclusion))
-
-                # Construct ACrQ tableau
-                tableau = ACrQTableau(initial_formulas)
-                result = tableau.construct()
-
-                # Display result
-                if args.json:
-                    output = {
-                        "type": "acrq_inference",
-                        "premises": [str(p) for p in premises],
-                        "conclusion": str(conclusion),
-                        "valid": not result.satisfiable,
-                        "syntax_mode": args.syntax,
-                    }
-                    print(json.dumps(output, indent=2))
-                else:
-                    print(f"ACrQ Inference ({args.syntax} mode):")
-                    print(f"  Premises: {', '.join(str(p) for p in premises)}")
-                    print(f"  Conclusion: {conclusion}")
-                    print(f"  Valid: {'Yes' if not result.satisfiable else 'No'}")
-
-                    if args.tree and result.tableau:
-                        print("\nTableau tree:")
-                        renderer = TableauTreeRenderer(
-                            args.show_rules,
-                            args.show_steps,
-                            args.highlight_closures,
-                            args.compact,
-                        )
-                        tree_str = getattr(renderer, f"render_{args.format}")(
-                            result.tableau
-                        )
-                        print(tree_str)
-            else:
-                # Single ACrQ formula
-                formula = parse_acrq_formula(args.input, syntax_mode)
-                sign = sign_from_string(args.sign)
-                signed_formula = SignedFormula(sign, formula)
-
-                # Construct ACrQ tableau
-                tableau = ACrQTableau([signed_formula])
-                result = tableau.construct()
-
-                # Display result
-                if args.json:
-                    output = {
-                        "type": "acrq_formula",
-                        "formula": str(formula),
-                        "sign": args.sign,
-                        "satisfiable": result.satisfiable,
-                        "syntax_mode": args.syntax,
-                    }
-                    if result.models and args.models:
-                        output["models"] = [str(m) for m in result.models]
-                    print(json.dumps(output, indent=2))
-                else:
-                    print(f"ACrQ Formula ({args.syntax} mode): {formula}")
-                    print(f"Sign: {args.sign}")
-                    print(f"Satisfiable: {result.satisfiable}")
-
-                    if args.models and result.models:
-                        print(f"\nModels ({len(result.models)}):")
-                        for i, model in enumerate(result.models, 1):
-                            print(f"  {i}. {model}")
-
-                    if args.stats:
-                        print("\nStatistics:")
-                        print(f"  Total nodes: {result.total_nodes}")
-                        print(f"  Open branches: {result.open_branches}")
-                        print(f"  Closed branches: {result.closed_branches}")
-
-                    if args.tree and result.tableau:
-                        print("\nTableau tree:")
-                        renderer = TableauTreeRenderer(
-                            args.show_rules,
-                            args.show_steps,
-                            args.highlight_closures,
-                            args.compact,
-                        )
-                        tree_str = getattr(renderer, f"render_{args.format}")(
-                            result.tableau
-                        )
-                        print(tree_str)
+            handle_acrq_mode(args)
         else:
-            # Standard wKrQ mode
-            if "|-" in args.input:
-                # Inference
-                inference = parse_inference(args.input)
-                inference_result = check_inference(inference)
-
-                if args.json:
-                    output = {
-                        "type": "inference",
-                        "inference": str(inference),
-                        "valid": inference_result.valid,
-                        "countermodels": [
-                            asdict(m) for m in inference_result.countermodels
-                        ],
-                    }
-                    print(json.dumps(output, indent=2))
-                else:
-                    display_inference_result(
-                        inference_result, args.explain or args.debug
-                    )
-
-                    if args.tree and inference_result.tableau_result.tableau:
-                        print("\nTableau tree:")
-                        renderer = TableauTreeRenderer(
-                            args.show_rules,
-                            args.show_steps,
-                            args.highlight_closures,
-                            args.compact,
-                        )
-                        tree_str = render_tree(
-                            inference_result.tableau_result.tableau,
-                            args.format,
-                            renderer,
-                        )
-                        print(tree_str)
-
-            else:
-                # Formula
-                formula = parse(args.input)
-                sign = sign_from_string(args.sign)
-                tableau_result = solve(formula, sign)
-
-                if args.json:
-                    output = {
-                        "type": "formula",
-                        "formula": str(formula),
-                        "sign": str(sign),
-                        "satisfiable": tableau_result.satisfiable,
-                        "models": [asdict(m) for m in tableau_result.models],
-                        "stats": {
-                            "open_branches": tableau_result.open_branches,
-                            "closed_branches": tableau_result.closed_branches,
-                            "total_nodes": tableau_result.total_nodes,
-                        },
-                    }
-                    print(json.dumps(output, indent=2))
-                else:
-                    display_result(tableau_result, args.models, args.stats, args.debug)
-
-                    if args.tree and tableau_result.tableau:
-                        print("\nTableau tree:")
-                        renderer = TableauTreeRenderer(
-                            args.show_rules,
-                            args.show_steps,
-                            args.highlight_closures,
-                            args.compact,
-                        )
-                        tree_str = render_tree(
-                            tableau_result.tableau, args.format, renderer
-                        )
-                        print(tree_str)
+            handle_wkrq_mode(args)
 
     except ParseError as e:
         print(f"Parse error: {e}", file=sys.stderr)

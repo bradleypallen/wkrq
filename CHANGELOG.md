@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2025-07-31
+## [1.1.0] - 2025-08-01
 
 ### Added
 
@@ -27,6 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated package version to 1.1.0 to reflect significant new functionality
 - Enhanced package structure to support ACrQ development alongside existing wKrQ
+
+### Fixed
+
+- **Documentation URLs** - Fixed relative URLs in documentation to work correctly on PyPI
+  - Converted all docs/*.md links to absolute GitHub URLs
+  - Updated LICENSE link to absolute GitHub URL
+- **Documentation Structure** - Fixed table of contents in wKrQ_ARCHITECTURE.md to match actual sections
+- **Code Quality** - Resolved ruff C901 complexity warnings through method refactoring
+  - Refactored `_eval_compound` method in ACrQ semantics into separate logical operator methods
+  - Refactored `_get_acrq_rule` method in ACrQ tableau into specialized bilateral predicate handling methods
+  - Refactored main CLI function into separate argument parsing and mode handling functions
+- **Type Annotations** - Resolved all mypy type annotation issues in ACrQ implementation
 
 ## [1.0.9] - 2025-01-30
 
