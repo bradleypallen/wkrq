@@ -69,6 +69,12 @@ twine upload dist/*
   pytest, ruff, black, and mypy tests, update the CHANGELOG.md file, and
   uprev the release number in the pyproject.toml file, the PyPI badge in
   the README.md file, and all of the documentation headers.
+- **IMPORTANT**: Version consistency is critical for releases. Before any push to GitHub and subsequent release to PyPI, verify that ALL version references are updated consistently:
+  - `pyproject.toml` (version field)
+  - `src/wkrq/__init__.py` (__version__ variable)
+  - Documentation headers in `docs/*.md` files
+  - `README.md` PyPI badge (if applicable)
+  - `CHANGELOG.md` release entry
 - Before deploying a release to PyPI once a commit has been pushed to
   GitHub, monitor the GitHub Actions to make the repo was pushed
   successfully.

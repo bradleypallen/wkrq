@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2025-08-01
+
+### Fixed
+
+- **Version Consistency** - Fixed missing version update in `src/wkrq/__init__.py`
+  - `__version__` variable now correctly reports "1.1.2" instead of "1.1.0"
+  - `wkrq --version` command now shows the correct version number
+  - Added version consistency check to development workflow documentation
+
 ## [1.1.1] - 2025-08-01
 
 ### Fixed
