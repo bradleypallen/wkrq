@@ -65,12 +65,17 @@ wkrq --models "p | q"
 wkrq --tree "p -> q"
 
 # First-order logic with restricted quantifiers
+# Unicode syntax:
 wkrq "[∃X Student(X)]Human(X)"
 wkrq "[∀X Human(X)]Mortal(X)"
 
+# ASCII syntax (easier to type):
+wkrq "[exists X Student(X)]Human(X)"
+wkrq "[forall X Human(X)]Mortal(X)"
+
 # Inference checking
 wkrq --inference "p & q |- p"
-wkrq --inference "[∀X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
+wkrq --inference "[forall X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
 
 # ACrQ paraconsistent reasoning (handles contradictions gracefully)
 wkrq "Human(x) & ~Human(x)"  # Shows paraconsistent model with "glut"
@@ -298,32 +303,16 @@ ruff check src tests
 mypy src
 ```
 
-## Theory
+## Implementation Approach
 
-wKrQ uses a tableau proof system with four signs:
+The wKrQ package implements a semantic tableau calculus for three-valued weak Kleene logic with restricted quantification. The tableau engine (`tableau.py`) uses a four-sign system (T, F, M, N) following Ferguson (2021), where T and F represent definite truth values, M represents epistemic uncertainty (both true and false are possible), and N represents undefined values. The core algorithm maintains branches as collections of signed formulas, with hash-based indexing by sign and formula for O(1) contradiction detection. The system applies tableau rules in priority order: alpha-rules (non-branching) before beta-rules (branching), with explicit priority values assigned to each rule type. For quantifier instantiation, the engine tracks ground terms per branch and attempts unification with existing constants before generating fresh ones. Universal quantifiers are re-instantiated with new constants as they appear, with the system tracking which constants have been used for each quantified formula to prevent redundant applications. The implementation supports extension to ACrQ through polymorphic branch creation, where bilateral predicates R and R* are processed independently—T:R(a) generates only T:R(a) rather than also concluding F:R*(a), enabling paraconsistent reasoning where contradictory information (T:R(a) ∧ T:R*(a)) remains satisfiable. Model extraction from open branches assigns truth values based on the signs present: T-signed atoms map to true, F-signed to false, N-signed to undefined, with M-signed atoms arbitrarily assigned to maintain completeness.
 
-- **T**: Must be true (t)
-- **F**: Must be false (f)
-- **M**: Can be true or false (t or f)
-- **N**: Must be undefined (e)
-
-This enables systematic proof search in three-valued logic while
-maintaining classical reasoning as a special case.
+The ACrQ implementation extends wKrQ's tableau calculus to handle bilateral predicates for paraconsistent reasoning. Each predicate R has an associated dual predicate R*, with the system maintaining bidirectional mappings between them. The `ACrQTableau` class overrides the base tableau's branch creation to use `ACrQBranch` instances that track bilateral predicate pairs. During formula processing, negated predicates in transparent syntax mode are automatically converted: ¬R(x) becomes R*(x). The tableau rules for bilateral predicates differ fundamentally from standard predicates: T:R(x) produces only T:R(x) as a conclusion, while T:R*(x) produces only T:R*(x), without generating complementary constraints. Similarly, F:R(x) yields only F:R(x), and F:R*(x) yields only F:R*(x). The M-sign rules branch on individual predicates (M:R(x) branches to T:R(x) or F:R(x)), while N-sign rules generate knowledge gaps (N:R(x) produces F:R(x) and F:R*(x)). This design permits gluts where both R(a) and R*(a) hold true simultaneously—the `_check_contradiction` method in `ACrQBranch` explicitly allows T:R(a) and T:R*(a) to coexist without closing the branch. Model extraction constructs `ACrQModel` instances containing bilateral valuations: for each predicate-argument combination, the model tracks both positive and negative truth values as a `BilateralTruthValue` object. The semantic evaluator (`ACrQEvaluator`) retrieves the appropriate component based on whether the formula references R (positive component) or R* (negative component), maintaining weak Kleene semantics where any operation involving undefined values produces undefined results.
 
 **Note**: Our implementation is validated against Ferguson (2021) and uses
 classical validity with weak Kleene semantics, meaning classical tautologies
 remain valid. See [Ferguson (2021) Analysis - Key
 Findings](https://github.com/bradleypallen/wkrq/blob/main/docs/FERGUSON_2021_ANALYSIS.md) for validation details.
-
-## Performance
-
-Industrial-grade optimizations include:
-
-- O(1) contradiction detection via hash indexing
-- Alpha/beta rule prioritization  
-- Intelligent branch selection
-- Early termination strategies
-- Optimized tableau construction
 
 ## Academic Citation
 

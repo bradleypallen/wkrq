@@ -4,12 +4,13 @@ Ferguson (2021) Compliance Tests for wKrQ Implementation.
 This module validates our implementation against Ferguson's exact specifications
 from "Tableaux and Restricted Quantification for Systems Related to Weak Kleene Logic."
 
-Key findings from paper analysis:
+Key points from paper:
 1. Ferguson uses weak Kleene truth tables (contagious undefined) ✓
-2. Ferguson uses classical validity (truth preservation) ✓
-3. Classical tautologies ARE valid in Ferguson's system ✓
-4. Four-sign system maps: T↔t, F↔f, M↔m, N↔e ✓
-5. Tableau system is sound and complete (Theorems 1-2) ✓
+2. Validity is truth preservation: φ valid iff φ gets value 't' in ALL interpretations ✓
+3. Classical tautologies are NOT necessarily valid in weak Kleene logic ✓
+4. Four-sign system: T↔t, F↔f, M↔{t,f} (meaningful), N↔{f,e} (nontrue) ✓
+5. M and N are technical branching instructions, not epistemic markers ✓
+6. Tableau system is sound and complete (Theorems 1-2) ✓
 
 All tests in this file should PASS to confirm Ferguson compliance.
 """
@@ -74,37 +75,38 @@ class TestFergusonTruthTables:
 class TestFergusonValidityDefinition:
     """Test Ferguson's Definition 6: validity as truth preservation."""
 
-    def test_classical_tautologies_are_valid_ferguson_definition_6(self):
-        """Test that classical tautologies are valid per Ferguson's Definition 6.
+    def test_classical_tautologies_are_not_valid_ferguson_definition_6(self):
+        """Test that classical tautologies are NOT valid per Ferguson's Definition 6.
 
         Ferguson Definition 6: "Validity in weak Kleene logic is defined as truth preservation"
-        This means classical tautologies that can never be false ARE valid.
+        A formula is valid iff it receives value 't' in ALL interpretations.
+        Classical tautologies can be undefined, so they are NOT valid.
         """
         p = Formula.atom("p")
 
-        # Law of Excluded Middle should be valid (cannot be false)
+        # Law of Excluded Middle is NOT valid (can be undefined)
         excluded_middle = p | ~p
-        assert valid(
+        assert not valid(
             excluded_middle
-        ), "p ∨ ¬p should be valid (Ferguson's truth preservation)"
+        ), "p ∨ ¬p is not valid in weak Kleene (can be undefined)"
 
-        # Self-implication should be valid
+        # Self-implication is NOT valid (can be undefined)
         self_implication = p.implies(p)
-        assert valid(
+        assert not valid(
             self_implication
-        ), "p → p should be valid (Ferguson's truth preservation)"
+        ), "p → p is not valid in weak Kleene (can be undefined)"
 
-        # Double negation elimination should be valid
+        # Double negation elimination is NOT valid
         double_negation = ~~p.implies(p)
-        assert valid(
+        assert not valid(
             double_negation
-        ), "¬¬p → p should be valid (Ferguson's truth preservation)"
+        ), "¬¬p → p is not valid in weak Kleene (can be undefined)"
 
     def test_classical_tautologies_unsatisfiable_under_f_sign(self):
         """Test that classical tautologies are unsatisfiable under F sign.
 
-        This follows from Ferguson's Definition 6 - if a formula is valid (true in all models),
-        then it cannot be false in any model, hence F:φ should be unsatisfiable.
+        While classical tautologies are NOT valid in weak Kleene (can be undefined),
+        they still cannot be false. They can only be true or undefined.
         """
         p = Formula.atom("p")
 
@@ -287,9 +289,11 @@ class TestFergusonTableauSoundnessCompleteness:
         """Test basic cases that should be derivable (completeness indication)."""
         p = Formula.atom("p")
 
-        # Classical tautologies should be derivable
+        # Classical tautologies are NOT necessarily valid in weak Kleene
         excluded_middle = p | ~p
-        assert valid(excluded_middle), "Classical tautologies should be derivable"
+        assert not valid(
+            excluded_middle
+        ), "Classical tautologies are not valid in weak Kleene"
 
         # Classical contradictions should be unsatisfiable
         contradiction = p & ~p
@@ -353,9 +357,9 @@ class TestOverallFergusonCompliance:
         modus_ponens_valid = entails([p, p.implies(q)], q)
         assert modus_ponens_valid, "Classical reasoning should work"
 
-        # Tautologies should be valid
+        # Tautologies are NOT valid in weak Kleene (can be undefined)
         tautology_valid = valid(p | ~p)
-        assert tautology_valid, "Classical tautologies should be valid"
+        assert not tautology_valid, "Classical tautologies are not valid in weak Kleene"
 
         # Epistemic uncertainty should be representable
         epistemic_satisfiable = solve(p & ~p, M).satisfiable

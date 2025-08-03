@@ -48,8 +48,8 @@ class TestACrQTableau:
         tableau = ACrQTableau(initial)
         result = tableau.construct()
 
-        # Should be unsatisfiable due to bilateral contradiction
-        assert not result.satisfiable
+        # Should be satisfiable in paraconsistent ACrQ (gluts allowed)
+        assert result.satisfiable
         # The number of closed branches may vary depending on implementation
         assert result.closed_branches >= 0
 
@@ -69,16 +69,12 @@ class TestACrQTableau:
         assert rule.name == "T-R"
         assert rule.rule_type.value == "alpha"
         assert len(rule.conclusions) == 1
-        assert len(rule.conclusions[0]) == 2
+        assert len(rule.conclusions[0]) == 1
 
-        # Check conclusions
+        # Check conclusions - corrected for paraconsistent ACrQ
         pos_pred, neg_pred = human.to_standard_predicates()
-        expected = [SignedFormula(T, pos_pred), SignedFormula(F, neg_pred)]
-
-        assert rule.conclusions[0][0].sign == expected[0].sign
-        assert str(rule.conclusions[0][0].formula) == str(expected[0].formula)
-        assert rule.conclusions[0][1].sign == expected[1].sign
-        assert str(rule.conclusions[0][1].formula) == str(expected[1].formula)
+        assert rule.conclusions[0][0].sign == T  # T:Human(alice) only
+        assert str(rule.conclusions[0][0].formula) == str(pos_pred)
 
     def test_t_r_star_rule(self):
         """Test T:R* rule (R is false, R* is true)."""
@@ -96,11 +92,10 @@ class TestACrQTableau:
         assert rule.name == "T-R*"
         assert rule.rule_type.value == "alpha"
 
-        # Check conclusions
+        # Check conclusions - corrected for paraconsistent ACrQ
         pos_pred, neg_pred = human_star.to_standard_predicates()
-        assert len(rule.conclusions[0]) == 2
-        assert rule.conclusions[0][0].sign == F  # F:Human(alice)
-        assert rule.conclusions[0][1].sign == T  # T:Human*(alice)
+        assert len(rule.conclusions[0]) == 1
+        assert rule.conclusions[0][0].sign == T  # T:Human*(alice) only
 
     def test_f_r_rule(self):
         """Test F:R rule (branches to T:R* or N:R,R*)."""
@@ -116,17 +111,14 @@ class TestACrQTableau:
 
         assert rule is not None
         assert rule.name == "F-R"
-        assert rule.rule_type.value == "beta"
-        assert len(rule.conclusions) == 2
+        assert rule.rule_type.value == "alpha"  # Changed to alpha
+        assert len(rule.conclusions) == 1
 
-        # Branch 1: T:R*
+        # Check conclusions - corrected for paraconsistent ACrQ
+        pos_pred, neg_pred = human.to_standard_predicates()
         assert len(rule.conclusions[0]) == 1
-        assert rule.conclusions[0][0].sign == T
-
-        # Branch 2: N:R and N:R*
-        assert len(rule.conclusions[1]) == 2
-        assert rule.conclusions[1][0].sign == N
-        assert rule.conclusions[1][1].sign == N
+        assert rule.conclusions[0][0].sign == F  # F:Human(alice) only
+        assert str(rule.conclusions[0][0].formula) == str(pos_pred)
 
     def test_m_r_rule(self):
         """Test M:R rule (branches to T:R or F:R)."""
@@ -240,8 +232,8 @@ class TestACrQTableau:
         tableau = ACrQTableau(initial)
         result = tableau.construct()
 
-        # Should be unsatisfiable (bilateral contradiction)
-        assert not result.satisfiable
+        # Should be satisfiable in paraconsistent ACrQ (gluts allowed)
+        assert result.satisfiable
 
     def test_paraconsistent_inference(self):
         """Test bilateral contradiction behavior according to Ferguson."""
@@ -264,11 +256,9 @@ class TestACrQTableau:
         tableau = ACrQTableau(initial)
         result = tableau.construct()
 
-        # According to Ferguson's rules, this creates a contradiction
-        # T:Human(alice) generates F:Human*(alice)
-        # T:Human*(alice) already exists
-        # So we get T:Human*(alice) and F:Human*(alice) - contradiction
-        assert not result.satisfiable
+        # In true paraconsistent ACrQ, T:Human(alice) and T:Human*(alice) can coexist (glut)
+        # The rules have been corrected to not generate contradictory conclusions
+        assert result.satisfiable
 
     def test_valid_bilateral_inference(self):
         """Test a valid inference with bilateral predicates."""

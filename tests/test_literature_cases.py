@@ -36,13 +36,13 @@ class TestPriestNonClassicalLogic:
         p = Formula.atom("p")
         excluded_middle = p | ~p
 
-        # In wKrQ (three-valued), excluded middle is actually still valid
-        # because ⊥ ∨ ¬⊥ = ⊥ ∨ ⊤ = ⊤ when p is undefined
+        # In wKrQ (three-valued), excluded middle is NOT valid
+        # because e ∨ ¬e = e ∨ e = e when p is undefined
         result = solve(excluded_middle, T)
         assert result.satisfiable, "p ∨ ¬p should be satisfiable"
 
-        # Should be valid
-        assert valid(excluded_middle), "p ∨ ¬p should be valid in weak Kleene"
+        # Should NOT be valid in weak Kleene (can be undefined)
+        assert not valid(excluded_middle), "p ∨ ¬p is not valid in weak Kleene"
 
     def test_weak_kleene_contradiction_properties(self):
         """Test contradiction behavior in weak Kleene logic."""
@@ -217,12 +217,14 @@ class TestSmullyanTableauFoundations:
         outer_impl = p.implies(r)
         full_tautology = (p.implies(q)).implies(inner_impl.implies(outer_impl))
 
-        # Should be valid
-        assert valid(full_tautology), "Hypothetical syllogism should be valid"
+        # Should NOT be valid in weak Kleene (can be undefined)
+        assert not valid(
+            full_tautology
+        ), "Hypothetical syllogism is not valid in weak Kleene"
 
-        # Test by showing negation is unsatisfiable
-        result = solve(~full_tautology, T)
-        assert not result.satisfiable, "Negation of tautology should be unsatisfiable"
+        # But it cannot be false
+        result = solve(full_tautology, F)
+        assert not result.satisfiable, "Hypothetical syllogism cannot be false"
 
     def test_smullyan_alpha_beta_classification_correctness(self):
         """Test correct classification and handling of alpha/beta formulas."""

@@ -165,8 +165,8 @@ class TestTableauConstruction:
         p = Formula.atom("p")
         tautology = p | ~p
 
-        # In weak Kleene, p | ~p is actually a tautology
-        assert valid(tautology)
+        # In weak Kleene, p | ~p is NOT a tautology (can be undefined)
+        assert not valid(tautology)
 
     def test_classical_inference(self):
         """Test classical inference patterns."""
@@ -283,7 +283,7 @@ class TestAPI:
         p = wkrq.atom("p")
         tautology = p | ~p
 
-        assert wkrq.valid(tautology)
+        assert not wkrq.valid(tautology)
 
     def test_model_finding(self):
         """Test API model finding."""

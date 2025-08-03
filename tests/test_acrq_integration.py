@@ -29,7 +29,7 @@ class TestACrQCLI:
         )
         assert code == 0
         assert "Human(alice) & Human*(alice)" in stdout
-        assert "Satisfiable: False" in stdout
+        assert "Satisfiable: True" in stdout
 
     def test_acrq_bilateral_syntax(self):
         """Test bilateral syntax mode."""
@@ -66,7 +66,7 @@ class TestACrQCLI:
         )
         assert code == 0
         assert "ACrQ Inference (transparent mode)" in stdout
-        assert "Valid: Yes" in stdout
+        assert "✓ Valid inference" in stdout
 
     def test_acrq_models(self):
         """Test model display in ACrQ mode."""

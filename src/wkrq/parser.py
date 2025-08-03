@@ -84,7 +84,9 @@ class FormulaParser:
         premises_str = parts[0].strip()
         premises = []
         if premises_str:
-            for premise_str in premises_str.split(","):
+            # Split premises by commas, but respect bracket nesting
+            premise_parts = self._split_by_top_level_commas(premises_str)
+            for premise_str in premise_parts:
                 premise = self.parse_formula(premise_str.strip())
                 premises.append(premise)
 
@@ -93,6 +95,31 @@ class FormulaParser:
         conclusion = self.parse_formula(conclusion_str)
 
         return Inference(premises, conclusion)
+
+    def _split_by_top_level_commas(self, input_str: str) -> list[str]:
+        """Split a string by commas, but only at top level (not inside brackets)."""
+        parts = []
+        current_part = []
+        depth = 0
+
+        for char in input_str:
+            if char in "([":
+                depth += 1
+                current_part.append(char)
+            elif char in ")]":
+                depth -= 1
+                current_part.append(char)
+            elif char == "," and depth == 0:
+                parts.append("".join(current_part))
+                current_part = []
+            else:
+                current_part.append(char)
+
+        # Add the last part
+        if current_part:
+            parts.append("".join(current_part))
+
+        return parts
 
     def parse_formula(self, input_str: str) -> Formula:
         """Parse a single formula."""
@@ -111,12 +138,13 @@ class FormulaParser:
 
     def _tokenize(self, input_str: str) -> list[str]:
         """Tokenize the input string."""
-        # Token patterns
+        # Token patterns - order matters! More specific patterns first
         patterns = [
-            (r"\[∀\w+\s+[^\]]+\]", "FORALL"),  # Restricted universal
-            (r"\[∃\w+\s+[^\]]+\]", "EXISTS"),  # Restricted existential
-            (r"\[\\forall\w+\s+[^\]]+\]", "FORALL"),  # LaTeX style
-            (r"\[\\exists\w+\s+[^\]]+\]", "EXISTS"),  # LaTeX style
+            # Quantifiers must come first to match before individual brackets
+            (r"\[∀\w+\s+[^\]]+\]", "FORALL"),  # Restricted universal (Unicode)
+            (r"\[∃\w+\s+[^\]]+\]", "EXISTS"),  # Restricted existential (Unicode)
+            (r"\[forall\s+\w+\s+[^\]]+\]", "FORALL"),  # ASCII forall
+            (r"\[exists\s+\w+\s+[^\]]+\]", "EXISTS"),  # ASCII exists
             (r"->", "IMPLIES"),
             (r"→", "IMPLIES"),
             (r"&", "AND"),
@@ -127,6 +155,8 @@ class FormulaParser:
             (r"¬", "NOT"),
             (r"\(", "LPAREN"),
             (r"\)", "RPAREN"),
+            (r"\[", "LBRACKET"),  # For cases where quantifier pattern doesn't match
+            (r"\]", "RBRACKET"),  # For cases where quantifier pattern doesn't match
             (r"\w+\([^)]*\)", "PREDICATE"),  # Predicate with arguments
             (r"\w+", "ATOM"),  # Propositional atom or constant
             (r"\s+", None),  # Whitespace (ignored)
@@ -222,10 +252,10 @@ class FormulaParser:
             return formula
 
         # Restricted quantifiers
-        if token.startswith("[∀") or token.startswith("[\\forall"):
+        if token.startswith("[∀") or token.startswith("[forall"):
             return self._parse_restricted_universal()
 
-        if token.startswith("[∃") or token.startswith("[\\exists"):
+        if token.startswith("[∃") or token.startswith("[exists"):
             return self._parse_restricted_existential()
 
         # Predicate
@@ -269,7 +299,7 @@ class FormulaParser:
         token = self._consume_token()
 
         # Extract components using regex
-        match = re.match(r"\[(?:∀|\\forall)(\w+)\s+([^\]]+)\]", token)
+        match = re.match(r"\[(?:∀|forall\s+)(\w+)\s+([^\]]+)\]", token)
         if not match:
             raise ParseError(f"Invalid restricted universal format: {token}")
 
@@ -296,7 +326,7 @@ class FormulaParser:
         token = self._consume_token()
 
         # Extract components using regex
-        match = re.match(r"\[(?:∃|\\exists)(\w+)\s+([^\]]+)\]", token)
+        match = re.match(r"\[(?:∃|exists\s+)(\w+)\s+([^\]]+)\]", token)
         if not match:
             raise ParseError(f"Invalid restricted existential format: {token}")
 

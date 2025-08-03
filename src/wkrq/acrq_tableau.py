@@ -106,9 +106,11 @@ class ACrQTableau(Tableau):
 
     def __init__(self, initial_formulas: list[SignedFormula]) -> None:
         """Initialize ACrQ tableau with bilateral predicate tracking."""
+        self.bilateral_pairs: dict[str, str] = (
+            {}
+        )  # Maps R to R* - Initialize before super()
         super().__init__(initial_formulas)
         self.logic_system = "ACrQ"
-        self.bilateral_pairs: dict[str, str] = {}  # Maps R to R*
 
         # Identify bilateral predicates in initial formulas
         self._identify_bilateral_predicates(initial_formulas)
@@ -208,13 +210,14 @@ class ACrQTableau(Tableau):
     ) -> RuleInfo:
         """Get T-sign rule for bilateral predicates."""
         if formula.is_negative:
-            # T: R*(x) means R(x) is false and R*(x) is true
-            conclusions = [[SignedFormula(F, pos_pred), SignedFormula(T, neg_pred)]]
-            return RuleInfo("T-R*", RuleType.ALPHA, 1, 2, conclusions)
+            # T: R*(x) just means R*(x) is true - says nothing about R(x)
+            # This is key to paraconsistency - R(x) and R*(x) are independent
+            conclusions = [[SignedFormula(T, neg_pred)]]
+            return RuleInfo("T-R*", RuleType.ALPHA, 1, 1, conclusions)
         else:
-            # T: R(x) means R(x) is true and R*(x) is false
-            conclusions = [[SignedFormula(T, pos_pred), SignedFormula(F, neg_pred)]]
-            return RuleInfo("T-R", RuleType.ALPHA, 1, 2, conclusions)
+            # T: R(x) just means R(x) is true - says nothing about R*(x)
+            conclusions = [[SignedFormula(T, pos_pred)]]
+            return RuleInfo("T-R", RuleType.ALPHA, 1, 1, conclusions)
 
     def _get_f_bilateral_rule(
         self,
@@ -224,19 +227,13 @@ class ACrQTableau(Tableau):
     ) -> RuleInfo:
         """Get F-sign rule for bilateral predicates."""
         if formula.is_negative:
-            # F: R*(x) branches: either R(x) is true or both undefined
-            conclusions = [
-                [SignedFormula(T, pos_pred)],
-                [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)],
-            ]
-            return RuleInfo("F-R*", RuleType.BETA, 10, 3, conclusions)
+            # F: R*(x) just means R*(x) is false - says nothing about R(x)
+            conclusions = [[SignedFormula(F, neg_pred)]]
+            return RuleInfo("F-R*", RuleType.ALPHA, 1, 1, conclusions)
         else:
-            # F: R(x) branches: either R*(x) is true or both undefined
-            conclusions = [
-                [SignedFormula(T, neg_pred)],
-                [SignedFormula(N, pos_pred), SignedFormula(N, neg_pred)],
-            ]
-            return RuleInfo("F-R", RuleType.BETA, 10, 3, conclusions)
+            # F: R(x) just means R(x) is false - says nothing about R*(x)
+            conclusions = [[SignedFormula(F, pos_pred)]]
+            return RuleInfo("F-R", RuleType.ALPHA, 1, 1, conclusions)
 
     def _get_m_bilateral_rule(
         self,

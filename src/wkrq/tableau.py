@@ -287,7 +287,7 @@ class Tableau:
         self.rule_application_stats: dict[str, int] = defaultdict(int)
 
         # Initialize with first branch
-        initial_branch = Branch(0)
+        initial_branch = self._create_branch(0)
         self.branches.append(initial_branch)
         self.open_branches.append(initial_branch)
 
@@ -312,6 +312,10 @@ class Tableau:
         # Update global constants from all initial ground terms
         for branch in self.branches:
             self.constants.update(branch.ground_terms)
+
+    def _create_branch(self, branch_id: int) -> Branch:
+        """Factory method for creating branches. Can be overridden by subclasses."""
+        return Branch(branch_id)
 
     def is_complete(self) -> bool:
         """Check if tableau construction is complete."""
@@ -654,7 +658,7 @@ class Tableau:
             parent_node = node
             for _i, conclusion_set in enumerate(conclusions):
                 # Create new branch
-                new_branch = Branch(len(self.branches))
+                new_branch = self._create_branch(len(self.branches))
                 self.branches.append(new_branch)
 
                 # Copy existing formulas to new branch
@@ -848,12 +852,27 @@ def solve(formula: Formula, sign: Sign = T) -> TableauResult:
 
 
 def valid(formula: Formula) -> bool:
-    """Check if a formula is valid (true in all models)."""
-    # A formula is valid if ~formula is unsatisfiable
-    from .formula import Negation
+    """Check if a formula is valid (true in all models).
 
-    result = solve(Negation(formula), T)
-    return not result.satisfiable
+    In weak Kleene logic, validity means the formula receives value 't'
+    in ALL interpretations, not just those where premises are true.
+
+    A formula is valid iff:
+    - F:φ is unsatisfiable (cannot be false), AND
+    - N:φ is unsatisfiable (cannot be undefined)
+    """
+    # Check if formula can be false
+    result_f = solve(formula, F)
+    if result_f.satisfiable:
+        return False  # Can be false, so not valid
+
+    # Check if formula can be undefined
+    result_n = solve(formula, N)
+    if result_n.satisfiable:
+        return False  # Can be undefined, so not valid
+
+    # If cannot be false or undefined, must be valid (always true)
+    return True
 
 
 def entails(premises: list[Formula], conclusion: Formula) -> bool:

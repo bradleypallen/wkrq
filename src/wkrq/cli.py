@@ -34,55 +34,135 @@ class TableauTreeRenderer:
         self.show_steps = show_steps
         self.highlight_closures = highlight_closures
         self.compact = compact
+        self.closed_leaf_nodes: set[int] = set()  # Track which nodes are closure points
+        self.branch_map: dict[int, list[int]] = {}  # Map nodes to their branches
+        self.max_formula_width: int = 0  # Track maximum formula width for alignment
 
     def render_ascii(self, tableau: Tableau) -> str:
         """Render tableau as ASCII art tree."""
         if not tableau.nodes:
             return "Empty tableau"
 
+        # First, identify which leaf nodes are at the end of closed branches
+        self._mark_closed_paths(tableau)
+
+        # Calculate maximum formula width for alignment
+        if self.show_rules:
+            self.max_formula_width = 0  # Reset before calculating
+            self._calculate_max_width(tableau.nodes[0], 0, is_unicode=False)
+
         lines: list[str] = []
         self._render_node_ascii(tableau.nodes[0], lines, "", True)
         return "\n".join(lines)
+
+    def _calculate_max_width(
+        self, node: TableauNode, depth: int, is_unicode: bool = False
+    ) -> None:
+        """Calculate maximum formula width in the tree for alignment."""
+        # Calculate the width of this node's display
+        if is_unicode:
+            prefix_width = (
+                depth * 5
+            )  # Unicode indentation is 5 chars ("│    " or "     ")
+        else:
+            prefix_width = depth * 4  # ASCII indentation is 4 chars ("│   " or "    ")
+
+        node_width = len(f"{node.id:>2}. {node.formula}")
+        if not node.children and node.id in self.closed_leaf_nodes:
+            node_width += 3  # Add space for "  ×"
+
+        total_width = prefix_width + node_width
+        self.max_formula_width = max(self.max_formula_width, total_width)
+
+        # Recurse for children
+        for child in node.children:
+            self._calculate_max_width(child, depth + 1, is_unicode)
+
+    def _mark_closed_paths(self, tableau: Tableau) -> None:
+        """Identify leaf nodes that represent closure points."""
+        # Build a path from each node to find which branches close
+        self.closed_leaf_nodes = set()
+
+        # Helper function to check if a path from node leads to only closed branches
+        def all_paths_closed(node: TableauNode) -> bool:
+            if not node.children:
+                # Leaf node - check if it's part of a closed tableau
+                return not tableau.open_branches
+            # Non-leaf - all children must lead to closed paths
+            return all(all_paths_closed(child) for child in node.children)
+
+        # Mark leaf nodes that are at the end of closed paths
+        def mark_closed_leaves(node: TableauNode) -> None:
+            if not node.children:
+                # This is a leaf node
+                if all_paths_closed(tableau.nodes[0]):
+                    # Part of a fully closed tableau
+                    self.closed_leaf_nodes.add(node.id)
+            else:
+                for child in node.children:
+                    mark_closed_leaves(child)
+
+        if tableau.nodes:
+            mark_closed_leaves(tableau.nodes[0])
 
     def _render_node_ascii(
         self, node: TableauNode, lines: list[str], prefix: str, is_last: bool
     ) -> None:
         """Recursively render node and children."""
-        # Node representation
-        node_str = f"{node.id}. {node.formula}"
+        # Node representation with better formatting
+        node_str = f"{node.id:>2}. {node.formula}"
+
+        # Add × mark for closed leaf nodes before rule name
+        if not node.children and node.id in self.closed_leaf_nodes:
+            node_str += "  ×"
+
+        # Add rule name inline if available and requested
+        # Include the parent node ID that the rule was applied to
         if self.show_rules and node.rule_applied:
-            node_str += f" ({node.rule_applied})"
+            # Calculate current width including prefix
+            current_width = len(prefix)
+            if prefix:
+                current_width += 4  # Length of connector ("├── " or "└── ")
+            current_width += len(node_str)
+
+            # Calculate padding needed
+            padding_needed = max(1, self.max_formula_width - current_width + 5)
+            padding = " " * padding_needed
+
+            if node.parent:
+                node_str += f"{padding}[{node.rule_applied}: {node.parent.id}]"
+            else:
+                # Root node case
+                node_str += f"{padding}[{node.rule_applied}]"
 
         # Add prefix
         if prefix:
-            connector = "└─ " if is_last else "├─ "
+            connector = "└── " if is_last else "├── "
             lines.append(prefix + connector + node_str)
         else:
             lines.append(node_str)
 
         # Handle children
         if node.children:
-            # Determine new prefix
-            extension = "   " if is_last else "│  "
+            extension = "    " if is_last else "│   "
             new_prefix = prefix + extension
 
             for i, child in enumerate(node.children):
                 is_child_last = i == len(node.children) - 1
                 self._render_node_ascii(child, lines, new_prefix, is_child_last)
-        elif node.is_closed:
-            # Show closure
-            closure_symbol = "✗ CLOSED"
-            if node.closure_reason:
-                closure_symbol += f" ({node.closure_reason})"
-
-            extension = "   " if is_last else "│  "
-            lines.append(prefix + extension + "│")
-            lines.append(prefix + extension + "└─ " + closure_symbol)
 
     def render_unicode(self, tableau: Tableau) -> str:
         """Render tableau with Unicode box drawing."""
         if not tableau.nodes:
             return "Empty tableau"
+
+        # First, identify which leaf nodes are at the end of closed branches
+        self._mark_closed_paths(tableau)
+
+        # Calculate maximum formula width for alignment
+        if self.show_rules:
+            self.max_formula_width = 0  # Reset before calculating
+            self._calculate_max_width(tableau.nodes[0], 0, is_unicode=True)
 
         lines: list[str] = []
         self._render_node_unicode(tableau.nodes[0], lines, "", True)
@@ -92,34 +172,47 @@ class TableauTreeRenderer:
         self, node: TableauNode, lines: list[str], prefix: str, is_last: bool
     ) -> None:
         """Recursively render node with Unicode characters."""
-        # Node representation
-        node_str = f"{node.id}. {node.formula}"
+        # Node representation with better formatting
+        node_str = f"{node.id:>2}. {node.formula}"
+
+        # Add × mark for closed leaf nodes before rule name
+        if not node.children and node.id in self.closed_leaf_nodes:
+            node_str += "  ×"
+
+        # Add rule name inline if available and requested
+        # Include the parent node ID that the rule was applied to
         if self.show_rules and node.rule_applied:
-            node_str += f" ({node.rule_applied})"
+            # Calculate current width including prefix
+            current_width = len(prefix)
+            if prefix:
+                current_width += 5  # Length of Unicode connector ("├─── " or "└─── ")
+            current_width += len(node_str)
+
+            # Calculate padding needed
+            padding_needed = max(1, self.max_formula_width - current_width + 5)
+            padding = " " * padding_needed
+
+            if node.parent:
+                node_str += f"{padding}[{node.rule_applied}: {node.parent.id}]"
+            else:
+                # Root node case
+                node_str += f"{padding}[{node.rule_applied}]"
 
         # Add prefix with Unicode
         if prefix:
-            connector = "└── " if is_last else "├── "
+            connector = "└─── " if is_last else "├─── "
             lines.append(prefix + connector + node_str)
         else:
-            lines.append("┌─ " + node_str + " ─┐")
+            lines.append(node_str)
 
         # Handle children
         if node.children:
-            extension = "    " if is_last else "│   "
+            extension = "     " if is_last else "│    "
             new_prefix = prefix + extension
 
             for i, child in enumerate(node.children):
                 is_child_last = i == len(node.children) - 1
                 self._render_node_unicode(child, lines, new_prefix, is_child_last)
-        elif node.is_closed:
-            closure_symbol = "✗ CLOSED"
-            if node.closure_reason:
-                closure_symbol += f" ({node.closure_reason})"
-
-            extension = "    " if is_last else "│   "
-            lines.append(prefix + extension + "│")
-            lines.append(prefix + extension + "└── " + closure_symbol)
 
     def render_latex(self, tableau: Tableau) -> str:
         """Generate LaTeX/TikZ code for tableau tree."""
@@ -216,13 +309,15 @@ def display_result(
             print(f"    Branch {i}: {status} ({len(branch.nodes)} nodes)")
 
 
-def display_inference_result(result: InferenceResult, explain: bool = False) -> None:
+def display_inference_result(
+    result: InferenceResult, explain: bool = False, show_countermodels: bool = True
+) -> None:
     """Display inference test result."""
     if result.valid:
         print("✓ Valid inference")
     else:
         print("✗ Invalid inference")
-        if result.countermodels:
+        if result.countermodels and show_countermodels:
             print("Countermodels:")
             for i, model in enumerate(result.countermodels, 1):
                 print(f"  {i}. {model}")
@@ -243,6 +338,7 @@ Examples:
   wkrq "p & ~p"                    # Test satisfiability
   wkrq --sign=M "p | ~p"           # Test with M sign
   wkrq "p, p -> q |- q"            # Test inference validity
+  wkrq --inference "p, p -> q, q"  # Last item is conclusion when using --inference
   wkrq --tree "p & (q | r)"        # Show tableau tree
   wkrq --models "p | q"            # Show all models
   wkrq --tree --format=unicode "p -> q"  # Unicode tree display
@@ -251,6 +347,7 @@ Examples:
   wkrq --mode=acrq "Human(alice) & ¬Human(alice)"  # Transparent mode (default)
   wkrq --mode=acrq --syntax=bilateral "Human*(alice)"  # Bilateral mode
   wkrq --mode=acrq "Human(x) -> Nice(x), Human(alice) |- Nice(alice)"  # Inference
+  wkrq --mode=acrq --inference "P(a), ~P(a), Q(b)"  # ACrQ inference with --inference flag
         """,
     )
 
@@ -282,6 +379,11 @@ Examples:
 
     # Inference testing
     parser.add_argument(
+        "--inference",
+        action="store_true",
+        help="Treat input as inference (premises |- conclusion)",
+    )
+    parser.add_argument(
         "--consequence",
         choices=["strong", "weak"],
         default="strong",
@@ -293,7 +395,7 @@ Examples:
     parser.add_argument(
         "--countermodel",
         action="store_true",
-        help="Show countermodel for invalid inference",
+        help="Show countermodel for invalid inference (default: show only if invalid)",
     )
 
     # Tree visualization
@@ -336,10 +438,37 @@ def handle_acrq_mode(args: argparse.Namespace) -> None:
     }
     syntax_mode = syntax_map[args.syntax]
 
-    if "|-" in args.input:
+    if args.inference or "|-" in args.input:
         handle_acrq_inference(args, syntax_mode)
     else:
         handle_acrq_formula(args, syntax_mode)
+
+
+def _parse_inference_input(input_str: str, use_inference_flag: bool) -> str:
+    """Parse input to add |- separator if using --inference flag."""
+    if use_inference_flag and "|-" not in input_str:
+        # Parse more carefully to handle formulas with nested commas (like quantifiers)
+        # Strategy: Find the last top-level comma by tracking bracket depth
+        depth = 0
+        last_comma_pos = -1
+
+        for i, char in enumerate(input_str):
+            if char in "([":
+                depth += 1
+            elif char in ")]":
+                depth -= 1
+            elif char == "," and depth == 0:
+                last_comma_pos = i
+
+        if last_comma_pos > 0:
+            premises = input_str[:last_comma_pos].strip()
+            conclusion = input_str[last_comma_pos + 1 :].strip()
+            return f"{premises} |- {conclusion}"
+        else:
+            raise ParseError(
+                "Inference format requires premises and conclusion separated by comma"
+            )
+    return input_str
 
 
 def handle_acrq_inference(args: argparse.Namespace, syntax_mode: "SyntaxMode") -> None:
@@ -347,10 +476,13 @@ def handle_acrq_inference(args: argparse.Namespace, syntax_mode: "SyntaxMode") -
     from .acrq_parser import parse_acrq_formula
     from .acrq_tableau import ACrQTableau
 
+    # Parse input to handle --inference flag
+    input_str = _parse_inference_input(args.input, args.inference)
+
     # Parse premises and conclusion separately
-    parts = args.input.split("|-")
+    parts = input_str.split("|-")
     if len(parts) != 2:
-        raise ParseError(f"Invalid inference format: {args.input}")
+        raise ParseError(f"Invalid inference format: {input_str}")
 
     # Parse premises
     premises = []
@@ -371,20 +503,33 @@ def handle_acrq_inference(args: argparse.Namespace, syntax_mode: "SyntaxMode") -
     result = tableau.construct()
 
     # Display result
+    is_valid = not result.satisfiable
+
     if args.json:
         output = {
             "type": "acrq_inference",
             "premises": [str(p) for p in premises],
             "conclusion": str(conclusion),
-            "valid": not result.satisfiable,
+            "valid": is_valid,
             "syntax_mode": args.syntax,
         }
+        if not is_valid and result.models:
+            output["countermodels"] = [str(m) for m in result.models]
         print(json.dumps(output, indent=2))
     else:
         print(f"ACrQ Inference ({args.syntax} mode):")
         print(f"  Premises: {', '.join(str(p) for p in premises)}")
         print(f"  Conclusion: {conclusion}")
-        print(f"  Valid: {'Yes' if not result.satisfiable else 'No'}")
+
+        if is_valid:
+            print("  ✓ Valid inference")
+        else:
+            print("  ✗ Invalid inference")
+            # Show countermodels only if invalid (default) or if --countermodel is specified
+            if result.models and (not is_valid or args.countermodel):
+                print("  Countermodels:")
+                for i, model in enumerate(result.models, 1):
+                    print(f"    {i}. {model}")
 
         if args.tree and result.tableau:
             print("\nTableau tree:")
@@ -454,7 +599,7 @@ def handle_acrq_formula(args: argparse.Namespace, syntax_mode: "SyntaxMode") -> 
 
 def handle_wkrq_mode(args: argparse.Namespace) -> None:
     """Handle standard wKrQ mode processing."""
-    if "|-" in args.input:
+    if args.inference or "|-" in args.input:
         handle_wkrq_inference(args)
     else:
         handle_wkrq_formula(args)
@@ -462,7 +607,9 @@ def handle_wkrq_mode(args: argparse.Namespace) -> None:
 
 def handle_wkrq_inference(args: argparse.Namespace) -> None:
     """Handle wKrQ inference processing."""
-    inference = parse_inference(args.input)
+    # Parse input to handle --inference flag
+    input_str = _parse_inference_input(args.input, args.inference)
+    inference = parse_inference(input_str)
     inference_result = check_inference(inference)
 
     if args.json:
@@ -474,7 +621,11 @@ def handle_wkrq_inference(args: argparse.Namespace) -> None:
         }
         print(json.dumps(output, indent=2))
     else:
-        display_inference_result(inference_result, args.explain or args.debug)
+        # Show countermodels only if invalid (default) or if --countermodel is specified
+        show_countermodels = not inference_result.valid or args.countermodel
+        display_inference_result(
+            inference_result, args.explain or args.debug, show_countermodels
+        )
 
         if args.tree and inference_result.tableau_result.tableau:
             print("\nTableau tree:")
