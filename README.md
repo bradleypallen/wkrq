@@ -1,6 +1,6 @@
 # wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
-[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.1.1)](https://badge.fury.io/py/wkrq)
+[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.2.0)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
@@ -241,11 +241,9 @@ formula3 = parse_acrq_formula("Human(x) & Robot*(y)", SyntaxMode.MIXED)
 
 ## Documentation
 
-- 📖 [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_CLI_GUIDE.md) - Complete command-line reference
-- 🔧 [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_API_REFERENCE.md) - Full Python API documentation
-- 🏗️ [Architecture](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_ARCHITECTURE.md) - System design and theory
-- 🔄 [ACrQ Implementation Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/ACrQ_IMPLEMENTATION_GUIDE.md) - Complete ACrQ system documentation
-- 📋 [ACrQ Examples](https://github.com/bradleypallen/wkrq/blob/main/docs/ACrQ_BILATERAL_EXAMPLE.md) - Bilateral predicate examples
+- 📖 [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/CLI_GUIDE.md) - Complete command-line reference with examples
+- 🔧 [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/API_REFERENCE.md) - Full Python API documentation with code examples
+- 📋 [Comprehensive Examples](https://github.com/bradleypallen/wkrq/blob/main/examples/validation.txt) - Literature validation with tableau trees
 
 ## Examples
 
@@ -311,10 +309,10 @@ The ACrQ implementation extends wKrQ's tableau calculus to handle bilateral pred
 
 **Note**: Our implementation is validated against Ferguson (2021) and uses
 classical validity with weak Kleene semantics, meaning classical tautologies
-remain valid. See [Ferguson (2021) Analysis - Key
-Findings](https://github.com/bradleypallen/wkrq/blob/main/docs/FERGUSON_2021_ANALYSIS.md) for validation details.
+remain valid. The implementation has been thoroughly tested against literature
+examples - see the [validation examples](https://github.com/bradleypallen/wkrq/blob/main/examples/validation.txt) for comprehensive test results.
 
-## Academic Citation
+## Citation
 
 If you use wKrQ in academic work, please cite:
 
@@ -324,6 +322,7 @@ If you use wKrQ in academic work, please cite:
          Weak Kleene Logic with Restricted Quantification},
   author={Allen, Bradley P.},
   year={2025},
+  version={1.2.0},
   url={https://github.com/bradleypallen/wkrq}
 }
 ```
@@ -337,4 +336,5 @@ MIT License - see [LICENSE](https://github.com/bradleypallen/wkrq/blob/main/LICE
 - [PyPI Package](https://pypi.org/project/wkrq/)
 - [GitHub Repository](https://github.com/bradleypallen/wkrq)
 - [Issue Tracker](https://github.com/bradleypallen/wkrq/issues)
-- [Documentation](https://github.com/bradleypallen/wkrq/tree/main/docs)
+- [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/CLI_GUIDE.md)
+- [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/API_REFERENCE.md)

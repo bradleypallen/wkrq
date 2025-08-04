@@ -23,7 +23,7 @@ from .semantics import BilateralTruthValue, TruthValue, WeakKleeneSemantics
 from .signs import F, M, N, Sign, SignedFormula, T
 from .tableau import Tableau, TableauResult, entails, solve, valid
 
-__version__ = "1.1.2"
+__version__ = "1.2.0"
 
 __all__ = [
     # Core types
