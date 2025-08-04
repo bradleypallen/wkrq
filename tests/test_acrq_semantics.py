@@ -173,19 +173,19 @@ class TestACrQEvaluator:
         q = PropositionalAtom("q")
         r = PropositionalAtom("r")
 
-        # T ∧ T = T
+        # t ∧ t = t
         conj1 = CompoundFormula("&", [p, p])
         assert evaluator.evaluate(conj1) == TRUE
 
-        # T ∧ F = F
+        # t ∧ f = f
         conj2 = CompoundFormula("&", [p, q])
         assert evaluator.evaluate(conj2) == FALSE
 
-        # T ∧ U = U (weak Kleene)
+        # t ∧ U = U (weak Kleene)
         conj3 = CompoundFormula("&", [p, r])
         assert evaluator.evaluate(conj3) == UNDEFINED
 
-        # F ∧ U = U (weak Kleene)
+        # f ∧ U = U (weak Kleene)
         conj4 = CompoundFormula("&", [q, r])
         assert evaluator.evaluate(conj4) == UNDEFINED
 
@@ -201,19 +201,19 @@ class TestACrQEvaluator:
         q = PropositionalAtom("q")
         r = PropositionalAtom("r")  # Undefined
 
-        # T ∨ F = T
+        # t ∨ f = t
         disj1 = CompoundFormula("|", [p, q])
         assert evaluator.evaluate(disj1) == TRUE
 
-        # F ∨ F = F
+        # f ∨ f = f
         disj2 = CompoundFormula("|", [q, q])
         assert evaluator.evaluate(disj2) == FALSE
 
-        # T ∨ U = U (weak Kleene)
+        # t ∨ U = U (weak Kleene)
         disj3 = CompoundFormula("|", [p, r])
         assert evaluator.evaluate(disj3) == UNDEFINED
 
-        # F ∨ U = U (weak Kleene)
+        # f ∨ U = U (weak Kleene)
         disj4 = CompoundFormula("|", [q, r])
         assert evaluator.evaluate(disj4) == UNDEFINED
 
@@ -229,23 +229,23 @@ class TestACrQEvaluator:
         q = PropositionalAtom("q")
         r = PropositionalAtom("r")  # Undefined
 
-        # T → T = T
+        # t → t = t
         impl1 = CompoundFormula("->", [p, p])
         assert evaluator.evaluate(impl1) == TRUE
 
-        # T → F = F
+        # t → f = f
         impl2 = CompoundFormula("->", [p, q])
         assert evaluator.evaluate(impl2) == FALSE
 
-        # F → X = T (for any X)
+        # f → X = t (for any X)
         impl3 = CompoundFormula("->", [q, p])
         assert evaluator.evaluate(impl3) == TRUE
 
-        # T → U = U (weak Kleene)
+        # t → U = U (weak Kleene)
         impl4 = CompoundFormula("->", [p, r])
         assert evaluator.evaluate(impl4) == UNDEFINED
 
-        # U → T = U (weak Kleene)
+        # U → t = U (weak Kleene)
         impl5 = CompoundFormula("->", [r, p])
         assert evaluator.evaluate(impl5) == UNDEFINED
 
@@ -274,7 +274,7 @@ class TestACrQEvaluator:
 
         # Test conjunction Human(alice) ∧ Human*(alice)
         conj = CompoundFormula("&", [alice_human, alice_human_star])
-        assert evaluator.evaluate(conj) == FALSE  # T ∧ F = F
+        assert evaluator.evaluate(conj) == FALSE  # t ∧ f = f
 
     def test_evaluate_acrq_function(self):
         """Test the convenience function."""

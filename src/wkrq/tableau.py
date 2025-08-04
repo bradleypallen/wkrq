@@ -13,11 +13,10 @@ from .formula import (
     CompoundFormula,
     Constant,
     Formula,
-    RestrictedExistentialFormula,
     RestrictedUniversalFormula,
 )
 from .semantics import FALSE, TRUE, UNDEFINED, TruthValue
-from .signs import F, M, N, Sign, SignedFormula, T
+from .signs import Sign, SignedFormula, e, f, m, n, t
 
 
 class RuleType(Enum):
@@ -144,12 +143,19 @@ class Branch:
         return False
 
     def _check_contradiction(self, new_formula: SignedFormula) -> bool:
-        """Check if new formula contradicts existing formulas."""
-        # Only T and F contradict
-        if new_formula.sign == T:
-            return len(self.formula_index[F][new_formula.formula]) > 0
-        elif new_formula.sign == F:
-            return len(self.formula_index[T][new_formula.formula]) > 0
+        """Check if new formula contradicts existing formulas.
+
+        Per Ferguson Definition 10: A branch closes if there is a sentence φ
+        and distinct v, u ∈ V₃ such that both v : φ and u : φ appear on B.
+        """
+        # Check if formula already exists with a different sign from {t, f, e}
+        for sign in [t, f, e]:
+            if (
+                sign != new_formula.sign
+                and len(self.formula_index[sign][new_formula.formula]) > 0
+            ):
+                # Found same formula with different truth value - contradiction!
+                return True
         return False
 
     def has_formula(self, signed_formula: SignedFormula) -> bool:
@@ -175,7 +181,7 @@ class Branch:
 
     def _extract_ground_terms(self, formula: Formula) -> None:
         """Extract ground terms (constants) from a formula for unification."""
-        from .formula import CompoundFormula, Constant, PredicateFormula
+        from .formula import Constant, PredicateFormula
 
         if isinstance(formula, PredicateFormula):
             # Extract constants from predicate arguments
@@ -330,278 +336,64 @@ class Tableau:
                 return False
         return True
 
-    def _get_applicable_rule(  # noqa: C901
+    def _get_applicable_rule(
         self, signed_formula: SignedFormula, branch: Branch
     ) -> Optional[RuleInfo]:
-        """Get the next applicable rule for a signed formula with optimization."""
-        sign = signed_formula.sign
-        formula = signed_formula.formula
+        """Get the next applicable rule for a signed formula using Ferguson's system."""
+        from .ferguson_rules import get_applicable_rule as get_ferguson_rule
 
-        # Check if this formula has already been processed
-        # Exception: Universal quantifiers should be re-instantiated with new constants
+        # Check if already processed (except for universal quantifiers)
         if hasattr(branch, "_processed_formulas"):
             if signed_formula in branch._processed_formulas:
                 # Allow re-processing of universal quantifiers for new constants
-                if not (isinstance(formula, RestrictedUniversalFormula) and sign == T):
+                if not (
+                    isinstance(signed_formula.formula, RestrictedUniversalFormula)
+                    and signed_formula.sign == t
+                ):
                     return None
         else:
             branch._processed_formulas = set()
 
-        if isinstance(formula, CompoundFormula):
-            connective = formula.connective
+        # Create a fresh constant generator
+        def fresh_constant_generator() -> Constant:
+            return Constant(f"c_{len(branch.nodes)}")
 
-            # Conjunction rules
-            if connective == "&":
-                if sign == T:
-                    conclusions = [
-                        [
-                            SignedFormula(T, formula.subformulas[0]),
-                            SignedFormula(T, formula.subformulas[1]),
-                        ]
-                    ]
-                    return RuleInfo("T-Conjunction", RuleType.ALPHA, 1, 2, conclusions)
-                elif sign == F:
-                    conclusions = [
-                        [SignedFormula(F, formula.subformulas[0])],
-                        [SignedFormula(F, formula.subformulas[1])],
-                    ]
-                    return RuleInfo("F-Conjunction", RuleType.BETA, 10, 3, conclusions)
-                elif sign == M:
-                    conclusions = [
-                        [SignedFormula(M, formula.subformulas[0])],
-                        [SignedFormula(M, formula.subformulas[1])],
-                    ]
-                    return RuleInfo("M-Conjunction", RuleType.BETA, 20, 4, conclusions)
-                elif sign == N:
-                    conclusions = [
-                        [SignedFormula(N, formula.subformulas[0])],
-                        [SignedFormula(N, formula.subformulas[1])],
-                    ]
-                    return RuleInfo("N-Conjunction", RuleType.BETA, 30, 4, conclusions)
-
-            # Disjunction rules
-            elif connective == "|":
-                if sign == T:
-                    conclusions = [
-                        [SignedFormula(T, formula.subformulas[0])],
-                        [SignedFormula(T, formula.subformulas[1])],
-                    ]
-                    return RuleInfo("T-Disjunction", RuleType.BETA, 11, 3, conclusions)
-                elif sign == F:
-                    conclusions = [
-                        [
-                            SignedFormula(F, formula.subformulas[0]),
-                            SignedFormula(F, formula.subformulas[1]),
-                        ]
-                    ]
-                    return RuleInfo("F-Disjunction", RuleType.ALPHA, 2, 2, conclusions)
-                elif sign == M:
-                    conclusions = [
-                        [SignedFormula(M, formula.subformulas[0])],
-                        [SignedFormula(M, formula.subformulas[1])],
-                    ]
-                    return RuleInfo("M-Disjunction", RuleType.BETA, 21, 4, conclusions)
-                elif sign == N:
-                    conclusions = [
-                        [SignedFormula(N, formula.subformulas[0])],
-                        [SignedFormula(N, formula.subformulas[1])],
-                    ]
-                    return RuleInfo("N-Disjunction", RuleType.BETA, 31, 4, conclusions)
-
-            # Negation rules (all ALPHA - high priority)
-            elif connective == "~":
-                subformula = formula.subformulas[0]
-                if sign == T:
-                    conclusions = [[SignedFormula(F, subformula)]]
-                    return RuleInfo("T-Negation", RuleType.ALPHA, 0, 1, conclusions)
-                elif sign == F:
-                    conclusions = [[SignedFormula(T, subformula)]]
-                    return RuleInfo("F-Negation", RuleType.ALPHA, 0, 1, conclusions)
-                elif sign == M:
-                    conclusions = [[SignedFormula(M, subformula)]]
-                    return RuleInfo("M-Negation", RuleType.ALPHA, 5, 1, conclusions)
-                elif sign == N:
-                    conclusions = [[SignedFormula(N, subformula)]]
-                    return RuleInfo("N-Negation", RuleType.ALPHA, 5, 1, conclusions)
-
-            # Implication rules
-            elif connective == "->":
-                antecedent = formula.subformulas[0]
-                consequent = formula.subformulas[1]
-                if sign == T:
-                    conclusions = [
-                        [SignedFormula(F, antecedent)],
-                        [SignedFormula(T, consequent)],
-                    ]
-                    return RuleInfo("T-Implication", RuleType.BETA, 12, 3, conclusions)
-                elif sign == F:
-                    conclusions = [
-                        [SignedFormula(T, antecedent), SignedFormula(F, consequent)]
-                    ]
-                    return RuleInfo("F-Implication", RuleType.ALPHA, 3, 2, conclusions)
-                elif sign == M:
-                    conclusions = [
-                        [SignedFormula(M, antecedent)],
-                        [SignedFormula(M, consequent)],
-                    ]
-                    return RuleInfo("M-Implication", RuleType.BETA, 22, 4, conclusions)
-                elif sign == N:
-                    conclusions = [
-                        [SignedFormula(N, antecedent)],
-                        [SignedFormula(N, consequent)],
-                    ]
-                    return RuleInfo("N-Implication", RuleType.BETA, 32, 4, conclusions)
-
-        # Restricted quantifier rules with unification
-        if isinstance(formula, RestrictedExistentialFormula):
-            # T:[∃X P(X)]Q(X) - there exists an x such that P(x) and Q(x)
-            if sign == T:
-                # For existentials, prefer fresh constants to avoid inappropriate witnesses
-                # Existentials assert existence of *some* individual, not necessarily existing ones
-                instantiation_const = Constant(f"c_{len(branch.nodes)}")
-                # Track the new constant
-                branch.ground_terms.add(instantiation_const.name)
-
-                # Substitute the variable with the chosen constant
-                restriction_inst = formula.restriction.substitute_term(
-                    {formula.var.name: instantiation_const}
+        # Get used constants for this formula if it's a universal quantifier
+        used_constants = None
+        if isinstance(signed_formula.formula, RestrictedUniversalFormula):
+            if hasattr(branch, "_universal_instantiations"):
+                used_constants = branch._universal_instantiations.get(
+                    signed_formula, set()
                 )
-                matrix_inst = formula.matrix.substitute_term(
-                    {formula.var.name: instantiation_const}
-                )
+            else:
+                branch._universal_instantiations = {}
+                used_constants = set()
 
-                # T:[∃X P(X)]Q(X) expands to: T:P(c) ∧ T:Q(c)
-                conclusions = [
-                    [SignedFormula(T, restriction_inst), SignedFormula(T, matrix_inst)]
-                ]
-                return RuleInfo(
-                    "T-RestrictedExists", RuleType.ALPHA, 40, 1, conclusions
-                )
+        # Get Ferguson rule
+        ferguson_rule = get_ferguson_rule(
+            signed_formula,
+            fresh_constant_generator,
+            list(branch.ground_terms) if branch.ground_terms else None,
+            used_constants,
+        )
 
-            elif sign == F:
-                # F:[∃X P(X)]Q(X) - there's no x such that P(x) and Q(x)
-                # This requires universal instantiation over all existing constants
-                # For tableau efficiency, we use a witness constant
-                unification_map = branch._unify_with_existing_terms(formula)
+        if not ferguson_rule:
+            return None
 
-                if unification_map and formula.var.name in unification_map:
-                    const_name = unification_map[formula.var.name]
-                    instantiation_const = Constant(const_name)
-                else:
-                    instantiation_const = Constant(f"c_{len(branch.nodes)}")
-                    branch.ground_terms.add(instantiation_const.name)
+        # Convert Ferguson rule to RuleInfo
+        rule_type = (
+            RuleType.ALPHA if not ferguson_rule.is_branching() else RuleType.BETA
+        )
+        priority = 1 if rule_type == RuleType.ALPHA else 10
 
-                restriction_inst = formula.restriction.substitute_term(
-                    {formula.var.name: instantiation_const}
-                )
-                matrix_inst = formula.matrix.substitute_term(
-                    {formula.var.name: instantiation_const}
-                )
-
-                # F:[∃X P(X)]Q(X) expands to: F:P(c) ∨ F:Q(c)
-                conclusions = [
-                    [SignedFormula(F, restriction_inst)],
-                    [SignedFormula(F, matrix_inst)],
-                ]
-                return RuleInfo("F-RestrictedExists", RuleType.BETA, 41, 2, conclusions)
-
-        elif isinstance(formula, RestrictedUniversalFormula):
-            # T:[∀X P(X)]Q(X) - for all x, if P(x) then Q(x)
-            if sign == T:
-                # Universal rules must be applied to ALL existing constants
-                # plus potentially one fresh constant for completeness
-                existing_constants = list(branch.ground_terms)
-
-                if existing_constants:
-                    # Check which constants we haven't instantiated this formula with yet
-                    if signed_formula not in branch._universal_instantiations:
-                        branch._universal_instantiations[signed_formula] = set()
-
-                    used_constants = branch._universal_instantiations[signed_formula]
-                    unused_constants = [
-                        c for c in existing_constants if c not in used_constants
-                    ]
-
-                    if unused_constants:
-                        # Use the first unused constant (don't mark as used yet - that happens during application)
-                        const_name = unused_constants[0]
-
-                        instantiation_const = Constant(const_name)
-                        restriction_inst = formula.restriction.substitute_term(
-                            {formula.var.name: instantiation_const}
-                        )
-                        matrix_inst = formula.matrix.substitute_term(
-                            {formula.var.name: instantiation_const}
-                        )
-
-                        # T:[∀X P(X)]Q(X) expands to: F:P(c) ∨ T:Q(c)
-                        conclusions = [
-                            [SignedFormula(F, restriction_inst)],
-                            [SignedFormula(T, matrix_inst)],
-                        ]
-                        # Store the constant name in the rule for later use during application
-                        rule_info = RuleInfo(
-                            "T-RestrictedForall", RuleType.BETA, 42, 2, conclusions
-                        )
-                        rule_info.instantiation_constant = (
-                            const_name  # Custom attribute
-                        )
-                        return rule_info
-                    else:
-                        # All constants have been used - no more instantiations needed
-                        return None
-                else:
-                    # No existing constants, use fresh one
-                    fresh_const = Constant(f"c_{len(branch.nodes)}")
-                    branch.ground_terms.add(fresh_const.name)
-
-                    restriction_inst = formula.restriction.substitute_term(
-                        {formula.var.name: fresh_const}
-                    )
-                    matrix_inst = formula.matrix.substitute_term(
-                        {formula.var.name: fresh_const}
-                    )
-
-                    conclusions = [
-                        [SignedFormula(F, restriction_inst)],
-                        [SignedFormula(T, matrix_inst)],
-                    ]
-                    rule_info = RuleInfo(
-                        "T-RestrictedForall", RuleType.BETA, 42, 2, conclusions
-                    )
-                    rule_info.instantiation_constant = (
-                        fresh_const.name
-                    )  # Track the fresh constant
-                    return rule_info
-
-            elif sign == F:
-                # F:[∀X P(X)]Q(X) - there exists an x such that P(x) but not Q(x)
-                # This is an existential witness - use unification to find the right constant
-                unification_map = branch._unify_with_existing_terms(formula)
-
-                if unification_map and formula.var.name in unification_map:
-                    const_name = unification_map[formula.var.name]
-                    instantiation_const = Constant(const_name)
-                else:
-                    instantiation_const = Constant(f"c_{len(branch.nodes)}")
-                    branch.ground_terms.add(instantiation_const.name)
-
-                restriction_inst = formula.restriction.substitute_term(
-                    {formula.var.name: instantiation_const}
-                )
-                matrix_inst = formula.matrix.substitute_term(
-                    {formula.var.name: instantiation_const}
-                )
-
-                # F:[∀X P(X)]Q(X) expands to: T:P(c) ∧ F:Q(c)
-                conclusions = [
-                    [SignedFormula(T, restriction_inst), SignedFormula(F, matrix_inst)]
-                ]
-                return RuleInfo(
-                    "F-RestrictedForall", RuleType.ALPHA, 43, 1, conclusions
-                )
-
-        return None
+        return RuleInfo(
+            name=ferguson_rule.name,
+            rule_type=rule_type,
+            priority=priority,
+            complexity_cost=len(ferguson_rule.conclusions),
+            conclusions=ferguson_rule.conclusions,
+            instantiation_constant=ferguson_rule.instantiation_constant,
+        )
 
     def apply_rule(  # noqa: C901
         self, node: TableauNode, branch: Branch, rule_info: RuleInfo
@@ -766,36 +558,39 @@ class Tableau:
         for atom in atoms:
             # Check what signs appear for this atom
             has_t = any(
-                node.formula.sign == T and str(node.formula.formula) == atom
+                node.formula.sign == t and str(node.formula.formula) == atom
                 for node in branch.nodes
             )
             has_f = any(
-                node.formula.sign == F and str(node.formula.formula) == atom
+                node.formula.sign == f and str(node.formula.formula) == atom
+                for node in branch.nodes
+            )
+            has_e = any(
+                node.formula.sign == e and str(node.formula.formula) == atom
                 for node in branch.nodes
             )
             has_m = any(
-                node.formula.sign == M and str(node.formula.formula) == atom
+                node.formula.sign == m and str(node.formula.formula) == atom
                 for node in branch.nodes
             )
             has_n = any(
-                node.formula.sign == N and str(node.formula.formula) == atom
+                node.formula.sign == n and str(node.formula.formula) == atom
                 for node in branch.nodes
             )
 
-            # Check for contradictions first - this should not happen in open branches
-            if has_t and has_f:
-                # This should not happen - branch should be closed
-                return None
-
+            # Direct truth value signs take precedence
             if has_t:
                 valuations[atom] = TRUE
             elif has_f:
                 valuations[atom] = FALSE
+            elif has_e:
+                valuations[atom] = UNDEFINED
             elif has_m:
-                # M means both T and F are possible - choose one
+                # m means both t and f are possible - choose one
                 valuations[atom] = TRUE  # Could also be FALSE
             elif has_n:
-                valuations[atom] = UNDEFINED
+                # n means both f and e are possible - choose f
+                valuations[atom] = FALSE  # Could also be UNDEFINED
             else:
                 # No constraint, default to undefined
                 valuations[atom] = UNDEFINED
@@ -844,7 +639,7 @@ class Tableau:
             return None
 
 
-def solve(formula: Formula, sign: Sign = T) -> TableauResult:
+def solve(formula: Formula, sign: Sign = t) -> TableauResult:
     """Solve a formula with the given sign."""
     signed_formula = SignedFormula(sign, formula)
     tableau = Tableau([signed_formula])
@@ -858,17 +653,17 @@ def valid(formula: Formula) -> bool:
     in ALL interpretations, not just those where premises are true.
 
     A formula is valid iff:
-    - F:φ is unsatisfiable (cannot be false), AND
-    - N:φ is unsatisfiable (cannot be undefined)
+    - f:φ is unsatisfiable (cannot be false), AND
+    - e:φ is unsatisfiable (cannot be undefined)
     """
     # Check if formula can be false
-    result_f = solve(formula, F)
+    result_f = solve(formula, f)
     if result_f.satisfiable:
         return False  # Can be false, so not valid
 
     # Check if formula can be undefined
-    result_n = solve(formula, N)
-    if result_n.satisfiable:
+    result_e = solve(formula, e)
+    if result_e.satisfiable:
         return False  # Can be undefined, so not valid
 
     # If cannot be false or undefined, must be valid (always true)
@@ -891,6 +686,6 @@ def entails(premises: list[Formula], conclusion: Formula) -> bool:
 
     # Test satisfiability of premises & ~conclusion
     test_formula = Conjunction(combined_premises, Negation(conclusion))
-    result = solve(test_formula, T)
+    result = solve(test_formula, t)
 
     return not result.satisfiable

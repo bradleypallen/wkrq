@@ -1,6 +1,6 @@
 # wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
-[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=1.2.0)](https://badge.fury.io/py/wkrq)
+[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=2.0.0)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
@@ -18,8 +18,8 @@ systems related to weak Kleene logic." In *International Conference on
 Automated Reasoning with Analytic Tableaux and Related Methods*, pp. 3-19.
 Cham: Springer International Publishing, 2021.
 
-The tableau construction algorithms and four-sign system (T, F, M, N)
-implemented here follow Ferguson's formal definitions. This is a research
+The tableau construction algorithms and six-sign system (t, f, e, m, n, v)
+implemented here follow Ferguson's formal definitions exactly. This is a research
 implementation created for experimental and educational purposes.
 
 ## Research Software Disclaimer
@@ -36,6 +36,7 @@ tracker](https://github.com/bradleypallen/wkrq/issues).
 - 🎯 **Three-valued semantics**: true (t), false (f), undefined (e)
 - 🔤 **Weak Kleene logic**: Operations with undefined propagate undefinedness
 - 🔢 **Restricted quantification**: Domain-bounded first-order reasoning
+- 📋 **Ferguson's six-sign system**: t, f, e, m, n, v exactly as in the 2021 paper
 - 🔄 **ACrQ extension**: Analytic Containment for paraconsistent/paracomplete reasoning
 - ⚡ **Industrial performance**: Optimized tableau with sub-millisecond response
 - 🖥️ **CLI and API**: Both command-line and programmatic interfaces
@@ -55,8 +56,8 @@ pip install wkrq
 # Test a simple formula
 wkrq "p & q"
 
-# Test with specific sign (T, F, M, N)
-wkrq --sign=N "p | ~p"
+# Test with specific sign (t, f, e, m, n)
+wkrq --sign=n "p | ~p"
 
 # Show all models
 wkrq --models "p | q"
@@ -84,14 +85,14 @@ wkrq "Human(x) & ~Human(x)"  # Shows paraconsistent model with "glut"
 ### Python API
 
 ```python
-from wkrq import Formula, solve, valid, T, F, M, N
+from wkrq import Formula, solve, valid, t, f, e, m, n
 
 # Create formulas
 p, q = Formula.atoms('p', 'q')
 formula = p & (q | ~p)
 
 # Test satisfiability
-result = solve(formula, T)
+result = solve(formula, t)
 print(f"Satisfiable: {result.satisfiable}")
 print(f"Models: {result.models}")
 
@@ -102,7 +103,7 @@ print(f"Valid in Ferguson's system: {valid(tautology)}")  # True (classical
                                                          # tautologies are valid)
 
 # Three-valued reasoning
-result = solve(p | ~p, N)  # Can it be undefined?
+result = solve(p | ~p, e)  # Can it be undefined?
 print(f"Can be undefined: {result.satisfiable}")  # True
 
 # ACrQ paraconsistent reasoning
@@ -110,7 +111,7 @@ from wkrq import parse_acrq_formula, SyntaxMode
 
 # Handle contradictions gracefully (no explosion)
 contradiction = parse_acrq_formula("Human(x) & ~Human(x)")
-result = solve(contradiction, T)
+result = solve(contradiction, t)
 print(f"Contradiction satisfiable: {result.satisfiable}")  # True (glut allowed)
 
 # Different syntax modes for ACrQ
@@ -338,3 +339,4 @@ MIT License - see [LICENSE](https://github.com/bradleypallen/wkrq/blob/main/LICE
 - [Issue Tracker](https://github.com/bradleypallen/wkrq/issues)
 - [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/CLI_GUIDE.md)
 - [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/API_REFERENCE.md)
+- [wKrQ vs ACrQ Comparison](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_vs_ACrQ_COMPARISON.md)

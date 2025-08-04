@@ -11,7 +11,7 @@ import time
 
 import pytest
 
-from wkrq import Formula, T, check_inference, parse_inference, solve
+from wkrq import Formula, check_inference, parse_inference, solve, t
 
 
 class TestBasicPerformanceBenchmarks:
@@ -25,7 +25,7 @@ class TestBasicPerformanceBenchmarks:
         times = []
         for _ in range(10):
             start = time.time()
-            result = solve(p, T)
+            result = solve(p, t)
             end = time.time()
             times.append((end - start) * 1000)  # Convert to milliseconds
 
@@ -44,7 +44,7 @@ class TestBasicPerformanceBenchmarks:
         times = []
         for _ in range(10):
             start = time.time()
-            result = solve(formula, T)
+            result = solve(formula, t)
             end = time.time()
             times.append((end - start) * 1000)
 
@@ -61,7 +61,7 @@ class TestBasicPerformanceBenchmarks:
         times = []
         for _ in range(10):
             start = time.time()
-            result = solve(formula, T)
+            result = solve(formula, t)
             end = time.time()
             times.append((end - start) * 1000)
 
@@ -79,7 +79,7 @@ class TestBasicPerformanceBenchmarks:
         times = []
         for _ in range(10):
             start = time.time()
-            result = solve(formula, T)
+            result = solve(formula, t)
             end = time.time()
             times.append((end - start) * 1000)
 
@@ -98,7 +98,7 @@ class TestBasicPerformanceBenchmarks:
         times = []
         for _ in range(10):
             start = time.time()
-            result = solve(contradiction, T)
+            result = solve(contradiction, t)
             end = time.time()
             times.append((end - start) * 1000)
 
@@ -125,7 +125,7 @@ class TestScalabilityBenchmarks:
                 formula = formula & atom
 
             start = time.time()
-            result = solve(formula, T)
+            result = solve(formula, t)
             end = time.time()
 
             elapsed = (end - start) * 1000
@@ -157,7 +157,7 @@ class TestScalabilityBenchmarks:
             formula = p.implies(formula)
 
         start = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end = time.time()
 
         elapsed = (end - start) * 1000
@@ -183,7 +183,7 @@ class TestScalabilityBenchmarks:
             formula = formula & clause
 
         start = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end = time.time()
 
         elapsed = (end - start) * 1000
@@ -205,7 +205,7 @@ class TestScalabilityBenchmarks:
             formula = formula & clause
 
         start = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end = time.time()
 
         elapsed = (end - start) * 1000
@@ -300,7 +300,7 @@ class TestOptimizationEffectiveness:
         formula = ~(p & q) & (r | p)
 
         start = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end = time.time()
 
         elapsed = (end - start) * 1000
@@ -323,7 +323,7 @@ class TestOptimizationEffectiveness:
         formula = p | ~p  # Tautology - satisfiable immediately
 
         start = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end = time.time()
 
         elapsed = (end - start) * 1000
@@ -344,7 +344,7 @@ class TestOptimizationEffectiveness:
         formula = formula & ~atoms[10]
 
         start = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end = time.time()
 
         elapsed = (end - start) * 1000
@@ -362,7 +362,7 @@ class TestOptimizationEffectiveness:
         subsuming_formula = p | (p & q & r)
 
         start = time.time()
-        result = solve(subsuming_formula, T)
+        result = solve(subsuming_formula, t)
         end = time.time()
 
         elapsed = (end - start) * 1000
@@ -396,7 +396,7 @@ class TestMemoryEfficiency:
         right_part = (atoms[4] | atoms[5]) & (atoms[6] | atoms[7])
         formula = left_part | right_part
 
-        result = solve(formula, T)
+        result = solve(formula, t)
 
         assert result.satisfiable, "Complex formula should be satisfiable"
         assert (
@@ -412,7 +412,7 @@ class TestMemoryEfficiency:
         p, q, r = Formula.atoms("p", "q", "r")
         formula = (p | q) & (q | r)
 
-        result = solve(formula, T)
+        result = solve(formula, t)
 
         assert result.satisfiable, "Formula should be satisfiable"
         assert len(result.models) > 0, "Should extract models"
@@ -442,7 +442,7 @@ class TestRegressionPrevention:
 
         for name, formula, max_time_ms in test_cases:
             start = time.time()
-            solve(formula, T)  # We don't need the result
+            solve(formula, t)  # We don't need the result
             end = time.time()
 
             elapsed = (end - start) * 1000
@@ -456,7 +456,7 @@ class TestRegressionPrevention:
         p, q = Formula.atoms("p", "q")
         formula = (p & q) | (~p & ~q)
 
-        result = solve(formula, T)
+        result = solve(formula, t)
 
         # With optimizations, should be reasonably efficient
         assert result.total_nodes < 50, "Optimization should limit node explosion"

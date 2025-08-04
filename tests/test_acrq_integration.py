@@ -92,20 +92,20 @@ class TestACrQCLI:
 
     def test_acrq_sign_options(self):
         """Test different signs in ACrQ mode."""
-        # Test with F sign
-        stdout, stderr, code = self.run_wkrq("--mode=acrq", "--sign=F", "Human(alice)")
+        # Test with f sign
+        stdout, stderr, code = self.run_wkrq("--mode=acrq", "--sign=f", "Human(alice)")
         assert code == 0
-        assert "Sign: F" in stdout
+        assert "Sign: f" in stdout
 
-        # Test with M sign
-        stdout, stderr, code = self.run_wkrq("--mode=acrq", "--sign=M", "Human(alice)")
+        # Test with m sign
+        stdout, stderr, code = self.run_wkrq("--mode=acrq", "--sign=m", "Human(alice)")
         assert code == 0
-        assert "Sign: M" in stdout
+        assert "Sign: m" in stdout
 
-        # Test with N sign
-        stdout, stderr, code = self.run_wkrq("--mode=acrq", "--sign=N", "Human(alice)")
+        # Test with n sign
+        stdout, stderr, code = self.run_wkrq("--mode=acrq", "--sign=n", "Human(alice)")
         assert code == 0
-        assert "Sign: N" in stdout
+        assert "Sign: n" in stdout
 
 
 class TestACrQSemantics:
@@ -115,11 +115,11 @@ class TestACrQSemantics:
         """Test that ACrQ can represent knowledge gaps."""
         from wkrq.acrq_parser import SyntaxMode, parse_acrq_formula
         from wkrq.acrq_tableau import ACrQTableau
-        from wkrq.signs import N, SignedFormula
+        from wkrq.signs import SignedFormula, n
 
-        # N: Human(charlie) represents a knowledge gap
+        # n: Human(charlie) represents a knowledge gap
         formula = parse_acrq_formula("Human(charlie)", SyntaxMode.TRANSPARENT)
-        tableau = ACrQTableau([SignedFormula(N, formula)])
+        tableau = ACrQTableau([SignedFormula(n, formula)])
         result = tableau.construct()
 
         assert result.satisfiable
@@ -134,7 +134,7 @@ class TestACrQSemantics:
         """Test paraconsistent behavior (no explosion from contradictions)."""
         from wkrq.acrq_parser import SyntaxMode, parse_acrq_formula
         from wkrq.acrq_tableau import ACrQTableau
-        from wkrq.signs import F, SignedFormula, T
+        from wkrq.signs import SignedFormula, f, t
 
         # Even with Human(alice) and ¬Human(alice), we can't prove Robot(bob)
         f1 = parse_acrq_formula("Human(alice)", SyntaxMode.TRANSPARENT)
@@ -144,9 +144,9 @@ class TestACrQSemantics:
         # Try to prove Robot(bob) from the contradiction
         tableau = ACrQTableau(
             [
-                SignedFormula(T, f1),
-                SignedFormula(T, f2),
-                SignedFormula(F, f3),  # Assume Robot(bob) is false
+                SignedFormula(t, f1),
+                SignedFormula(t, f2),
+                SignedFormula(f, f3),  # Assume Robot(bob) is false
             ]
         )
         _result = tableau.construct()
@@ -236,10 +236,10 @@ class TestACrQFergusonCompliance:
         q = PropositionalAtom("q")
         r = PropositionalAtom("r")
 
-        # Test weak Kleene conjunction: T ∧ U = U
+        # Test weak Kleene conjunction: t ∧ U = U
         conj = CompoundFormula("&", [p, r])
         assert evaluator.evaluate(conj) == UNDEFINED
 
-        # Test weak Kleene disjunction: F ∨ U = U
+        # Test weak Kleene disjunction: f ∨ U = U
         disj = CompoundFormula("|", [q, r])
         assert evaluator.evaluate(disj) == UNDEFINED

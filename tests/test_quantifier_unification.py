@@ -10,7 +10,7 @@ import pytest
 from wkrq.api import check_inference
 from wkrq.cli import parse_inference
 from wkrq.parser import parse
-from wkrq.signs import T
+from wkrq.signs import t
 from wkrq.tableau import entails, solve
 
 
@@ -138,7 +138,7 @@ class TestExistentialQuantifierUnification:
         # If some human is wise, and we have two humans, at least one is wise
         # This tests the branching behavior of existential quantifiers
         formula = parse("[∃X Human(X)]Wise(X)")
-        result = solve(formula, T)
+        result = solve(formula, t)
         assert result.satisfiable, "Existential should be satisfiable"
 
     def test_existential_contradiction(self):
@@ -198,14 +198,14 @@ class TestQuantifierEdgeCases:
         """Test universal quantifier with no matching constants."""
         # Universal should be vacuously true if no instances exist
         formula = parse("[∀X Unicorn(X)]Magical(X)")
-        result = solve(formula, T)
+        result = solve(formula, t)
         assert result.satisfiable, "Universal over empty domain should be satisfiable"
 
     def test_empty_domain_existential(self):
         """Test existential quantifier with no matching constants."""
         # Existential should be satisfiable by introducing a witness
         formula = parse("[∃X Unicorn(X)]Magical(X)")
-        result = solve(formula, T)
+        result = solve(formula, t)
         assert (
             result.satisfiable
         ), "Existential should be satisfiable with fresh witness"
@@ -274,33 +274,33 @@ class TestQuantifierSemantics:
         # Test with undefined values in the domain
         # This is more complex as it involves the three-valued nature
         formula = parse("[∀X P(X)]Q(X)")
-        result = solve(formula, T)
+        result = solve(formula, t)
         # Should be satisfiable in weak Kleene logic
         assert result.satisfiable
 
     def test_existential_semantic_correctness(self):
         """Test that existential quantifiers have correct weak Kleene semantics."""
         formula = parse("[∃X P(X)]Q(X)")
-        result = solve(formula, T)
+        result = solve(formula, t)
         assert result.satisfiable
 
     def test_quantifier_with_undefined_predicates(self):
         """Test quantifier behavior with undefined predicate values."""
-        # This tests the interaction with the M and N signs
+        # This tests the interaction with the m and n signs
         # In weak Kleene logic, undefined values should propagate appropriately
 
-        # Test with M sign (multiple truth values possible)
-        from wkrq.signs import M
+        # Test with m sign (multiple truth values possible)
+        from wkrq.signs import m
 
         formula = parse("[∀X P(X)]Q(X)")
-        result = solve(formula, M)
-        assert result.satisfiable, "Universal should be satisfiable with M sign"
+        result = solve(formula, m)
+        assert result.satisfiable, "Universal should be satisfiable with m sign"
 
-        # Test with N sign (neither true nor false - undefined)
-        from wkrq.signs import N
+        # Test with n sign (neither true nor false - undefined)
+        from wkrq.signs import n
 
-        result = solve(formula, N)
-        assert result.satisfiable, "Universal should be satisfiable with N sign"
+        result = solve(formula, n)
+        assert result.satisfiable, "Universal should be satisfiable with n sign"
 
     def test_restricted_quantification_semantics(self):
         """Test the semantics of restricted quantification specifically."""

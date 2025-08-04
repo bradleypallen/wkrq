@@ -339,6 +339,10 @@ class BilateralPredicateFormula(PredicateFormula):
         neg = PredicateFormula(self.negative_name, self.terms)
         return (pos, neg)
 
+    def get_base_name(self) -> str:
+        """Get the base predicate name (without *)."""
+        return self.positive_name
+
 
 class CompoundFormula(Formula):
     """A compound formula with a connective."""

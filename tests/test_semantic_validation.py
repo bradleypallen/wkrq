@@ -9,7 +9,7 @@ This module validates our implementation against:
 5. Epistemic vs truth-functional distinctions
 
 References:
-- Ferguson, T.M. (2021). "Tableaux and restricted quantification for systems related to weak Kleene logic"
+- Ferguson, t.m. (2021). "Tableaux and restricted quantification for systems related to weak Kleene logic"
 - Bochvar, D.A. (1938). "Ob odnom trekhznachnom ischislenii i ego primenenii k analizu paradoksov klassicheskogo rasshirennogo funktsional'nogo ischisleniya"
 - Kleene, S.C. (1938). "On notation for ordinal numbers"
 - Priest, G. (2008). "An Introduction to Non-Classical Logic"
@@ -18,7 +18,7 @@ References:
 from wkrq.api import entails, solve, valid
 from wkrq.formula import Formula
 from wkrq.semantics import FALSE, TRUE, UNDEFINED, WeakKleeneSemantics
-from wkrq.signs import F, M, N, SignedFormula, T
+from wkrq.signs import SignedFormula, f, m, n, t
 
 
 class TestWeakKleeneTruthTables:
@@ -113,7 +113,7 @@ class TestContagiousUndefinedPropagation:
         # Test that undefined propagates in conjunction
         # TODO: Need to implement model checking to verify undefined propagation
         # For now, verify basic satisfiability behavior
-        _ = solve(formula, T)  # Basic satisfiability test
+        _ = solve(formula, t)  # Basic satisfiability test
 
     def test_complex_undefined_propagation(self):
         """Test undefined propagation in complex nested formulas."""
@@ -124,10 +124,10 @@ class TestContagiousUndefinedPropagation:
 
         # If any variable is undefined, whole formula should be undefined
         # This tests the "contagious" property through multiple operations
-        result = solve(complex_formula, N)  # N sign tests undefined behavior
+        result = solve(complex_formula, n)  # n sign tests undefined behavior
         assert (
             result.satisfiable
-        ), "Undefined formulas should be satisfiable under N sign"
+        ), "Undefined formulas should be satisfiable under n sign"
 
 
 class TestFergusonTautologyBehavior:
@@ -147,16 +147,16 @@ class TestFergusonTautologyBehavior:
         excluded_middle = p | ~p
 
         # In Ferguson's system, classical tautologies are valid (cannot be false)
-        result_f = solve(excluded_middle, F)
+        result_f = solve(excluded_middle, f)
         assert (
             not result_f.satisfiable
-        ), "F:(p ∨ ¬p) should be unsatisfiable (cannot be false in Ferguson's system)"
+        ), "f:(p ∨ ¬p) should be unsatisfiable (cannot be false in Ferguson's system)"
 
-        # But satisfiable under N sign (can be undefined for epistemic uncertainty)
-        result_n = solve(excluded_middle, N)
+        # But satisfiable under n sign (can be undefined for epistemic uncertainty)
+        result_n = solve(excluded_middle, n)
         assert (
             result_n.satisfiable
-        ), "N:(p ∨ ¬p) should be satisfiable (epistemic uncertainty allowed)"
+        ), "n:(p ∨ ¬p) should be satisfiable (epistemic uncertainty allowed)"
 
         # Ferguson does NOT preserve classical validity for tautologies
         assert not valid(
@@ -169,16 +169,16 @@ class TestFergusonTautologyBehavior:
         non_contradiction = ~(p & ~p)
 
         # In Ferguson's system, classical tautologies cannot be false
-        result_f = solve(non_contradiction, F)
+        result_f = solve(non_contradiction, f)
         assert (
             not result_f.satisfiable
-        ), "F:¬(p ∧ ¬p) should be unsatisfiable (cannot be false in Ferguson's system)"
+        ), "f:¬(p ∧ ¬p) should be unsatisfiable (cannot be false in Ferguson's system)"
 
-        # But satisfiable under N sign (epistemic uncertainty)
-        result_n = solve(non_contradiction, N)
+        # But satisfiable under n sign (epistemic uncertainty)
+        result_n = solve(non_contradiction, n)
         assert (
             result_n.satisfiable
-        ), "N:¬(p ∧ ¬p) should be satisfiable (epistemic uncertainty allowed)"
+        ), "n:¬(p ∧ ¬p) should be satisfiable (epistemic uncertainty allowed)"
 
         # Ferguson preserves classical validity for tautologies
         assert not valid(
@@ -198,16 +198,16 @@ class TestFergusonTautologyBehavior:
 
         for formula in tautology_candidates:
             # Classical tautologies cannot be false in Ferguson's system
-            result_f = solve(formula, F)
+            result_f = solve(formula, f)
             assert (
                 not result_f.satisfiable
-            ), f"F:{formula} should be unsatisfiable (cannot be false)"
+            ), f"f:{formula} should be unsatisfiable (cannot be false)"
 
             # But allow epistemic uncertainty
-            result_n = solve(formula, N)
+            result_n = solve(formula, n)
             assert (
                 result_n.satisfiable
-            ), f"N:{formula} should be satisfiable (epistemic uncertainty)"
+            ), f"n:{formula} should be satisfiable (epistemic uncertainty)"
 
             # Ferguson does NOT preserve classical validity for all tautologies
             assert not valid(
@@ -216,61 +216,61 @@ class TestFergusonTautologyBehavior:
 
 
 class TestFergusonFourSignSystem:
-    """Test Ferguson's four-sign system (T, F, M, N) principles."""
+    """Test Ferguson's four-sign system (t, f, m, n) principles."""
 
     def test_four_signs_basic_satisfiability(self):
         """Test that all four signs are meaningful and satisfiable."""
         p = Formula.atom("p")
 
         # All four signs should be satisfiable for any atomic formula
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(p, sign)
             assert result.satisfiable, f"{sign}:p should be satisfiable"
             assert len(result.models) > 0, f"{sign}:p should have models"
 
     def test_epistemic_vs_truth_functional_distinction(self):
-        """Test distinction between epistemic (M, N) and truth-functional (T, F) signs.
+        """Test distinction between epistemic (m, n) and truth-functional (t, f) signs.
 
-        Reference: Ferguson's epistemic interpretation of M and N signs.
+        Reference: Ferguson's epistemic interpretation of m and n signs.
         """
         p = Formula.atom("p")
         contradiction = p & ~p
 
         # Truth-functional signs: contradictions are unsatisfiable
-        result_t = solve(contradiction, T)
-        assert not result_t.satisfiable, "T:(p ∧ ¬p) should be unsatisfiable"
+        result_t = solve(contradiction, t)
+        assert not result_t.satisfiable, "t:(p ∧ ¬p) should be unsatisfiable"
 
-        result_f = solve(contradiction, F)
-        # F:(p ∧ ¬p) tests if contradiction can be false - in Ferguson's system,
+        result_f = solve(contradiction, f)
+        # f:(p ∧ ¬p) tests if contradiction can be false - in Ferguson's system,
         # contradictions CAN be false (they're not valid), so this should be satisfiable
         assert (
             result_f.satisfiable
-        ), "F:(p ∧ ¬p) should be satisfiable (contradictions can be false)"
+        ), "f:(p ∧ ¬p) should be satisfiable (contradictions can be false)"
 
         # Epistemic signs: express uncertainty, should be satisfiable
-        result_m = solve(contradiction, M)
+        result_m = solve(contradiction, m)
         assert (
             result_m.satisfiable
-        ), "M:(p ∧ ¬p) should be satisfiable (epistemic uncertainty)"
+        ), "m:(p ∧ ¬p) should be satisfiable (epistemic uncertainty)"
 
-        result_n = solve(contradiction, N)
-        assert result_n.satisfiable, "N:(p ∧ ¬p) should be satisfiable (undefined)"
+        result_n = solve(contradiction, n)
+        assert result_n.satisfiable, "n:(p ∧ ¬p) should be satisfiable (undefined)"
 
     def test_sign_interaction_principles(self):
         """Test how different signs interact in reasoning."""
         p, q = Formula.atoms("p", "q")
 
         # Test inference patterns with different signs
-        premises = [SignedFormula(T, p), SignedFormula(T, p.implies(q))]
-        conclusion = SignedFormula(T, q)
+        premises = [SignedFormula(t, p), SignedFormula(t, p.implies(q))]
+        conclusion = SignedFormula(t, q)
 
-        # Modus ponens should work with T signs
+        # Modus ponens should work with t signs
         assert entails(
             [sf.formula for sf in premises], conclusion.formula
         ), "Modus ponens should work with truth-functional signs"
 
         # Test with epistemic signs
-        premises_m = [SignedFormula(M, p), SignedFormula(M, p.implies(q))]
+        premises_m = [SignedFormula(m, p), SignedFormula(m, p.implies(q))]
         # Epistemic reasoning is more complex - for now just test satisfiability
         for prem in premises_m:
             result = solve(prem.formula, prem.sign)
@@ -290,7 +290,7 @@ class TestRestrictedQuantifierSemantics:
         universal_formula = Formula.restricted_forall(x, px, qx)
 
         # Test satisfiability under different signs
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(universal_formula, sign)
             # Should be satisfiable - exact semantics depend on domain
             assert result.satisfiable, f"{sign}:[∀X P(X)]Q(X) should be satisfiable"
@@ -305,7 +305,7 @@ class TestRestrictedQuantifierSemantics:
         existential_formula = Formula.restricted_exists(x, px, qx)
 
         # Test satisfiability under different signs
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(existential_formula, sign)
             assert result.satisfiable, f"{sign}:[∃X P(X)]Q(X) should be satisfiable"
 
@@ -320,7 +320,7 @@ class TestRestrictedQuantifierSemantics:
         universal = Formula.restricted_forall(x, human_x, mortal_x)
 
         # Should be satisfiable as a general principle
-        result = solve(universal, T)
+        result = solve(universal, t)
         assert result.satisfiable, "Universal quantification should be satisfiable"
 
 
@@ -355,19 +355,19 @@ class TestTableauSoundnessProperties:
         p = Formula.atom("p")
         contradiction = p & ~p
 
-        # Should be unsatisfiable under T sign
-        result = solve(contradiction, T)
-        assert not result.satisfiable, "Contradictions should be unsatisfiable under T"
+        # Should be unsatisfiable under t sign
+        result = solve(contradiction, t)
+        assert not result.satisfiable, "Contradictions should be unsatisfiable under t"
 
         # But satisfiable under epistemic signs (uncertainty about contradictions)
-        result_m = solve(contradiction, M)
-        result_n = solve(contradiction, N)
+        result_m = solve(contradiction, m)
+        result_n = solve(contradiction, n)
         assert (
             result_m.satisfiable
-        ), "Contradictions should be satisfiable under M (epistemic)"
+        ), "Contradictions should be satisfiable under m (epistemic)"
         assert (
             result_n.satisfiable
-        ), "Contradictions should be satisfiable under N (undefined)"
+        ), "Contradictions should be satisfiable under n (undefined)"
 
 
 class TestSQLNullLogicCompatibility:

@@ -19,14 +19,14 @@ pip install wkrq
 Test if a formula can be satisfied under different signs:
 
 ```bash
-# Test if formula is satisfiable under T (true) sign
+# Test if formula is satisfiable under t (true) sign
 wkrq "p & q"
 
 # Test under specific signs
-wkrq --sign=T "p | q"    # Must be true
-wkrq --sign=F "p & ~p"   # Must be false (unsatisfiable)
-wkrq --sign=M "p | ~p"   # Can be true or false
-wkrq --sign=N "p"        # Must be undefined
+wkrq --sign=t "p | q"    # Must be true
+wkrq --sign=f "p & ~p"   # Must be false (unsatisfiable)
+wkrq --sign=m "p | ~p"   # Can be true or false
+wkrq --sign=n "p"        # Must be undefined
 ```
 
 ### Tableau Tree Visualization
@@ -61,12 +61,12 @@ wkrq --explain --tree --show-rules "p -> (q -> r), p, q |- r"
 
 ## Signs System
 
-wKrQ uses a four-sign system for tableau construction:
+wKrQ uses a six-sign system for tableau construction:
 
-- **T**: Formula must be true
-- **F**: Formula must be false  
-- **M**: Formula can be true or false (meaningful)
-- **N**: Formula must be undefined (non-true)
+- **t**: Formula must be true
+- **f**: Formula must be false  
+- **m**: Formula can be true or false (meaningful)
+- **n**: Formula must be undefined (non-true)
 
 ## Tableau Rules Reference
 
@@ -75,20 +75,20 @@ wKrQ uses a four-sign system for tableau construction:
 These rules extend a single branch:
 
 ```bash
-# T-Conjunction: T:(A & B) → T:A, T:B
-wkrq --sign=T --tree --show-rules "p & q"
+# t-Conjunction: t:(A & B) → t:A, t:B
+wkrq --sign=t --tree --show-rules "p & q"
 
-# F-Disjunction: F:(A | B) → F:A, F:B  
-wkrq --sign=F --tree --show-rules "p | q"
+# f-Disjunction: f:(A | B) → f:A, f:B  
+wkrq --sign=f --tree --show-rules "p | q"
 
-# T-Negation: T:~A → F:A
-wkrq --sign=T --tree --show-rules "~p"
+# t-Negation: t:~A → f:A
+wkrq --sign=t --tree --show-rules "~p"
 
-# F-Negation: F:~A → T:A
-wkrq --sign=F --tree --show-rules "~p"
+# f-Negation: f:~A → t:A
+wkrq --sign=f --tree --show-rules "~p"
 
-# F-Implication: F:(A -> B) → T:A, F:B
-wkrq --sign=F --tree --show-rules "p -> q"
+# f-Implication: f:(A -> B) → t:A, f:B
+wkrq --sign=f --tree --show-rules "p -> q"
 ```
 
 ### Beta Rules (Branching)
@@ -96,24 +96,24 @@ wkrq --sign=F --tree --show-rules "p -> q"
 These rules create multiple branches:
 
 ```bash
-# T-Disjunction: T:(A | B) → T:A | T:B
-wkrq --sign=T --tree --show-rules "p | q"
+# t-Disjunction: t:(A | B) → t:A | t:B
+wkrq --sign=t --tree --show-rules "p | q"
 
-# F-Conjunction: F:(A & B) → F:A | F:B
-wkrq --sign=F --tree --show-rules "p & q"
+# f-Conjunction: f:(A & B) → f:A | f:B
+wkrq --sign=f --tree --show-rules "p & q"
 
-# T-Implication: T:(A -> B) → F:A | T:B
-wkrq --sign=T --tree --show-rules "p -> q"
+# t-Implication: t:(A -> B) → f:A | t:B
+wkrq --sign=t --tree --show-rules "p -> q"
 ```
 
-### Epistemic Rules (M/N Signs)
+### Epistemic Rules (m/n Signs)
 
 ```bash
-# M-signs branch to both T and F possibilities
-wkrq --sign=M --tree --show-rules "p & q"
+# m-signs branch to both t and f possibilities
+wkrq --sign=m --tree --show-rules "p & q"
 
-# N-signs propagate undefined values
-wkrq --sign=N --tree --show-rules "p -> q"
+# n-signs propagate undefined values
+wkrq --sign=n --tree --show-rules "p -> q"
 ```
 
 ## Restricted Quantifiers
@@ -185,11 +185,11 @@ wkrq "p -> q, q -> r |- p -> r"
 
 ```bash
 # Classical tautology (not valid in weak Kleene)
-wkrq --sign=F "p | ~p"  # Unsatisfiable (cannot be false)
-wkrq --sign=N "p | ~p"  # Satisfiable (can be undefined)
+wkrq --sign=f "p | ~p"  # Unsatisfiable (cannot be false)
+wkrq --sign=n "p | ~p"  # Satisfiable (can be undefined)
 
 # Contradiction
-wkrq --sign=T "p & ~p"  # Unsatisfiable (cannot be true)
+wkrq --sign=t "p & ~p"  # Unsatisfiable (cannot be true)
 ```
 
 ### Complex Formula Analysis
@@ -219,9 +219,9 @@ echo "p -> q" | wkrq --inference --explain
 wkrq --tree --show-rules --format=unicode --explain "complex_inference"
 
 # Visual comparison of different signs
-wkrq --sign=T --tree "p | ~p"
-wkrq --sign=F --tree "p | ~p" 
-wkrq --sign=N --tree "p | ~p"
+wkrq --sign=t --tree "p | ~p"
+wkrq --sign=f --tree "p | ~p" 
+wkrq --sign=n --tree "p | ~p"
 ```
 
 This guide demonstrates the wKrQ CLI's comprehensive features for logical analysis, education, and research applications.

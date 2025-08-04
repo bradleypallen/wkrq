@@ -8,14 +8,16 @@ according to Ferguson's ACrQ system.
 from dataclasses import dataclass, field
 from typing import Optional
 
+from .acrq_ferguson_rules import get_acrq_rule
 from .formula import (
     BilateralPredicateFormula,
     CompoundFormula,
     Formula,
     PredicateFormula,
+    RestrictedUniversalFormula,
 )
 from .semantics import FALSE, BilateralTruthValue, TruthValue
-from .signs import F, M, N, SignedFormula, T
+from .signs import Sign, SignedFormula, e, f, t
 from .tableau import Branch, Model, RuleInfo, RuleType, Tableau
 
 
@@ -28,18 +30,80 @@ class ACrQBranch(Branch):
         self.bilateral_pairs: dict[str, str] = {}  # Maps R to R*
 
     def _check_contradiction(self, new_formula: SignedFormula) -> bool:
-        """Check for contradictions with ACrQ paraconsistent rules."""
-        # Standard contradiction check for non-bilateral predicates
-        if super()._check_contradiction(new_formula):
-            return True
+        """Check for contradictions per Ferguson's Lemma 5.
 
-        # For ACrQ, we allow T:R(a) and T:R*(a) to coexist (paraconsistent)
-        # This represents a "glut" - conflicting information
-        # We only check for contradictions in the standard wKrQ sense
+        A branch closes in ACrQ when:
+        1. Standard contradiction: u:φ and v:φ appear for distinct u,v ∈ {t,f,e}
+        2. But NOT when t:R(a) and t:R*(a) appear (this is a glut, allowed)
 
-        # Note: In a full ACrQ implementation, we might want to track gluts
-        # and gaps explicitly, but for paraconsistency, we simply don't
-        # close branches on bilateral contradictions
+        The key insight from Lemma 5 is that φ* = ψ* ensures they share a
+        common primary logical operator, preventing closure in glut cases.
+        """
+        formula = new_formula.formula
+        sign = new_formula.sign
+
+        # Check standard contradictions (distinct signs from {t,f,e})
+        for other_sign in [t, f, e]:
+            if other_sign != sign and len(self.formula_index[other_sign][formula]) > 0:
+                # Check if this is a bilateral predicate glut case
+                if sign == t and other_sign == t:
+                    # Both are t - check if they form a glut (R and R*)
+                    if self._is_bilateral_glut(formula, sign):
+                        # This is allowed in ACrQ - don't close
+                        return False
+                # Standard contradiction - close branch
+                return True
+
+        return False
+
+    def _is_bilateral_glut(self, formula: Formula, sign: Sign) -> bool:
+        """Check if this formula forms a bilateral glut with existing formulas.
+
+        Returns True if we have both t:R(a) and t:R*(a) which is allowed.
+        """
+        if not isinstance(formula, PredicateFormula) and not isinstance(
+            formula, BilateralPredicateFormula
+        ):
+            return False
+
+        # Get the base name and check for its dual
+        if isinstance(formula, BilateralPredicateFormula):
+            base_name = formula.get_base_name()
+            is_negative = formula.is_negative
+        else:
+            # Regular predicate
+            if formula.predicate_name.endswith("*"):
+                base_name = formula.predicate_name[:-1]
+                is_negative = True
+            else:
+                base_name = formula.predicate_name
+                is_negative = False
+
+        # Look for the dual predicate with same sign
+        for node_id in self.formula_index[sign][formula]:
+            # Get the actual signed formula from the node
+            node = self.nodes[node_id]
+            other = node.formula.formula
+            if isinstance(other, PredicateFormula) or isinstance(
+                other, BilateralPredicateFormula
+            ):
+                # Check if it's the dual
+                if isinstance(other, BilateralPredicateFormula):
+                    other_base = other.get_base_name()
+                    other_negative = other.is_negative
+                else:
+                    if other.predicate_name.endswith("*"):
+                        other_base = other.predicate_name[:-1]
+                        other_negative = True
+                    else:
+                        other_base = other.predicate_name
+                        other_negative = False
+
+                # If same base name but different polarity, it's a glut
+                if base_name == other_base and is_negative != other_negative:
+                    # Check that arguments match
+                    if str(formula.terms) == str(other.terms):
+                        return True
 
         return False
 
@@ -111,6 +175,7 @@ class ACrQTableau(Tableau):
         )  # Maps R to R* - Initialize before super()
         super().__init__(initial_formulas)
         self.logic_system = "ACrQ"
+        self._constant_counter = 0  # Initialize counter for fresh constants
 
         # Identify bilateral predicates in initial formulas
         self._identify_bilateral_predicates(initial_formulas)
@@ -147,160 +212,55 @@ class ACrQTableau(Tableau):
     def _get_applicable_rule(
         self, signed_formula: SignedFormula, branch: Branch
     ) -> Optional[RuleInfo]:
-        """Get applicable rule, including ACrQ-specific rules."""
-        # Try ACrQ-specific rules first
-        acrq_rule = self._get_acrq_rule(signed_formula, branch)
-        if acrq_rule:
-            return acrq_rule
+        """Get applicable rule using ACrQ Ferguson rules from Definition 18."""
+        # Use ACrQ-specific Ferguson rules which:
+        # 1. Drop the general negation elimination rule
+        # 2. Handle bilateral predicates specially
+        # 3. Keep all other wKrQ rules
 
-        # Fall back to standard rules
-        return super()._get_applicable_rule(signed_formula, branch)
+        # Get the ACrQ rule from our Ferguson rules module
+        from .formula import Constant
 
-    def _get_acrq_rule(
-        self, signed_formula: SignedFormula, branch: Branch
-    ) -> Optional[RuleInfo]:
-        """Get ACrQ-specific tableau rules for bilateral predicates."""
-        formula = signed_formula.formula
+        def fresh_constant_generator() -> Constant:
+            """Generate fresh constants for quantifier instantiation."""
+            self._constant_counter += 1
+            return Constant(f"c_{self._constant_counter}")
 
-        # Handle bilateral predicates
-        if isinstance(formula, BilateralPredicateFormula):
-            return self._get_bilateral_predicate_rule(signed_formula, branch)
+        # Get existing constants from branch
+        existing_constants = list(branch.ground_terms) if branch.ground_terms else []
 
-        # Handle negation of bilateral predicates
-        elif isinstance(formula, CompoundFormula) and formula.connective == "~":
-            return self._get_bilateral_negation_rule(signed_formula)
+        # Get used constants for this formula if it's a universal quantifier
+        used_constants = None
+        if isinstance(signed_formula.formula, RestrictedUniversalFormula):
+            if hasattr(branch, "_universal_instantiations"):
+                used_constants = branch._universal_instantiations.get(
+                    signed_formula, set()
+                )
+            else:
+                branch._universal_instantiations = {}
+                used_constants = set()
 
-        return None
-
-    def _get_bilateral_predicate_rule(
-        self, signed_formula: SignedFormula, branch: Branch
-    ) -> Optional[RuleInfo]:
-        """Get tableau rules for bilateral predicates."""
-        formula = signed_formula.formula
-        if not isinstance(formula, BilateralPredicateFormula):
-            return None
-
-        sign = signed_formula.sign
-
-        # Check if already processed to avoid infinite loops
-        if (
-            hasattr(branch, "_processed_formulas")
-            and signed_formula in branch._processed_formulas
-        ):
-            return None
-
-        pos_pred, neg_pred = formula.to_standard_predicates()
-
-        if sign == T:
-            return self._get_t_bilateral_rule(formula, pos_pred, neg_pred)
-        elif sign == F:
-            return self._get_f_bilateral_rule(formula, pos_pred, neg_pred)
-        elif sign == M:
-            return self._get_m_bilateral_rule(formula, pos_pred, neg_pred)
-        elif sign == N:
-            return self._get_n_bilateral_rule(formula, pos_pred, neg_pred)
-
-        return None
-
-    def _get_t_bilateral_rule(
-        self,
-        formula: BilateralPredicateFormula,
-        pos_pred: PredicateFormula,
-        neg_pred: PredicateFormula,
-    ) -> RuleInfo:
-        """Get T-sign rule for bilateral predicates."""
-        if formula.is_negative:
-            # T: R*(x) just means R*(x) is true - says nothing about R(x)
-            # This is key to paraconsistency - R(x) and R*(x) are independent
-            conclusions = [[SignedFormula(T, neg_pred)]]
-            return RuleInfo("T-R*", RuleType.ALPHA, 1, 1, conclusions)
-        else:
-            # T: R(x) just means R(x) is true - says nothing about R*(x)
-            conclusions = [[SignedFormula(T, pos_pred)]]
-            return RuleInfo("T-R", RuleType.ALPHA, 1, 1, conclusions)
-
-    def _get_f_bilateral_rule(
-        self,
-        formula: BilateralPredicateFormula,
-        pos_pred: PredicateFormula,
-        neg_pred: PredicateFormula,
-    ) -> RuleInfo:
-        """Get F-sign rule for bilateral predicates."""
-        if formula.is_negative:
-            # F: R*(x) just means R*(x) is false - says nothing about R(x)
-            conclusions = [[SignedFormula(F, neg_pred)]]
-            return RuleInfo("F-R*", RuleType.ALPHA, 1, 1, conclusions)
-        else:
-            # F: R(x) just means R(x) is false - says nothing about R*(x)
-            conclusions = [[SignedFormula(F, pos_pred)]]
-            return RuleInfo("F-R", RuleType.ALPHA, 1, 1, conclusions)
-
-    def _get_m_bilateral_rule(
-        self,
-        formula: BilateralPredicateFormula,
-        pos_pred: PredicateFormula,
-        neg_pred: PredicateFormula,
-    ) -> RuleInfo:
-        """Get M-sign rule for bilateral predicates."""
-        if formula.is_negative:
-            # M: R*(x) - focus on R*
-            conclusions = [
-                [SignedFormula(T, neg_pred)],  # R* is true
-                [SignedFormula(F, neg_pred)],  # R* is false
-            ]
-        else:
-            # M: R(x) - focus on R
-            conclusions = [
-                [SignedFormula(T, pos_pred)],  # R is true
-                [SignedFormula(F, pos_pred)],  # R is false
-            ]
-        return RuleInfo(
-            f"M-R{'*' if formula.is_negative else ''}",
-            RuleType.BETA,
-            20,
-            2,
-            conclusions,
+        ferguson_rule = get_acrq_rule(
+            signed_formula, fresh_constant_generator, existing_constants, used_constants
         )
 
-    def _get_n_bilateral_rule(
-        self,
-        formula: BilateralPredicateFormula,
-        pos_pred: PredicateFormula,
-        neg_pred: PredicateFormula,
-    ) -> RuleInfo:
-        """Get N-sign rule for bilateral predicates."""
-        # N: R(x) means R(x) is undefined
-        # In bilateral interpretation, this means gap (both false)
-        conclusions = [[SignedFormula(F, pos_pred), SignedFormula(F, neg_pred)]]
-        return RuleInfo(
-            f"N-R{'*' if formula.is_negative else ''}",
-            RuleType.ALPHA,
-            5,
-            2,
-            conclusions,
-        )
-
-    def _get_bilateral_negation_rule(
-        self, signed_formula: SignedFormula
-    ) -> Optional[RuleInfo]:
-        """Get rule for negation of bilateral predicates."""
-        formula = signed_formula.formula
-        if not isinstance(formula, CompoundFormula):
-            return None
-
-        sign = signed_formula.sign
-
-        sub = formula.subformulas[0]
-        if isinstance(sub, BilateralPredicateFormula):
-            # ¬R(x) becomes R*(x) and ¬R*(x) becomes R(x)
-            dual = BilateralPredicateFormula(
-                positive_name=sub.positive_name,
-                terms=sub.terms,
-                is_negative=not sub.is_negative,
+        if ferguson_rule:
+            # Convert FergusonRule to RuleInfo
+            rule_type = (
+                RuleType.BETA if ferguson_rule.is_branching() else RuleType.ALPHA
             )
-            conclusions = [[SignedFormula(sign, dual)]]
-            return RuleInfo("Bilateral-Negation", RuleType.ALPHA, 0, 1, conclusions)
+            priority = 10 if rule_type == RuleType.ALPHA else 20
 
+            return RuleInfo(
+                name=ferguson_rule.name,
+                rule_type=rule_type,
+                priority=priority,
+                complexity_cost=len(ferguson_rule.conclusions),
+                conclusions=ferguson_rule.conclusions,
+                instantiation_constant=ferguson_rule.instantiation_constant,
+            )
+
+        # If no ACrQ rule applies, the formula might be atomic
         return None
 
     def _extract_model(self, branch: Branch) -> Optional[ACrQModel]:

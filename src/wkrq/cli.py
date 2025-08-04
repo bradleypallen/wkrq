@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from . import __version__
 from .api import InferenceResult, check_inference
 from .parser import ParseError, parse, parse_inference
-from .signs import F, SignedFormula, T, sign_from_string
+from .signs import SignedFormula, f, sign_from_string, t
 from .tableau import Tableau, TableauNode, TableauResult, solve
 
 if TYPE_CHECKING:
@@ -355,9 +355,9 @@ Examples:
     parser.add_argument("--version", action="version", version=f"wKrQ {__version__}")
     parser.add_argument(
         "--sign",
-        default="T",
-        choices=["T", "F", "M", "N"],
-        help="Sign to test (default: T)",
+        default="t",
+        choices=["t", "f", "e", "m", "n"],
+        help="Sign to test (default: t)",
     )
 
     # Logic mode selection
@@ -495,8 +495,8 @@ def handle_acrq_inference(args: argparse.Namespace, syntax_mode: "SyntaxMode") -
     conclusion = parse_acrq_formula(parts[1].strip(), syntax_mode)
 
     # Create signed formulas for tableau
-    initial_formulas = [SignedFormula(T, p) for p in premises]
-    initial_formulas.append(SignedFormula(F, conclusion))
+    initial_formulas = [SignedFormula(t, p) for p in premises]
+    initial_formulas.append(SignedFormula(f, conclusion))
 
     # Construct ACrQ tableau
     tableau = ACrQTableau(initial_formulas)
@@ -754,7 +754,7 @@ def interactive_mode() -> None:
                 display_inference_result(result)
             else:
                 formula = parse(line)
-                tableau_result = solve(formula, T)
+                tableau_result = solve(formula, t)
                 display_result(tableau_result)
 
         except ParseError as e:

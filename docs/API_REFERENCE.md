@@ -23,7 +23,7 @@ from wkrq import (
     Formula, parse, parse_inference,
     
     # Signs system
-    T, F, M, N, SignedFormula,
+    t, f, m, n, SignedFormula,
     
     # Advanced features
     Inference, TableauResult, Tableau
@@ -40,18 +40,18 @@ from wkrq.semantics import TRUE, FALSE, UNDEFINED
 Test if formulas can be satisfied under different signs:
 
 ```python
-from wkrq import solve, parse, T, F, M, N
+from wkrq import solve, parse, t, f, m, n
 
 # Parse and test formula satisfiability
 formula = parse("p & q")
-result = solve(formula, T)  # Test under T sign
+result = solve(formula, t)  # Test under t sign
 
 print(f"Satisfiable: {result.satisfiable}")
 print(f"Models: {result.models}")
 print(f"Total nodes: {result.total_nodes}")
 
 # Test under different signs
-for sign in [T, F, M, N]:
+for sign in [t, f, m, n]:
     result = solve(formula, sign)
     print(f"{sign}:(p & q) satisfiable: {result.satisfiable}")
 ```
@@ -69,8 +69,8 @@ is_valid = valid(tautology)
 print(f"p | ~p is valid: {is_valid}")  # False
 
 # Test what signs are unsatisfiable
-result_f = solve(tautology, F)
-result_n = solve(tautology, N)
+result_f = solve(tautology, f)
+result_n = solve(tautology, n)
 print(f"Can be false: {result_f.satisfiable}")      # False
 print(f"Can be undefined: {result_n.satisfiable}")  # True
 ```
@@ -80,11 +80,11 @@ print(f"Can be undefined: {result_n.satisfiable}")  # True
 ### Accessing Tableau Trees
 
 ```python
-from wkrq import solve, parse, T
+from wkrq import solve, parse, t
 from wkrq.cli import TableauTreeRenderer
 
 formula = parse("p -> q")
-result = solve(formula, T)
+result = solve(formula, t)
 
 if result.tableau:
     # Create renderer with rule display
@@ -108,14 +108,14 @@ if result.tableau:
 ### Rule Application Analysis
 
 ```python
-from wkrq import solve, parse, T, F
+from wkrq import solve, parse, t, f
 
 # Demonstrate different rule types
 test_cases = [
-    ("p & q", T, "T-Conjunction (Alpha rule)"),
-    ("p | q", T, "T-Disjunction (Beta rule)"),  
-    ("~p", T, "T-Negation (Alpha rule)"),
-    ("p -> q", F, "F-Implication (Alpha rule)"),
+    ("p & q", t, "t-Conjunction (Alpha rule)"),
+    ("p | q", t, "t-Disjunction (Beta rule)"),  
+    ("~p", t, "t-Negation (Alpha rule)"),
+    ("p -> q", f, "f-Implication (Alpha rule)"),
 ]
 
 for formula_str, sign, description in test_cases:
@@ -183,7 +183,7 @@ for inference_str, description in inference_patterns:
 ### Quantified Formula Construction
 
 ```python
-from wkrq import Formula, solve, T
+from wkrq import formula, solve, t
 
 # Create quantified formulas programmatically
 x = Formula.variable("X")
@@ -192,19 +192,19 @@ mortal_x = Formula.predicate("Mortal", [x])
 
 # Universal quantification: [∀X Human(X)]Mortal(X)
 universal = Formula.restricted_forall(x, human_x, mortal_x)
-result = solve(universal, T)
+result = solve(universal, t)
 print(f"Universal satisfiable: {result.satisfiable}")
 
 # Existential quantification: [∃X Human(X)]Mortal(X)  
 existential = Formula.restricted_exists(x, human_x, mortal_x)
-result = solve(existential, T)
+result = solve(existential, t)
 print(f"Existential satisfiable: {result.satisfiable}")
 ```
 
 ### Quantified Inference
 
 ```python
-from wkrq import entails, Formula
+from wkrq import entails, formula
 
 # Domain-specific reasoning
 x = Formula.variable("X")
@@ -230,7 +230,7 @@ print(f"Socrates inference valid: {is_valid}")
 ### Custom Formula Construction
 
 ```python
-from wkrq import Formula, solve, T
+from wkrq import formula, solve, t
 
 # Build complex formulas programmatically
 p, q, r = Formula.atoms("p", "q", "r")
@@ -242,7 +242,7 @@ nested = p.implies(q.implies(r))
 complex_conj = (p | q) & (q | r) & (r | p)
 
 # Test satisfiability
-result = solve(complex_conj, T)
+result = solve(complex_conj, t)
 print(f"Complex formula satisfiable: {result.satisfiable}")
 print(f"Number of models: {len(result.models)}")
 
@@ -255,7 +255,7 @@ for i, model in enumerate(result.models):
 
 ```python
 import time
-from wkrq import solve, Formula, T
+from wkrq import solve, formula, t
 
 # Performance testing
 def benchmark_formula(formula_str, iterations=100):
@@ -263,7 +263,7 @@ def benchmark_formula(formula_str, iterations=100):
     
     start_time = time.time()
     for _ in range(iterations):
-        result = solve(formula, T)
+        result = solve(formula, t)
     end_time = time.time()
     
     avg_time = (end_time - start_time) / iterations
@@ -282,10 +282,10 @@ benchmark_formula("((p -> q) -> ((q -> r) -> (p -> r)))")
 ### Model Extraction and Analysis
 
 ```python
-from wkrq import solve, parse, T, TRUE, FALSE, UNDEFINED
+from wkrq import solve, parse, t, tRUE, FALSE, UNDEfInED
 
 formula = parse("(p | q) & ~(p & q)")  # Exclusive or
-result = solve(formula, T)
+result = solve(formula, t)
 
 if result.satisfiable:
     print(f"Found {len(result.models)} models:")
@@ -304,21 +304,21 @@ if result.satisfiable:
 ### Sign System Analysis  
 
 ```python
-from wkrq import solve, parse, T, F, M, N
+from wkrq import solve, parse, t, f, m, n
 
 formula = parse("p | ~p")  # Classical tautology
 
-# Test all four signs
+# Test all six signs
 sign_results = {}
-for sign in [T, F, M, N]:
+for sign in [t, f, m, n]:
     result = solve(formula, sign)
     sign_results[sign] = result.satisfiable
 
 print("Classical tautology p | ~p:")
-print(f"T (must be true): {sign_results[T]}")
-print(f"F (must be false): {sign_results[F]}")  
-print(f"M (can be true or false): {sign_results[M]}")
-print(f"N (must be undefined): {sign_results[N]}")
+print(f"t (must be true): {sign_results[t]}")
+print(f"f (must be false): {sign_results[f]}")  
+print(f"m (can be true or false): {sign_results[m]}")
+print(f"n (must be undefined): {sign_results[n]}")
 
 # This demonstrates weak Kleene semantics:
 # - Cannot be false (classical reasoning preserved)
@@ -335,7 +335,7 @@ def analyze_logical_query(query_data):
     """Process logical queries from external systems."""
     if query_data["type"] == "satisfiability":
         formula = parse(query_data["formula"])
-        sign = {"T": T, "F": F, "M": M, "N": N}[query_data["sign"]]
+        sign = {"t": t, "f": f, "m": m, "n": n}[query_data["sign"]]
         result = solve(formula, sign)
         
         return {

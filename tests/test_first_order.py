@@ -10,9 +10,9 @@ from wkrq import (
     PredicateFormula,
     RestrictedExistentialFormula,
     RestrictedUniversalFormula,
-    T,
     Variable,
     solve,
+    t,
 )
 from wkrq.parser import parse
 
@@ -114,7 +114,7 @@ class TestFirstOrderSemantics:
         x = Formula.constant("a")  # Use constant for now
         p_a = Formula.predicate("P", [x])
 
-        result = solve(p_a, T)
+        result = solve(p_a, t)
         assert result.satisfiable
         assert len(result.models) > 0
 
@@ -125,7 +125,7 @@ class TestFirstOrderSemantics:
 
         # P(a) & ~P(a) should be unsatisfiable
         contradiction = p_a & ~p_a
-        result = solve(contradiction, T)
+        result = solve(contradiction, t)
         assert not result.satisfiable
 
     def test_predicate_reasoning(self):
@@ -136,7 +136,7 @@ class TestFirstOrderSemantics:
 
         # Simple predicate implication
         formula = p_a.implies(q_a)
-        result = solve(formula, T)
+        result = solve(formula, t)
         assert (
             result.satisfiable
         )  # Should have models where P(a) is false or Q(a) is true
@@ -169,12 +169,12 @@ class TestRestrictedQuantifiers:
 
         # Test basic satisfiability of restricted existential
         premise1 = Formula.restricted_exists(x, student_x, human_x)
-        result = solve(premise1, T)
+        result = solve(premise1, t)
         assert result.satisfiable, "[∃X Student(X)]Human(X) should be satisfiable"
 
         # Test that we can construct complex formulas with restricted quantifiers
         complex_formula = premise1 & student_a
-        result = solve(complex_formula, T)
+        result = solve(complex_formula, t)
         assert (
             result.satisfiable
         ), "Complex formula with restricted existential should be satisfiable"
@@ -190,12 +190,12 @@ class TestRestrictedQuantifiers:
 
         # Test basic satisfiability of restricted universal
         premise1 = Formula.restricted_forall(x, student_x, human_x)
-        result = solve(premise1, T)
+        result = solve(premise1, t)
         assert result.satisfiable, "[∀X Student(X)]Human(X) should be satisfiable"
 
         # Test that we can construct complex formulas with restricted quantifiers
         complex_formula = premise1 & student_a
-        result = solve(complex_formula, T)
+        result = solve(complex_formula, t)
         assert (
             result.satisfiable
         ), "Complex formula with restricted universal should be satisfiable"

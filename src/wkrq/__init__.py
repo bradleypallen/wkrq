@@ -20,10 +20,10 @@ from .formula import (
 )
 from .parser import parse, parse_inference
 from .semantics import BilateralTruthValue, TruthValue, WeakKleeneSemantics
-from .signs import F, M, N, Sign, SignedFormula, T
+from .signs import Sign, SignedFormula, e, f, m, n, t
 from .tableau import Tableau, TableauResult, entails, solve, valid
 
-__version__ = "1.2.0"
+__version__ = "2.0.0"
 
 __all__ = [
     # Core types
@@ -43,10 +43,11 @@ __all__ = [
     # Signs
     "Sign",
     "SignedFormula",
-    "T",
-    "F",
-    "M",
-    "N",
+    "t",
+    "f",
+    "e",
+    "m",
+    "n",
     # Tableau
     "Tableau",
     "TableauResult",

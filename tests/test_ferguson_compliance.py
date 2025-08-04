@@ -8,8 +8,8 @@ Key points from paper:
 1. Ferguson uses weak Kleene truth tables (contagious undefined) ✓
 2. Validity is truth preservation: φ valid iff φ gets value 't' in ALL interpretations ✓
 3. Classical tautologies are NOT necessarily valid in weak Kleene logic ✓
-4. Four-sign system: T↔t, F↔f, M↔{t,f} (meaningful), N↔{f,e} (nontrue) ✓
-5. M and N are technical branching instructions, not epistemic markers ✓
+4. Four-sign system: t↔t, f↔f, m↔{t,f} (meaningful), n↔{f,e} (nontrue) ✓
+5. m and n are technical branching instructions, not epistemic markers ✓
 6. Tableau system is sound and complete (Theorems 1-2) ✓
 
 All tests in this file should PASS to confirm Ferguson compliance.
@@ -18,7 +18,7 @@ All tests in this file should PASS to confirm Ferguson compliance.
 from wkrq.api import entails, solve, valid
 from wkrq.formula import Formula
 from wkrq.semantics import FALSE, TRUE, UNDEFINED, WeakKleeneSemantics
-from wkrq.signs import F, M, N, T
+from wkrq.signs import f, m, n, t
 
 
 class TestFergusonTruthTables:
@@ -103,63 +103,63 @@ class TestFergusonValidityDefinition:
         ), "¬¬p → p is not valid in weak Kleene (can be undefined)"
 
     def test_classical_tautologies_unsatisfiable_under_f_sign(self):
-        """Test that classical tautologies are unsatisfiable under F sign.
+        """Test that classical tautologies are unsatisfiable under f sign.
 
         While classical tautologies are NOT valid in weak Kleene (can be undefined),
         they still cannot be false. They can only be true or undefined.
         """
         p = Formula.atom("p")
 
-        # F:(p ∨ ¬p) should be unsatisfiable (cannot be false)
+        # f:(p ∨ ¬p) should be unsatisfiable (cannot be false)
         excluded_middle = p | ~p
-        result = solve(excluded_middle, F)
+        result = solve(excluded_middle, f)
         assert (
             not result.satisfiable
-        ), "F:(p ∨ ¬p) should be unsatisfiable (cannot be false)"
+        ), "f:(p ∨ ¬p) should be unsatisfiable (cannot be false)"
 
-        # F:(p → p) should be unsatisfiable
+        # f:(p → p) should be unsatisfiable
         self_implication = p.implies(p)
-        result = solve(self_implication, F)
+        result = solve(self_implication, f)
         assert (
             not result.satisfiable
-        ), "F:(p → p) should be unsatisfiable (cannot be false)"
+        ), "f:(p → p) should be unsatisfiable (cannot be false)"
 
     def test_contradictions_unsatisfiable_under_t_sign(self):
-        """Test that contradictions are unsatisfiable under T sign."""
+        """Test that contradictions are unsatisfiable under t sign."""
         p = Formula.atom("p")
 
-        # T:(p ∧ ¬p) should be unsatisfiable (contradictions cannot be true)
+        # t:(p ∧ ¬p) should be unsatisfiable (contradictions cannot be true)
         contradiction = p & ~p
-        result = solve(contradiction, T)
+        result = solve(contradiction, t)
         assert (
             not result.satisfiable
-        ), "T:(p ∧ ¬p) should be unsatisfiable (cannot be true)"
+        ), "t:(p ∧ ¬p) should be unsatisfiable (cannot be true)"
 
     def test_epistemic_uncertainty_allows_satisfiability(self):
-        """Test that epistemic signs (M, N) allow satisfiability for tautologies/contradictions.
+        """Test that epistemic signs (m, n) allow satisfiability for tautologies/contradictions.
 
         This reflects Ferguson's practical approach where epistemic uncertainty
         is possible even about logical truths.
         """
         p = Formula.atom("p")
 
-        # M:(p ∨ ¬p) should be satisfiable (epistemic uncertainty about tautology)
+        # m:(p ∨ ¬p) should be satisfiable (epistemic uncertainty about tautology)
         excluded_middle = p | ~p
-        result = solve(excluded_middle, M)
+        result = solve(excluded_middle, m)
         assert (
             result.satisfiable
-        ), "M:(p ∨ ¬p) should be satisfiable (epistemic uncertainty)"
+        ), "m:(p ∨ ¬p) should be satisfiable (epistemic uncertainty)"
 
-        # N:(p ∨ ¬p) should be satisfiable (can be undefined)
-        result = solve(excluded_middle, N)
-        assert result.satisfiable, "N:(p ∨ ¬p) should be satisfiable (can be undefined)"
+        # n:(p ∨ ¬p) should be satisfiable (can be undefined)
+        result = solve(excluded_middle, n)
+        assert result.satisfiable, "n:(p ∨ ¬p) should be satisfiable (can be undefined)"
 
-        # M:(p ∧ ¬p) should be satisfiable (epistemic uncertainty about contradiction)
+        # m:(p ∧ ¬p) should be satisfiable (epistemic uncertainty about contradiction)
         contradiction = p & ~p
-        result = solve(contradiction, M)
+        result = solve(contradiction, m)
         assert (
             result.satisfiable
-        ), "M:(p ∧ ¬p) should be satisfiable (epistemic uncertainty)"
+        ), "m:(p ∧ ¬p) should be satisfiable (epistemic uncertainty)"
 
 
 class TestFergusonFourSignSystem:
@@ -169,15 +169,15 @@ class TestFergusonFourSignSystem:
         """Test that our signs map correctly to Ferguson's truth values.
 
         Based on Ferguson's Definition 9 and Lemma 1:
-        - T sign ↔ t (must be true)
-        - F sign ↔ f (must be false)
-        - M sign ↔ m (meaningful - can be true or false)
-        - N sign ↔ e (must be undefined)
+        - t sign ↔ t (must be true)
+        - f sign ↔ f (must be false)
+        - m sign ↔ m (meaningful - can be true or false)
+        - n sign ↔ e (must be undefined)
         """
         p = Formula.atom("p")
 
         # All four signs should be satisfiable for atomic formulas
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(p, sign)
             assert result.satisfiable, f"{sign}:p should be satisfiable"
             assert len(result.models) > 0, f"{sign}:p should have models"
@@ -189,16 +189,16 @@ class TestFergusonFourSignSystem:
         because m represents potential branching while t represents definite value.
         """
         # This is more of a tableau construction detail, but we can test
-        # that M and T signs don't create inherent contradictions
+        # that m and t signs don't create inherent contradictions
         p = Formula.atom("p")
 
-        # M:p is satisfiable (can be true or false)
-        result_m = solve(p, M)
-        assert result_m.satisfiable, "M:p should be satisfiable"
+        # m:p is satisfiable (can be true or false)
+        result_m = solve(p, m)
+        assert result_m.satisfiable, "m:p should be satisfiable"
 
-        # T:p is satisfiable (must be true)
-        result_t = solve(p, T)
-        assert result_t.satisfiable, "T:p should be satisfiable"
+        # t:p is satisfiable (must be true)
+        result_t = solve(p, t)
+        assert result_t.satisfiable, "t:p should be satisfiable"
 
         # These don't contradict each other at the semantic level
 
@@ -216,7 +216,7 @@ class TestFergusonRestrictedQuantifiers:
         existential_formula = Formula.restricted_exists(x, human_x, mortal_x)
 
         # Should be satisfiable under all signs (depends on domain)
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(existential_formula, sign)
             assert (
                 result.satisfiable
@@ -232,7 +232,7 @@ class TestFergusonRestrictedQuantifiers:
         universal_formula = Formula.restricted_forall(x, human_x, mortal_x)
 
         # Should be satisfiable under all signs (depends on domain)
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(universal_formula, sign)
             assert (
                 result.satisfiable
@@ -297,7 +297,7 @@ class TestFergusonTableauSoundnessCompleteness:
 
         # Classical contradictions should be unsatisfiable
         contradiction = p & ~p
-        result = solve(contradiction, T)
+        result = solve(contradiction, t)
         assert not result.satisfiable, "Contradictions should be unsatisfiable"
 
 
@@ -312,32 +312,33 @@ class TestFergusonModelExtraction:
         """
         p = Formula.atom("p")
 
-        # T:p should produce models where p is true
-        result_t = solve(p, T)
+        # t:p should produce models where p is true
+        result_t = solve(p, t)
         assert result_t.satisfiable
         for model in result_t.models:
             # Model should assign true to p
             assert str(model.valuations.get("p", "")).startswith(
                 "t"
-            ), "T:p should produce models where p is true"
+            ), "t:p should produce models where p is true"
 
-        # F:p should produce models where p is false
-        result_f = solve(p, F)
+        # f:p should produce models where p is false
+        result_f = solve(p, f)
         assert result_f.satisfiable
         for model in result_f.models:
             # Model should assign false to p
             assert str(model.valuations.get("p", "")).startswith(
                 "f"
-            ), "F:p should produce models where p is false"
+            ), "f:p should produce models where p is false"
 
-        # N:p should produce models where p is undefined
-        result_n = solve(p, N)
+        # n:p should produce models where p is nontrue (f or e)
+        result_n = solve(p, n)
         assert result_n.satisfiable
         for model in result_n.models:
-            # Model should assign undefined to p
-            assert str(model.valuations.get("p", "")).startswith(
+            # Model should assign either false or undefined to p
+            p_value = str(model.valuations.get("p", ""))
+            assert p_value.startswith("f") or p_value.startswith(
                 "e"
-            ), "N:p should produce models where p is undefined"
+            ), "n:p should produce models where p is false or undefined"
 
 
 # Summary test to confirm overall Ferguson compliance
@@ -362,11 +363,11 @@ class TestOverallFergusonCompliance:
         assert not tautology_valid, "Classical tautologies are not valid in weak Kleene"
 
         # Epistemic uncertainty should be representable
-        epistemic_satisfiable = solve(p & ~p, M).satisfiable
+        epistemic_satisfiable = solve(p & ~p, m).satisfiable
         assert epistemic_satisfiable, "Epistemic uncertainty should be representable"
 
         # Four signs should all be meaningful
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(p, sign)
             assert result.satisfiable, "All four signs should be satisfiable"
 
@@ -383,5 +384,5 @@ class TestOverallFergusonCompliance:
         domain_rule = Formula.restricted_forall(x, human_x, mortal_x)
 
         # Should be satisfiable under epistemic uncertainty
-        result = solve(domain_rule, M)
+        result = solve(domain_rule, m)
         assert result.satisfiable, "Domain rules should support epistemic uncertainty"

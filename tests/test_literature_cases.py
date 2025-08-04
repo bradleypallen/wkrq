@@ -5,7 +5,7 @@ Comprehensive Literature Test Cases for wKrQ
 Adapted from classical tableau literature for the optimized wKrQ system.
 Includes test cases from:
 - Priest, G. "Introduction to Non-Classical Logic" (2008)
-- Fitting, M. "First-Order Logic and Automated Theorem Proving" (1996)
+- Fitting, m. "First-Order Logic and Automated Theorem Proving" (1996)
 - Smullyan, R. "First-Order Logic" (1968)
 - Ferguson, S. "Tableaux and restricted quantification" (2021)
 """
@@ -15,14 +15,14 @@ import time
 import pytest
 
 from wkrq import (
-    F,
     Formula,
-    M,
-    N,
-    T,
     check_inference,
+    f,
+    m,
+    n,
     parse_inference,
     solve,
+    t,
     valid,
 )
 from wkrq.semantics import FALSE, TRUE, UNDEFINED
@@ -38,7 +38,7 @@ class TestPriestNonClassicalLogic:
 
         # In wKrQ (three-valued), excluded middle is NOT valid
         # because e ∨ ¬e = e ∨ e = e when p is undefined
-        result = solve(excluded_middle, T)
+        result = solve(excluded_middle, t)
         assert result.satisfiable, "p ∨ ¬p should be satisfiable"
 
         # Should NOT be valid in weak Kleene (can be undefined)
@@ -49,29 +49,29 @@ class TestPriestNonClassicalLogic:
         p = Formula.atom("p")
         contradiction = p & ~p
 
-        # T:(p ∧ ¬p) should be unsatisfiable
-        result_t = solve(contradiction, T)
-        assert not result_t.satisfiable, "T:(p ∧ ¬p) should be unsatisfiable"
+        # t:(p ∧ ¬p) should be unsatisfiable
+        result_t = solve(contradiction, t)
+        assert not result_t.satisfiable, "t:(p ∧ ¬p) should be unsatisfiable"
 
-        # F:(p ∧ ¬p) should be satisfiable
-        result_f = solve(contradiction, F)
-        assert result_f.satisfiable, "F:(p ∧ ¬p) should be satisfiable"
+        # f:(p ∧ ¬p) should be satisfiable
+        result_f = solve(contradiction, f)
+        assert result_f.satisfiable, "f:(p ∧ ¬p) should be satisfiable"
 
-        # M:(p ∧ ¬p) should be satisfiable (epistemic uncertainty)
-        result_m = solve(contradiction, M)
-        assert result_m.satisfiable, "M:(p ∧ ¬p) should be satisfiable"
+        # m:(p ∧ ¬p) should be satisfiable (epistemic uncertainty)
+        result_m = solve(contradiction, m)
+        assert result_m.satisfiable, "m:(p ∧ ¬p) should be satisfiable"
 
-        # N:(p ∧ ¬p) should be satisfiable (need not be true)
-        result_n = solve(contradiction, N)
-        assert result_n.satisfiable, "N:(p ∧ ¬p) should be satisfiable"
+        # n:(p ∧ ¬p) should be satisfiable (need not be true)
+        result_n = solve(contradiction, n)
+        assert result_n.satisfiable, "n:(p ∧ ¬p) should be satisfiable"
 
     def test_priest_signed_tableau_soundness(self):
         """Test soundness of signed tableau rules."""
         p, q = Formula.atoms("p", "q")
 
-        # Test T-conjunction rule correctness
+        # Test t-conjunction rule correctness
         conj = p & q
-        result = solve(conj, T)
+        result = solve(conj, t)
 
         if result.satisfiable:
             # Every model should make both p and q true
@@ -79,7 +79,7 @@ class TestPriestNonClassicalLogic:
                 p_val = model.valuations.get("p", UNDEFINED)
                 q_val = model.valuations.get("q", UNDEFINED)
 
-                # In a T:(p ∧ q) model, both p and q should be true
+                # In a t:(p ∧ q) model, both p and q should be true
                 if p_val == TRUE and q_val == TRUE:
                     continue  # This is expected
                 else:
@@ -99,7 +99,7 @@ class TestPriestNonClassicalLogic:
         ]
 
         for formula in satisfiable_formulas:
-            result = solve(formula, T)
+            result = solve(formula, t)
             if result.satisfiable:
                 assert (
                     len(result.models) > 0
@@ -111,7 +111,7 @@ class TestPriestNonClassicalLogic:
         ]
 
         for formula in unsatisfiable_formulas:
-            result = solve(formula, T)
+            result = solve(formula, t)
             assert not result.satisfiable, f"Formula {formula} should be unsatisfiable"
             assert (
                 len(result.models) == 0
@@ -126,11 +126,11 @@ class TestFittingTableauMethods:
         # Formula that exercises both alpha and beta rules
         p, q, r = Formula.atoms("p", "q", "r")
 
-        # ~(p ∧ q) ∧ (r ∨ p) - should prioritize alpha rules (negation, T-conjunction)
+        # ~(p ∧ q) ∧ (r ∨ p) - should prioritize alpha rules (negation, t-conjunction)
         formula = ~(p & q) & (r | p)
 
         start_time = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end_time = time.time()
 
         # Should be efficiently solved with alpha rule prioritization
@@ -150,7 +150,7 @@ class TestFittingTableauMethods:
         mixed_formula = contradiction_part & tautology_part
 
         start_time = time.time()
-        result = solve(mixed_formula, T)
+        result = solve(mixed_formula, t)
         end_time = time.time()
 
         # Should detect closure immediately due to contradiction
@@ -164,7 +164,7 @@ class TestFittingTableauMethods:
         formula = (p | q) & (q | r) & (r | p)
 
         start_time = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end_time = time.time()
 
         assert result.satisfiable, "Formula should be satisfiable"
@@ -186,7 +186,7 @@ class TestFittingTableauMethods:
         # p ∨ (p ∧ q) - the disjunction subsumes the conjunction
         subsuming_formula = p | (p & q)
 
-        result = solve(subsuming_formula, T)
+        result = solve(subsuming_formula, t)
 
         # Should be satisfiable and efficiently processed
         assert result.satisfiable, "Subsuming formula should be satisfiable"
@@ -223,7 +223,7 @@ class TestSmullyanTableauFoundations:
         ), "Hypothetical syllogism is not valid in weak Kleene"
 
         # But it cannot be false
-        result = solve(full_tautology, F)
+        result = solve(full_tautology, f)
         assert not result.satisfiable, "Hypothetical syllogism cannot be false"
 
     def test_smullyan_alpha_beta_classification_correctness(self):
@@ -232,21 +232,21 @@ class TestSmullyanTableauFoundations:
 
         # Alpha formulas (non-branching)
         alpha_formulas = [
-            ~(p | q),  # T:¬(p ∨ q) → F:(p ∨ q) → F:p, F:q
-            p & q,  # T:(p ∧ q) → T:p, T:q
-            ~(p.implies(q)),  # T:¬(p → q) → F:(p → q) → T:p, F:q
+            ~(p | q),  # t:¬(p ∨ q) → f:(p ∨ q) → f:p, f:q
+            p & q,  # t:(p ∧ q) → t:p, t:q
+            ~(p.implies(q)),  # t:¬(p → q) → f:(p → q) → t:p, f:q
         ]
 
         # Beta formulas (branching)
         beta_formulas = [
-            p | q,  # T:(p ∨ q) → T:p | T:q
-            p.implies(q),  # T:(p → q) → F:p | T:q
-            ~(p & q),  # T:¬(p ∧ q) → F:(p ∧ q) → F:p | F:q
+            p | q,  # t:(p ∨ q) → t:p | t:q
+            p.implies(q),  # t:(p → q) → f:p | t:q
+            ~(p & q),  # t:¬(p ∧ q) → f:(p ∧ q) → f:p | f:q
         ]
 
         # Test that alpha formulas are processed efficiently (non-branching)
         for alpha in alpha_formulas:
-            result = solve(alpha, T)
+            result = solve(alpha, t)
             # Alpha rules should not create excessive branching
             if result.satisfiable:
                 # The key is that alpha rules are deterministic
@@ -256,7 +256,7 @@ class TestSmullyanTableauFoundations:
 
         # Test that beta formulas create appropriate branching
         for beta in beta_formulas:
-            result = solve(beta, T)
+            result = solve(beta, t)
             if result.satisfiable:
                 # Beta rules should allow multiple possibilities
                 assert (
@@ -272,7 +272,7 @@ class TestSmullyanTableauFoundations:
         neg_case = ~p & ~q
         satisfiable_formula = pos_case | neg_case
 
-        result = solve(satisfiable_formula, T)
+        result = solve(satisfiable_formula, t)
         assert result.satisfiable, "Formula should be satisfiable"
         assert len(result.models) > 0, "Should extract satisfying models"
 
@@ -297,30 +297,30 @@ class TestFergusonWKrQSystem:
     """Test cases specific to Ferguson's wKrQ system."""
 
     def test_ferguson_four_valued_signs(self):
-        """Test the four-valued sign system T, F, M, N."""
+        """Test the four-valued sign system t, f, m, n."""
         p = Formula.atom("p")
 
         # Test all four signs are satisfiable individually
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(p, sign)
             assert result.satisfiable, f"{sign}:p should be satisfiable"
             assert len(result.models) > 0, f"{sign}:p should have models"
 
     def test_ferguson_epistemic_vs_truth_functional(self):
-        """Test distinction between epistemic (M, N) and truth-functional (T, F) signs."""
+        """Test distinction between epistemic (m, n) and truth-functional (t, f) signs."""
         p, q = Formula.atoms("p", "q")
 
         # Truth-functional contradiction: should be unsatisfiable
         contradiction = p & ~p
-        result_t = solve(contradiction, T)
-        assert not result_t.satisfiable, "T:(p ∧ ¬p) should be unsatisfiable"
+        result_t = solve(contradiction, t)
+        assert not result_t.satisfiable, "t:(p ∧ ¬p) should be unsatisfiable"
 
         # Epistemic uncertainty: should be satisfiable
-        result_m = solve(contradiction, M)
-        assert result_m.satisfiable, "M:(p ∧ ¬p) should be satisfiable"
+        result_m = solve(contradiction, m)
+        assert result_m.satisfiable, "m:(p ∧ ¬p) should be satisfiable"
 
-        result_n = solve(contradiction, N)
-        assert result_n.satisfiable, "N:(p ∧ ¬p) should be satisfiable"
+        result_n = solve(contradiction, n)
+        assert result_n.satisfiable, "n:(p ∧ ¬p) should be satisfiable"
 
         # This demonstrates the key insight: epistemic signs express uncertainty,
         # not truth conditions
@@ -333,15 +333,15 @@ class TestFergusonWKrQSystem:
         tautology = p | ~p
 
         # Truth-functionally true
-        result_t = solve(tautology, T)
-        assert result_t.satisfiable, "T:(p ∨ ¬p) should be satisfiable"
+        result_t = solve(tautology, t)
+        assert result_t.satisfiable, "t:(p ∨ ¬p) should be satisfiable"
 
         # But epistemic uncertainty is possible
-        result_m = solve(tautology, M)
-        assert result_m.satisfiable, "M:(p ∨ ¬p) should be satisfiable"
+        result_m = solve(tautology, m)
+        assert result_m.satisfiable, "m:(p ∨ ¬p) should be satisfiable"
 
-        result_n = solve(tautology, N)
-        assert result_n.satisfiable, "N:(p ∨ ¬p) should be satisfiable"
+        result_n = solve(tautology, n)
+        assert result_n.satisfiable, "n:(p ∨ ¬p) should be satisfiable"
 
         # This shows epistemic and truth-functional dimensions are orthogonal
 
@@ -355,7 +355,7 @@ class TestFergusonWKrQSystem:
         complex_impl = antecedent.implies(consequent)
 
         # Test with different signs
-        for sign in [T, F, M, N]:
+        for sign in [t, f, m, n]:
             result = solve(complex_impl, sign)
             # Each should be satisfiable given the semantic framework
             assert result.satisfiable, f"{sign}:complex_formula should be satisfiable"
@@ -377,7 +377,7 @@ class TestPerformanceOptimization:
         formula = ~(p & q) & (r | p)
 
         start_time = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end_time = time.time()
 
         # Should be solved efficiently
@@ -402,7 +402,7 @@ class TestPerformanceOptimization:
             formula = formula & clause
 
         start_time = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end_time = time.time()
 
         # Should be solved without exponential blowup
@@ -420,7 +420,7 @@ class TestPerformanceOptimization:
         formula = p | q
 
         start_time = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end_time = time.time()
 
         # Should terminate quickly
@@ -438,7 +438,7 @@ class TestPerformanceOptimization:
         formula = general | specific
 
         start_time = time.time()
-        result = solve(formula, T)
+        result = solve(formula, t)
         end_time = time.time()
 
         # Should recognize that p subsumes p ∧ q ∧ r

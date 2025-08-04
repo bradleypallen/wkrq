@@ -7,16 +7,16 @@ Tests core functionality of the refactored wKrQ system.
 import pytest
 
 from wkrq import (
-    F,
     Formula,
-    M,
-    N,
-    T,
     check_inference,
     entails,
+    f,
+    m,
+    n,
     parse,
     parse_inference,
     solve,
+    t,
     valid,
 )
 from wkrq.parser import ParseError
@@ -125,18 +125,21 @@ class TestSigns:
 
     def test_sign_contradictions(self):
         """Test sign contradiction detection."""
-        assert T.is_contradictory_with(F)
-        assert F.is_contradictory_with(T)
-        assert not T.is_contradictory_with(M)
-        assert not T.is_contradictory_with(N)
-        assert not M.is_contradictory_with(N)
+        assert t.is_contradictory_with(f)
+        assert f.is_contradictory_with(t)
+        assert not t.is_contradictory_with(m)
+        assert not t.is_contradictory_with(n)
+        assert not m.is_contradictory_with(n)
 
     def test_sign_truth_conditions(self):
         """Test sign truth conditions."""
-        assert T.truth_conditions() == {TRUE}
-        assert F.truth_conditions() == {FALSE}
-        assert M.truth_conditions() == {TRUE, FALSE}
-        assert N.truth_conditions() == {UNDEFINED}
+        assert t.truth_conditions() == {TRUE}
+        assert f.truth_conditions() == {FALSE}
+        assert m.truth_conditions() == {TRUE, FALSE}
+        assert n.truth_conditions() == {
+            FALSE,
+            UNDEFINED,
+        }  # n means "nontrue" - can be f or e
 
 
 class TestTableauConstruction:
@@ -145,7 +148,7 @@ class TestTableauConstruction:
     def test_satisfiable_formula(self):
         """Test satisfiable formula."""
         p = Formula.atom("p")
-        result = solve(p, T)
+        result = solve(p, t)
 
         assert result.satisfiable
         assert len(result.models) > 0
@@ -155,7 +158,7 @@ class TestTableauConstruction:
         """Test unsatisfiable formula."""
         p = Formula.atom("p")
         contradiction = p & ~p
-        result = solve(contradiction, T)
+        result = solve(contradiction, t)
 
         assert not result.satisfiable
         assert len(result.models) == 0

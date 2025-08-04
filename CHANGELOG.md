@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-08-04
+
+### Changed
+
+- **BREAKING: Complete Ferguson 2021 Alignment** - Implemented exact compliance with Ferguson's tableau system
+  - Changed from 4-sign system (T, F, M, N) to Ferguson's 6-sign system (t, f, e, m, n, v)
+  - Signs now use lowercase notation exactly as in the paper
+  - Added explicit `e` sign for undefined values (previously conflated with N)
+  - `m` and `n` are now pure branching instructions, not truth values
+  - Complete rewrite of tableau rules to match Ferguson's Definition 9 exactly
+  - New branch closure conditions per Ferguson's Definition 10
+  - All imports must now use lowercase signs: `from wkrq import t, f, e, m, n`
+  - CLI now accepts lowercase signs: `wkrq --sign=t "p | ~p"`
+
+### Added
+
+- **Ferguson Rules Module** - New `ferguson_rules.py` implementing exact tableau rules from the paper
+- **E Sign** - Explicit sign for undefined values, completing the V₃ = {t, f, e} value set
+- **Exact Branching** - Proper m and n decomposition with all truth value combinations
+- **Ferguson Compliance Tests** - Comprehensive test suite validating exact paper compliance
+
+### Fixed
+
+- **Quantifier Rules** - Now match Ferguson's Definition 9 exactly for restricted quantifiers
+- **Model Extraction** - Correctly handles all six signs in model generation
+- **Sign Contradictions** - Proper closure when distinct v, u ∈ {t, f, e} appear for same formula
+
+### Migration Guide
+
+- Update all imports: `T, F, M, N` → `t, f, e, m, n`
+- Update CLI usage: `--sign=T` → `--sign=t`
+- Update API calls: `solve(formula, T)` → `solve(formula, t)`
+- Note that `n` now represents "nontrue" (can be f or e), not just undefined
+
+## [1.2.0] - 2025-08-04
+
+### Changed
+
+- **Documentation Restructure** - Major reorganization of documentation
+  - Created `docs/archive/` directory for historical versions
+  - Moved versioned files (e.g., `wKrQ_API_REFERENCE_v1.0.md`) to archive
+  - Maintained clean, unversioned files in main `docs/` directory
+  - All documentation now uses consistent version 1.2.0 headers
+
+### Fixed
+
+- **Version Consistency** - Updated all version references to 1.2.0 across:
+  - All documentation headers
+  - `pyproject.toml` 
+  - `src/wkrq/__init__.py`
+  - README.md PyPI badge
+
 ## [1.1.2] - 2025-08-01
 
 ### Fixed

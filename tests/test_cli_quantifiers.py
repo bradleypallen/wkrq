@@ -324,7 +324,7 @@ class TestCLIQuantifierTreeVisualization:
         # Should show rule names
         assert any(
             rule in result.stdout
-            for rule in ["T-Conjunction", "T-Negation", "T-RestrictedForall"]
+            for rule in ["t-conjunction", "t-negation", "t-restricted-forall"]
         )
 
     def test_json_tree_quantifier(self):

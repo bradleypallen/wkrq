@@ -9,7 +9,7 @@ from typing import Optional
 
 from .formula import Formula
 from .parser import Inference, parse, parse_inference
-from .signs import Sign, T, sign_from_string
+from .signs import Sign, sign_from_string, t
 from .tableau import Model, TableauResult, entails, solve, valid
 
 
@@ -47,7 +47,7 @@ def check_inference(
     test_formula = inference.to_formula()
 
     # Test satisfiability
-    result = solve(test_formula, T)
+    result = solve(test_formula, t)
 
     # Inference is valid if test formula is unsatisfiable
     is_valid = not result.satisfiable
@@ -62,14 +62,14 @@ def check_inference(
 
 
 def evaluate_formula(
-    formula: Formula, sign: Sign = T, track_steps: bool = False
+    formula: Formula, sign: Sign = t, track_steps: bool = False
 ) -> TableauResult:
     """
     Evaluate a formula with the given sign.
 
     Args:
         formula: The formula to evaluate
-        sign: The sign to test (T, F, M, or N)
+        sign: The sign to test (t, f, e, m, or n)
         track_steps: Whether to track tableau construction steps
 
     Returns:
@@ -89,7 +89,7 @@ def check_entailment(premises: list[Formula], conclusion: Formula) -> bool:
 
 
 def find_models(
-    formula: Formula, sign: Sign = T, limit: Optional[int] = None
+    formula: Formula, sign: Sign = t, limit: Optional[int] = None
 ) -> list[Model]:
     """
     Find models that satisfy the formula with the given sign.
@@ -126,7 +126,7 @@ class WkrqLogic:
         """Parse an inference string."""
         return parse_inference(input_str)
 
-    def solve(self, formula: Formula, sign: str = "T") -> TableauResult:
+    def solve(self, formula: Formula, sign: str = "t") -> TableauResult:
         """Solve a formula with the given sign."""
         sign_obj = sign_from_string(sign)
         return solve(formula, sign_obj)
@@ -152,7 +152,7 @@ class WkrqLogic:
         return list(Formula.atoms(*names))
 
     def models(
-        self, formula: Formula, sign: str = "T", limit: Optional[int] = None
+        self, formula: Formula, sign: str = "t", limit: Optional[int] = None
     ) -> list[Model]:
         """Find models for a formula."""
         sign_obj = sign_from_string(sign)
