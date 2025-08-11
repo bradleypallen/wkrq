@@ -6,6 +6,7 @@ Based on Ferguson (2021) semantics with tableau-based theorem proving.
 """
 
 from .acrq_parser import SyntaxMode, parse_acrq_formula
+from .acrq_tableau import ACrQTableau
 from .api import Inference, check_inference
 from .formula import (
     BilateralPredicateFormula,
@@ -50,6 +51,7 @@ __all__ = [
     "n",
     # Tableau
     "Tableau",
+    "ACrQTableau",
     "TableauResult",
     # Main functions
     "solve",
