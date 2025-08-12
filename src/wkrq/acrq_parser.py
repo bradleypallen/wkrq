@@ -164,8 +164,8 @@ class ACrQParser:
             # Restricted quantifiers
             (r"\[∀\w+\s+[^\]]+\]", "FORALL"),
             (r"\[∃\w+\s+[^\]]+\]", "EXISTS"),
-            (r"\[A\w+\s+[^\]]+\]", "FORALL"),  # ASCII alternative
-            (r"\[E\w+\s+[^\]]+\]", "EXISTS"),  # ASCII alternative
+            (r"\[forall\s+\w+\s+[^\]]+\]", "FORALL"),  # ASCII alternative
+            (r"\[exists\s+\w+\s+[^\]]+\]", "EXISTS"),  # ASCII alternative
             # Connectives
             (r"->", "IMPLIES"),
             (r"→", "IMPLIES"),
@@ -397,25 +397,57 @@ class ACrQParser:
 
     def _parse_restricted_quantifier(self) -> Formula:
         """Parse restricted quantifier [∀X P(X)]Q(X) or [∃X P(X)]Q(X)."""
-        # This is a simplified version - full implementation would parse the content
         token = self.current_token
         if not token:
             raise ParseError("Expected quantifier")
 
-        # For now, delegate to the existing parser
-        # In a full implementation, we would parse the quantifier structure
-        from .parser import parse
+        # Extract variable and restriction from quantifier token
+        import re
 
-        # Parse the entire quantifier expression
-        remaining = " ".join(self.tokens[self.pos :])
-        formula = parse(remaining)
+        # Try different patterns
+        patterns = [
+            (r"\[(?:∀|forall\s+)(\w+)\s+([^\]]+)\]", "forall"),
+            (r"\[(?:∃|exists\s+)(\w+)\s+([^\]]+)\]", "exists"),
+        ]
 
-        # Advance past all remaining tokens
-        self.pos = len(self.tokens)
-        self.current_token = None
+        match = None
+        quantifier_type = None
+        for pattern, qtype in patterns:
+            match = re.match(pattern, token)
+            if match:
+                quantifier_type = qtype
+                break
 
-        # Apply bilateral conversion if needed
-        return self._convert_to_bilateral(formula)
+        if not match:
+            raise ParseError(f"Invalid quantifier format: {token}")
+
+        var_name = match.group(1)
+        restriction_str = match.group(2)
+
+        # Create variable
+        var = Variable(var_name)
+
+        # Parse restriction using temporary parser
+        from .parser import FormulaParser
+
+        temp_parser = FormulaParser()
+        restriction = temp_parser.parse_formula(restriction_str)
+
+        # Advance past the quantifier token
+        self._advance()
+
+        # Parse the matrix (what follows the quantifier)
+        matrix = self._parse_negation()  # This allows negation in the matrix
+
+        # Convert to bilateral if needed
+        restriction = self._convert_to_bilateral(restriction)
+        matrix = self._convert_to_bilateral(matrix)
+
+        # Create the appropriate quantifier formula
+        if quantifier_type == "forall":
+            return RestrictedUniversalFormula(var, restriction, matrix)
+        else:
+            return RestrictedExistentialFormula(var, restriction, matrix)
 
     def _convert_to_bilateral(self, formula: Formula) -> Formula:
         """Convert predicates in a formula to bilateral form."""
@@ -426,6 +458,19 @@ class ACrQParser:
                 is_negative=False,
             )
         elif isinstance(formula, CompoundFormula):
+            # Special handling for negated predicates
+            if formula.connective == "~" and len(formula.subformulas) == 1:
+                sub = formula.subformulas[0]
+                if isinstance(sub, PredicateFormula):
+                    # Convert ~P(x) to P*(x) in transparent mode
+                    if self.mode.can_parse_negated_predicate():
+                        return self.mode.transform_negated_predicate(sub)
+                    else:
+                        # In bilateral mode, this would be an error
+                        raise ParseError(
+                            self.mode.get_error_message(f"~{sub.predicate_name}")
+                        )
+            # Regular compound formula conversion
             converted_subs = [
                 self._convert_to_bilateral(sub) for sub in formula.subformulas
             ]

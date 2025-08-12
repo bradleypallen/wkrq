@@ -125,10 +125,15 @@ class TestACrQSemantics:
         assert result.satisfiable
         if result.models:
             model = result.models[0]
-            # Check that both Human(charlie) and Human*(charlie) are false (gap)
-            btv = model.bilateral_valuations.get("Human(charlie)")
-            if btv:
-                assert btv.is_gap()
+            # Check that both Human(charlie) and Human*(charlie) represent a gap
+            # n sign can mean either f or e, so we check it's not t
+            human_val = model.valuations.get("Human(charlie)")
+            human_star_val = model.valuations.get("Human*(charlie)")
+            # For a gap, neither should be true
+            from wkrq.semantics import TRUE
+
+            assert human_val != TRUE
+            assert human_star_val != TRUE
 
     def test_paraconsistent_reasoning(self):
         """Test paraconsistent behavior (no explosion from contradictions)."""

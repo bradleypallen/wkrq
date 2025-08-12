@@ -94,13 +94,13 @@ wKrQ (Definition 9) and ACrQ (Definition 18) implementations.
 ### Core Systems
 
 #### wKrQ System (Ferguson Definition 9)
-- **ferguson_rules.py**: Exact tableau rules from Ferguson's Definition 9
+- **wkrq_rules.py**: Exact tableau rules from Ferguson's Definition 9
 - **tableau.py**: Tableau engine with Ferguson's 6-sign system (t,f,e,m,n,v)
 - **signs.py**: Ferguson's signs: t (true), f (false), e (error/undefined), 
   m (meaningful/branching), n (nontrue/branching), v (variable/meta-sign)
 
 #### ACrQ System (Ferguson Definition 18)
-- **acrq_ferguson_rules.py**: Modified rules without general negation elimination
+- **acrq_rules.py**: Modified rules without general negation elimination
 - **acrq_tableau.py**: Extended tableau with bilateral predicate support
 - **acrq_parser.py**: Three parsing modes (Transparent, Bilateral, Mixed)
 - **BilateralPredicateFormula**: R/R* duality for paraconsistent reasoning
@@ -111,7 +111,7 @@ wKrQ (Definition 9) and ACrQ (Definition 18) implementations.
 - **semantics.py**: Weak Kleene semantics with BilateralTruthValue
 - **parser.py**: Base parser for standard syntax
 - **api.py**: High-level API functions (solve, valid, entails, check_inference)
-- **cli.py**: Command-line interface with --system flag for wKrQ/ACrQ selection
+- **cli.py**: Command-line interface with --mode flag for wKrQ/ACrQ selection
 
 ### Key Design Patterns
 
@@ -215,14 +215,14 @@ src/wkrq/
 ├── formula.py              # Formula types including BilateralPredicateFormula
 ├── semantics.py            # Weak Kleene semantics, BilateralTruthValue
 ├── signs.py                # Ferguson's 6-sign system
-├── ferguson_rules.py       # wKrQ rules (Definition 9)
+├── wkrq_rules.py           # wKrQ rules (Definition 9)
 ├── tableau.py              # wKrQ tableau engine
-├── acrq_ferguson_rules.py  # ACrQ rules (Definition 18)
+├── acrq_rules.py           # ACrQ rules (Definition 18)
 ├── acrq_tableau.py         # ACrQ tableau with glut handling
 ├── acrq_parser.py          # Mode-aware parser for ACrQ
 ├── parser.py               # Base parser
 ├── api.py                  # High-level API
-└── cli.py                  # CLI with --system flag
+└── cli.py                  # CLI with --mode flag
 
 tests/
 ├── test_ferguson_compliance.py  # Ferguson Definition 9/10 tests

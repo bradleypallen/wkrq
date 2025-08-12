@@ -97,7 +97,10 @@ select = [
     "C90", # mccabe complexity
     "N",   # pep8-naming
 ]
-ignore = ["E501"]  # line too long (handled by black)
+ignore = [
+    "E501",  # line too long (handled by black)
+    "C901",  # function too complex (some tableau methods are necessarily complex)
+]
 
 [tool.mypy]
 python_version = "3.9"

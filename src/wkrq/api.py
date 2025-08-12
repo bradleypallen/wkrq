@@ -31,7 +31,7 @@ class InferenceResult:
 
 
 def check_inference(
-    inference: Inference, consequence: str = "strong"
+    inference: Inference, consequence: str = "strong", trace: bool = False
 ) -> InferenceResult:
     """
     Test the validity of an inference.
@@ -39,15 +39,16 @@ def check_inference(
     Args:
         inference: The inference to test
         consequence: Type of consequence relation ("strong" or "weak")
+        trace: Whether to enable construction tracing
 
     Returns:
-        InferenceResult with validity information
+        InferenceResult with validity information and optional trace
     """
     # Convert inference to formula for tableau testing
     test_formula = inference.to_formula()
 
     # Test satisfiability
-    result = solve(test_formula, t)
+    result = solve(test_formula, t, trace=trace)
 
     # Inference is valid if test formula is unsatisfiable
     is_valid = not result.satisfiable

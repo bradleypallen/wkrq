@@ -1,18 +1,23 @@
 """
-wKrQ tableau construction engine.
+Unified tableau implementation for both wKrQ and ACrQ.
 
-Optimized tableau prover for wKrQ logic with industrial-grade performance.
+This module provides a single, coherent tableau system that eliminates
+the synchronization issues between multiple representations.
 """
 
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Callable, Optional
+
+if TYPE_CHECKING:
+    from .tableau_trace import TableauConstructionTrace
 
 from .formula import (
     CompoundFormula,
     Constant,
     Formula,
+    PredicateFormula,
     RestrictedUniversalFormula,
 )
 from .semantics import FALSE, TRUE, UNDEFINED, TruthValue
@@ -20,51 +25,51 @@ from .signs import Sign, SignedFormula, e, f, m, n, t
 
 
 class RuleType(Enum):
-    """Types of tableau rules for optimization."""
+    """Types of tableau rules."""
 
-    ALPHA = "alpha"  # Non-branching rules (high priority)
-    BETA = "beta"  # Branching rules (lower priority)
+    ALPHA = "alpha"  # Non-branching rules
+    BETA = "beta"  # Branching rules
+    LLM = "llm"  # LLM evaluation rules
 
 
 @dataclass
 class RuleInfo:
-    """Information about a tableau rule for optimization."""
+    """Information about a tableau rule."""
 
     name: str
     rule_type: RuleType
-    priority: int  # Lower numbers = higher priority
-    complexity_cost: int  # Estimated computational cost
+    priority: int
     conclusions: list[list[SignedFormula]]
-    instantiation_constant: Optional[str] = None  # For universal quantifier tracking
+    instantiation_constant: Optional[str] = None
 
     def __lt__(self, other: "RuleInfo") -> bool:
         """Compare rules for priority ordering."""
-        # Alpha rules always come first
-        if self.rule_type == RuleType.ALPHA and other.rule_type != RuleType.ALPHA:
-            return True
-        if self.rule_type != RuleType.ALPHA and other.rule_type == RuleType.ALPHA:
-            return False
-
-        # Then by explicit priority
         if self.priority != other.priority:
             return self.priority < other.priority
-
-        # Finally by complexity cost
-        return self.complexity_cost < other.complexity_cost
+        return len(self.conclusions) < len(other.conclusions)
 
 
 @dataclass
 class TableauNode:
-    """A node in the tableau tree."""
+    """Unified node representation for the tableau tree.
+
+    This is the single source of truth for all node information.
+    """
 
     id: int
     formula: SignedFormula
     parent: Optional["TableauNode"] = None
     children: list["TableauNode"] = field(default_factory=list)
     rule_applied: Optional[str] = None
-    is_closed: bool = False
-    closure_reason: Optional[str] = None
     depth: int = 0
+
+    # Branch membership tracking
+    branch_ids: set[int] = field(default_factory=set)
+
+    # Closure tracking
+    causes_closure: bool = False
+    contradicts_with: Optional[int] = None  # ID of the node it contradicts with
+    closure_branch_id: Optional[int] = None  # Which branch closed because of this node
 
     def add_child(self, child: "TableauNode", rule: Optional[str] = None) -> None:
         """Add a child node."""
@@ -72,163 +77,41 @@ class TableauNode:
         child.depth = self.depth + 1
         child.rule_applied = rule
         self.children.append(child)
+        # Child inherits parent's branch memberships initially
+        child.branch_ids = self.branch_ids.copy()
 
 
 @dataclass
 class Branch:
-    """A branch in the tableau with industrial-grade optimizations."""
+    """Unified branch representation.
+
+    References nodes by ID only - no duplication of node data.
+    """
 
     id: int
-    nodes: list[TableauNode] = field(default_factory=list)
-    formulas: set[SignedFormula] = field(default_factory=set)
+    node_ids: set[int] = field(default_factory=set)
     is_closed: bool = False
     closure_reason: Optional[str] = None
 
-    # Optimization: index formulas by sign and formula for O(1) lookup
-    formula_index: dict[Sign, dict[Formula, set[int]]] = field(
-        default_factory=lambda: defaultdict(lambda: defaultdict(set))
+    # Track which nodes caused closure
+    closure_node_ids: Optional[tuple[int, int]] = None  # IDs of contradicting nodes
+
+    # Formula index for O(1) contradiction checking
+    # Maps (formula_str, sign) -> set of node IDs
+    formula_index: dict[tuple[str, Sign], set[int]] = field(
+        default_factory=lambda: defaultdict(set)
     )
 
-    # Constraint propagation: track unit literals and implications
-    unit_literals: set[SignedFormula] = field(default_factory=set)
-    implications: list[tuple[SignedFormula, SignedFormula]] = field(
-        default_factory=list
-    )
+    # Track processed node IDs to avoid reprocessing
+    processed_node_ids: set[int] = field(default_factory=set)
 
-    # Performance metrics
-    complexity_score: int = 0
-    branching_factor: int = 0
-
-    # Track processed formulas to avoid reprocessing
-    _processed_formulas: set[SignedFormula] = field(default_factory=set)
-
-    # Track ground terms (constants) for unification
+    # Track ground terms for quantifier instantiation
     ground_terms: set[str] = field(default_factory=set)
 
-    # Track universal quantifier instantiations: formula -> set of constants used
-    _universal_instantiations: dict[SignedFormula, set[str]] = field(
+    # Track universal instantiations: (node_id, formula) -> set of constants used
+    universal_instantiations: dict[tuple[int, str], set[str]] = field(
         default_factory=dict
     )
-
-    def add_formula(self, signed_formula: SignedFormula, node: TableauNode) -> bool:
-        """Add a formula to the branch. Return True if branch closes."""
-        # Skip if already exists (basic duplicate detection)
-        if signed_formula in self.formulas:
-            return False
-
-        # Check for immediate contradiction (O(1) with indexing)
-        if self._check_contradiction(signed_formula):
-            self.is_closed = True
-            self.closure_reason = f"{signed_formula} contradicts existing formula"
-            return True
-
-        # Add to branch structures
-        self.formulas.add(signed_formula)
-        self.nodes.append(node)
-        self.formula_index[signed_formula.sign][signed_formula.formula].add(
-            len(self.nodes) - 1
-        )
-
-        # Extract ground terms from the formula
-        self._extract_ground_terms(signed_formula.formula)
-
-        # Update complexity score for branch selection
-        self.complexity_score += self._formula_complexity(signed_formula.formula)
-
-        # Constraint propagation: detect unit literals
-        if self._is_unit_literal(signed_formula):
-            self.unit_literals.add(signed_formula)
-            self._propagate_unit_literal(signed_formula)
-
-        return False
-
-    def _check_contradiction(self, new_formula: SignedFormula) -> bool:
-        """Check if new formula contradicts existing formulas.
-
-        Per Ferguson Definition 10: A branch closes if there is a sentence φ
-        and distinct v, u ∈ V₃ such that both v : φ and u : φ appear on B.
-        """
-        # Check if formula already exists with a different sign from {t, f, e}
-        for sign in [t, f, e]:
-            if (
-                sign != new_formula.sign
-                and len(self.formula_index[sign][new_formula.formula]) > 0
-            ):
-                # Found same formula with different truth value - contradiction!
-                return True
-        return False
-
-    def has_formula(self, signed_formula: SignedFormula) -> bool:
-        """Check if branch already contains this signed formula."""
-        return signed_formula in self.formulas
-
-    def _formula_complexity(self, formula: Formula) -> int:
-        """Calculate complexity score of a formula."""
-        if formula.is_atomic():
-            return 1
-        return formula.complexity()
-
-    def _is_unit_literal(self, signed_formula: SignedFormula) -> bool:
-        """Check if this is a unit literal (atomic formula)."""
-        return signed_formula.formula.is_atomic()
-
-    def _propagate_unit_literal(self, unit_literal: SignedFormula) -> None:
-        """Propagate constraints from unit literal."""
-        # In a more sophisticated implementation, this would propagate
-        # the literal through implications and update other formulas
-        # For now, just track it for future optimization
-        pass
-
-    def _extract_ground_terms(self, formula: Formula) -> None:
-        """Extract ground terms (constants) from a formula for unification."""
-        from .formula import Constant, PredicateFormula
-
-        if isinstance(formula, PredicateFormula):
-            # Extract constants from predicate arguments
-            for term in formula.terms:
-                if isinstance(term, Constant):
-                    self.ground_terms.add(term.name)
-        elif isinstance(formula, CompoundFormula):
-            # Recursively extract from subformulas
-            for subformula in formula.subformulas:
-                self._extract_ground_terms(subformula)
-        elif hasattr(formula, "restriction") and hasattr(formula, "matrix"):
-            # Handle restricted quantifiers
-            self._extract_ground_terms(formula.restriction)
-            self._extract_ground_terms(formula.matrix)
-
-    def _find_best_instantiation_constant(self, variable_name: str) -> Optional[str]:
-        """Find the best constant to instantiate a quantified variable with.
-
-        Uses unification principles: prefer existing constants over fresh ones.
-        """
-        # First, try to find constants that appear in the restriction or matrix
-        # This implements a simple form of unification for tableau theorem proving
-        if self.ground_terms:
-            # Return the first available ground term
-            # In a more sophisticated implementation, we could rank these by relevance
-            return next(iter(self.ground_terms))
-
-        # If no ground terms available, we'll need to generate a fresh constant
-        return None
-
-    def _unify_with_existing_terms(self, formula: Formula) -> dict[str, str]:
-        """Attempt to unify quantified variables with existing ground terms.
-
-        This is a simplified unification that looks for opportunities to use
-        existing constants instead of always generating fresh ones.
-        """
-        from .formula import RestrictedQuantifierFormula
-
-        unification_map = {}
-
-        if isinstance(formula, RestrictedQuantifierFormula):
-            var_name = formula.var.name
-            best_constant = self._find_best_instantiation_constant(var_name)
-            if best_constant:
-                unification_map[var_name] = best_constant
-
-        return unification_map
 
 
 @dataclass
@@ -236,7 +119,7 @@ class Model:
     """A model extracted from an open branch."""
 
     valuations: dict[str, TruthValue]
-    constants: dict[str, set[Formula]]  # For first-order models
+    constants: dict[str, set[Formula]]
 
     def __str__(self) -> str:
         val_str = ", ".join(f"{k}={v}" for k, v in sorted(self.valuations.items()))
@@ -259,282 +142,391 @@ class TableauResult:
     open_branches: int
     total_nodes: int
     tableau: Optional["Tableau"] = None
+    construction_trace: Optional["TableauConstructionTrace"] = None
 
     @property
     def valid(self) -> bool:
         """Check if the original formula is valid (no countermodels)."""
         return not self.satisfiable
 
+    def print_trace(self, verbose: bool = False) -> None:
+        """Print the construction trace if available."""
+        if self.construction_trace:
+            self.construction_trace.print_trace(verbose=verbose)
+        else:
+            print("No trace available. Re-run with trace=True")
+
 
 class Tableau:
-    """Industrial-grade optimized tableau for wKrQ logic."""
+    """Base tableau implementation for both wKrQ and ACrQ.
 
-    def __init__(self, initial_formulas: list[SignedFormula]):
+    This class provides all shared tableau mechanics.
+    Subclasses only override rule selection and contradiction checking.
+    """
+
+    def __init__(self, initial_formulas: list[SignedFormula], trace: bool = False):
+        """Initialize the tableau.
+
+        Args:
+            initial_formulas: Initial signed formulas for the tableau
+            trace: Whether to enable construction tracing
+        """
         if not initial_formulas:
             raise ValueError("Cannot create tableau with empty formula list")
-        self.root = TableauNode(0, initial_formulas[0])
-        self.nodes: list[TableauNode] = [self.root]
+
+        # All nodes stored by ID
+        self.nodes: dict[int, TableauNode] = {}
+        self.node_counter = 0
+
+        # All branches
         self.branches: list[Branch] = []
         self.open_branches: list[Branch] = []
         self.closed_branches: list[Branch] = []
-        self.node_counter = 1
-        self.constants: set[str] = set()  # Track introduced constants
+        self.branch_counter = 0
 
-        # Performance optimization settings
-        self.max_branching_factor = 1000  # Prevent exponential explosion
-        self.max_tableau_depth = 100  # Prevent infinite loops
-        self.early_termination = True  # Stop on first satisfying model
+        # Global tracking
+        self.constants: set[str] = set()
 
-        # Advanced optimization state
-        self.global_processed_formulas: set[SignedFormula] = set()
-        self.branch_selection_strategy = (
-            "least_complex"  # "least_complex", "depth_first", "breadth_first"
-        )
-        self.rule_application_stats: dict[str, int] = defaultdict(int)
+        # Tracing
+        self.trace_enabled = trace
+        self.construction_trace = None
+        if trace:
+            from .tableau_trace import TableauConstructionTrace
 
-        # Initialize with first branch
-        initial_branch = self._create_branch(0)
+            self.construction_trace = TableauConstructionTrace(initial_formulas)
+
+        # Create initial branch
+        initial_branch = self._create_branch()
         self.branches.append(initial_branch)
         self.open_branches.append(initial_branch)
 
-        # Add initial formulas to root and branch
-        for i, sf in enumerate(initial_formulas):
+        # Add all initial formulas as separate nodes
+        for i, signed_formula in enumerate(initial_formulas):
+            node = self._create_node(signed_formula)
             if i == 0:
-                # First formula goes to root
-                self.root.formula = sf
-                initial_branch.add_formula(sf, self.root)
-            else:
-                # Additional formulas as children of root
-                node = TableauNode(self.node_counter, sf)
-                self.node_counter += 1
-                self.nodes.append(node)
-                self.root.add_child(node)
+                self.root = node  # First node is the root
 
-                if initial_branch.add_formula(sf, node):
-                    self.open_branches.remove(initial_branch)
-                    self.closed_branches.append(initial_branch)
-                    break
+            # Check for closure when adding each initial formula
+            if self._add_node_to_branch(node, initial_branch):
+                break  # Branch closed
 
-        # Update global constants from all initial ground terms
-        for branch in self.branches:
-            self.constants.update(branch.ground_terms)
+    def _create_node(self, signed_formula: SignedFormula) -> TableauNode:
+        """Create a new tableau node."""
+        node = TableauNode(self.node_counter, signed_formula)
+        self.nodes[self.node_counter] = node
+        self.node_counter += 1
+        return node
 
-    def _create_branch(self, branch_id: int) -> Branch:
-        """Factory method for creating branches. Can be overridden by subclasses."""
-        return Branch(branch_id)
+    def _create_branch(self) -> Branch:
+        """Create a new branch."""
+        branch = Branch(self.branch_counter)
+        self.branch_counter += 1
+        return branch
 
-    def is_complete(self) -> bool:
-        """Check if tableau construction is complete."""
-        return len(self.open_branches) == 0 or all(
-            self._branch_is_complete(branch) for branch in self.open_branches
-        )
+    def _register_node_with_branch(self, node: TableauNode, branch: Branch) -> None:
+        """Register a node with a branch."""
+        node.branch_ids.add(branch.id)
+        branch.node_ids.add(node.id)
 
-    def _branch_is_complete(self, branch: Branch) -> bool:
-        """Check if all possible rules have been applied to a branch."""
-        for node in branch.nodes:
-            if self._get_applicable_rule(node.formula, branch) is not None:
-                return False
-        return True
+        # Update formula index
+        formula_key = (str(node.formula.formula), node.formula.sign)
+        branch.formula_index[formula_key].add(node.id)
+
+    def _extract_ground_terms_from_node(
+        self, node: TableauNode, branch: Branch
+    ) -> None:
+        """Extract ground terms from a node's formula."""
+        formula = node.formula.formula
+
+        def extract_from_formula(f: Formula) -> None:
+            if isinstance(f, PredicateFormula):
+                for term in f.terms:
+                    if isinstance(term, Constant):
+                        branch.ground_terms.add(term.name)
+                        self.constants.add(term.name)
+            elif isinstance(f, CompoundFormula):
+                for sub in f.subformulas:
+                    extract_from_formula(sub)
+            elif hasattr(f, "restriction") and hasattr(f, "matrix"):
+                extract_from_formula(f.restriction)
+                extract_from_formula(f.matrix)
+
+        extract_from_formula(formula)
+
+    def _check_contradiction(
+        self, node: TableauNode, branch: Branch
+    ) -> tuple[bool, Optional[int]]:
+        """Check if a node causes a contradiction in the branch.
+
+        Returns:
+            (closes, contradicting_node_id)
+        """
+        # Check for contradicting signs
+        for other_sign in [t, f, e]:
+            if other_sign != node.formula.sign:
+                other_key = (str(node.formula.formula), other_sign)
+                if other_key in branch.formula_index:
+                    # Found contradiction
+                    other_node_ids = branch.formula_index[other_key]
+                    if other_node_ids:
+                        other_node_id = next(iter(other_node_ids))
+                        return True, other_node_id
+
+        return False, None
+
+    def _add_node_to_branch(self, node: TableauNode, branch: Branch) -> bool:
+        """Add a node to a branch and check for closure.
+
+        Returns:
+            True if branch closes
+        """
+        # Check for contradiction
+        closes, contradicting_node_id = self._check_contradiction(node, branch)
+
+        if closes:
+            # Mark branch as closed
+            branch.is_closed = True
+            if contradicting_node_id is not None:
+                branch.closure_node_ids = (node.id, contradicting_node_id)
+            if contradicting_node_id is not None:
+                branch.closure_reason = f"{node.formula} contradicts {self.nodes[contradicting_node_id].formula}"
+
+                # Mark nodes as causing closure
+                node.causes_closure = True
+                node.contradicts_with = contradicting_node_id
+                node.closure_branch_id = branch.id
+
+                other_node = self.nodes[contradicting_node_id]
+                other_node.causes_closure = True
+                other_node.contradicts_with = node.id
+                other_node.closure_branch_id = branch.id
+
+            # Move branch to closed list
+            if branch in self.open_branches:
+                self.open_branches.remove(branch)
+                self.closed_branches.append(branch)
+
+            return True
+
+        # No contradiction - register the node
+        self._register_node_with_branch(node, branch)
+        self._extract_ground_terms_from_node(node, branch)
+
+        return False
 
     def _get_applicable_rule(
-        self, signed_formula: SignedFormula, branch: Branch
+        self, node: TableauNode, branch: Branch
     ) -> Optional[RuleInfo]:
-        """Get the next applicable rule for a signed formula using Ferguson's system."""
-        from .ferguson_rules import get_applicable_rule as get_ferguson_rule
+        """Get the next applicable rule for a node.
 
-        # Check if already processed (except for universal quantifiers)
-        if hasattr(branch, "_processed_formulas"):
-            if signed_formula in branch._processed_formulas:
-                # Allow re-processing of universal quantifiers for new constants
-                if not (
-                    isinstance(signed_formula.formula, RestrictedUniversalFormula)
-                    and signed_formula.sign == t
-                ):
-                    return None
-        else:
-            branch._processed_formulas = set()
+        Subclasses override this to use different rule systems.
+        """
+        # Default implementation uses wKrQ rules
+        from .wkrq_rules import get_applicable_rule
 
-        # Create a fresh constant generator
-        def fresh_constant_generator() -> Constant:
-            return Constant(f"c_{len(branch.nodes)}")
+        # Check if already processed
+        if node.id in branch.processed_node_ids:
+            # Allow reprocessing of universals for new constants
+            if not isinstance(node.formula.formula, RestrictedUniversalFormula):
+                return None
 
-        # Get used constants for this formula if it's a universal quantifier
+        # Get existing and used constants for universals
         used_constants = None
-        if isinstance(signed_formula.formula, RestrictedUniversalFormula):
-            if hasattr(branch, "_universal_instantiations"):
-                used_constants = branch._universal_instantiations.get(
-                    signed_formula, set()
-                )
-            else:
-                branch._universal_instantiations = {}
-                used_constants = set()
+        if isinstance(node.formula.formula, RestrictedUniversalFormula):
+            key = (node.id, str(node.formula.formula))
+            used_constants = branch.universal_instantiations.get(key, set())
 
-        # Get Ferguson rule
-        ferguson_rule = get_ferguson_rule(
-            signed_formula,
+        # Create fresh constant generator
+        def fresh_constant_generator() -> Constant:
+            return Constant(f"c_{self.node_counter}")
+
+        # Get the rule
+        rule = get_applicable_rule(
+            node.formula,
             fresh_constant_generator,
             list(branch.ground_terms) if branch.ground_terms else None,
             used_constants,
         )
 
-        if not ferguson_rule:
+        if not rule:
             return None
 
-        # Convert Ferguson rule to RuleInfo
-        rule_type = (
-            RuleType.ALPHA if not ferguson_rule.is_branching() else RuleType.BETA
-        )
-        priority = 1 if rule_type == RuleType.ALPHA else 10
+        # Convert to RuleInfo
+        rule_type = RuleType.ALPHA if not rule.is_branching() else RuleType.BETA
+        priority = 10 if rule_type == RuleType.ALPHA else 20
 
         return RuleInfo(
-            name=ferguson_rule.name,
+            name=rule.name,
             rule_type=rule_type,
             priority=priority,
-            complexity_cost=len(ferguson_rule.conclusions),
-            conclusions=ferguson_rule.conclusions,
-            instantiation_constant=ferguson_rule.instantiation_constant,
+            conclusions=rule.conclusions,
+            instantiation_constant=rule.instantiation_constant,
         )
 
-    def apply_rule(  # noqa: C901
+    def apply_rule(
         self, node: TableauNode, branch: Branch, rule_info: RuleInfo
     ) -> None:
-        """Apply a tableau rule with optimization, creating new branches if needed."""
+        """Apply a tableau rule."""
+        # Create trace for this application if tracing is enabled
+        if self.trace_enabled and self.construction_trace:
+            from .tableau_trace import RuleApplicationTrace
 
-        # Mark the formula as processed (except for universal quantifiers which can be reprocessed)
-        if not hasattr(branch, "_processed_formulas"):
-            branch._processed_formulas = set()
-
-        # For universal quantifiers, mark the instantiation as used instead of marking formula as processed
-        if (
-            hasattr(rule_info, "instantiation_constant")
-            and rule_info.instantiation_constant is not None
-        ):
-            # This is a universal quantifier instantiation
-            if not hasattr(branch, "_universal_instantiations"):
-                branch._universal_instantiations = {}
-            if node.formula not in branch._universal_instantiations:
-                branch._universal_instantiations[node.formula] = set()
-            branch._universal_instantiations[node.formula].add(
-                rule_info.instantiation_constant
+            trace = RuleApplicationTrace(
+                rule_name=rule_info.name,
+                source_node=node,
+                source_branch=branch,
+                produced_formulas=rule_info.conclusions,
             )
-        else:
-            # Regular formula processing
-            branch._processed_formulas.add(node.formula)
+            initial_closed_count = len(self.closed_branches)
+            initial_branch_count = len(self.branches)
 
-        # Update statistics
-        self.rule_application_stats[rule_info.name] += 1
+        # Mark node as processed
+        if rule_info.instantiation_constant:
+            # Universal quantifier - track instantiation
+            key = (node.id, str(node.formula.formula))
+            if key not in branch.universal_instantiations:
+                branch.universal_instantiations[key] = set()
+            branch.universal_instantiations[key].add(rule_info.instantiation_constant)
+        else:
+            # Regular processing
+            branch.processed_node_ids.add(node.id)
 
         conclusions = rule_info.conclusions
 
         if len(conclusions) == 1:
-            # Non-branching rule (alpha rule)
+            # Non-branching rule
             for signed_formula in conclusions[0]:
-                if not branch.has_formula(signed_formula):
-                    new_node = TableauNode(self.node_counter, signed_formula)
-                    self.node_counter += 1
-                    self.nodes.append(new_node)
+                # Check if formula already exists in branch
+                formula_key = (str(signed_formula.formula), signed_formula.sign)
+                if (
+                    formula_key not in branch.formula_index
+                    or not branch.formula_index[formula_key]
+                ):
+                    # Create new node
+                    new_node = self._create_node(signed_formula)
                     node.add_child(new_node, rule_info.name)
 
-                    if branch.add_formula(signed_formula, new_node):
-                        # Branch closed
-                        if branch in self.open_branches:
-                            self.open_branches.remove(branch)
-                            self.closed_branches.append(branch)
-                        return
+                    # Add to branch
+                    if self._add_node_to_branch(new_node, branch):
+                        return  # Branch closed
         else:
-            # Branching rule (beta rule)
-            # Remove current branch from open branches
+            # Branching rule
             if branch in self.open_branches:
                 self.open_branches.remove(branch)
 
-            parent_node = node
-            for _i, conclusion_set in enumerate(conclusions):
+            for conclusion_set in conclusions:
                 # Create new branch
-                new_branch = self._create_branch(len(self.branches))
+                new_branch = self._create_branch()
                 self.branches.append(new_branch)
 
-                # Copy existing formulas to new branch
-                for existing_node in branch.nodes:
-                    new_branch.add_formula(existing_node.formula, existing_node)
+                # Copy existing nodes to new branch
+                for node_id in branch.node_ids:
+                    existing_node = self.nodes[node_id]
+                    self._register_node_with_branch(existing_node, new_branch)
 
-                # Copy ground terms from parent branch
+                # Copy branch state
                 new_branch.ground_terms = branch.ground_terms.copy()
-
-                # Copy universal instantiation tracking
-                new_branch._universal_instantiations = {
-                    sf: constants.copy()
-                    for sf, constants in branch._universal_instantiations.items()
+                new_branch.processed_node_ids = branch.processed_node_ids.copy()
+                new_branch.universal_instantiations = {
+                    k: v.copy() for k, v in branch.universal_instantiations.items()
                 }
-
-                # Copy processed formulas to avoid reprocessing
-                if hasattr(branch, "_processed_formulas"):
-                    new_branch._processed_formulas = branch._processed_formulas.copy()
-                else:
-                    new_branch._processed_formulas = set()
 
                 # Add new formulas
                 branch_closed = False
                 for signed_formula in conclusion_set:
-                    if not new_branch.has_formula(signed_formula):
-                        new_node = TableauNode(self.node_counter, signed_formula)
-                        self.node_counter += 1
-                        self.nodes.append(new_node)
-                        parent_node.add_child(new_node, rule_info.name)
+                    formula_key = (str(signed_formula.formula), signed_formula.sign)
+                    if (
+                        formula_key not in new_branch.formula_index
+                        or not new_branch.formula_index[formula_key]
+                    ):
+                        new_node = self._create_node(signed_formula)
+                        node.add_child(new_node, rule_info.name)
 
-                        if new_branch.add_formula(signed_formula, new_node):
+                        if self._add_node_to_branch(new_node, new_branch):
                             branch_closed = True
                             break
 
-                if branch_closed:
-                    self.closed_branches.append(new_branch)
-                else:
+                if not branch_closed:
                     self.open_branches.append(new_branch)
 
+        # Complete the trace if enabled
+        if self.trace_enabled and self.construction_trace:
+            # Record nodes created
+            for child in node.children:
+                if child.rule_applied == rule_info.name:
+                    trace.nodes_created.append(child)
+
+            # Record branches created
+            if len(self.branches) > initial_branch_count:
+                new_branches = self.branches[initial_branch_count:]
+                trace.branches_created.extend(new_branches)
+
+            # Record closures
+            if len(self.closed_branches) > initial_closed_count:
+                for closed_branch in self.closed_branches[initial_closed_count:]:
+                    if closed_branch.closure_reason:
+                        trace.closures_caused.append(
+                            (closed_branch, closed_branch.closure_reason)
+                        )
+
+            # Add trace to construction history
+            self.construction_trace.add_rule_application(trace)
+            self.construction_trace.total_nodes = len(self.nodes)
+            self.construction_trace.total_branches = len(self.branches)
+            self.construction_trace.closed_branches = len(self.closed_branches)
+
+    def is_complete(self) -> bool:
+        """Check if tableau construction is complete."""
+        if not self.open_branches:
+            return True
+
+        for branch in self.open_branches:
+            for node_id in branch.node_ids:
+                if node_id not in branch.processed_node_ids:
+                    node = self.nodes[node_id]
+                    if self._get_applicable_rule(node, branch):
+                        return False
+
+        return True
+
     def construct(self) -> TableauResult:
-        """Construct the tableau with industrial-grade optimizations."""
-        max_iterations = 1000  # Increased for complex formulas
+        """Construct the tableau."""
+        max_iterations = 1000
         iteration = 0
 
         while (
-            self.open_branches
-            and not self.is_complete()
-            and iteration < max_iterations
-            and len(self.branches) < self.max_branching_factor
+            self.open_branches and not self.is_complete() and iteration < max_iterations
         ):
-
             iteration += 1
 
-            # Advanced branch selection strategy
-            selected_branch = self._select_optimal_branch()
-            if not selected_branch:
-                break
+            # Select branch to process
+            branch = self.open_branches[0]
 
-            # Get all applicable rules for this branch and prioritize them
-            applicable_rules = self._get_prioritized_rules(selected_branch)
+            # Get applicable rules
+            applicable_rules = []
+            for node_id in branch.node_ids:
+                if node_id not in branch.processed_node_ids:
+                    node = self.nodes[node_id]
+                    rule = self._get_applicable_rule(node, branch)
+                    if rule:
+                        applicable_rules.append((node, rule))
+
             if not applicable_rules:
-                # No more rules can be applied to any branch
                 break
 
-            # Apply the highest priority rule
-            best_rule = applicable_rules[0]  # Already sorted by priority
-            node, rule_info = best_rule
+            # Sort by priority
+            applicable_rules.sort(key=lambda x: x[1])
 
-            self.apply_rule(node, selected_branch, rule_info)
-
-            # Early termination for satisfiability (first model found)
-            if self.early_termination and len(self.open_branches) > 0:
-                # Check if any branch is ready for model extraction (all atomic)
-                for branch in self.open_branches:
-                    if all(node.formula.formula.is_atomic() for node in branch.nodes):
-                        break
+            # Apply best rule
+            node, rule_info = applicable_rules[0]
+            self.apply_rule(node, branch, rule_info)
 
         # Extract models from open branches
         models = []
         for branch in self.open_branches:
-            if not branch.is_closed:
-                model = self._extract_model(branch)
-                if model:
-                    models.append(model)
+            model = self._extract_model(branch)
+            if model:
+                models.append(model)
 
         return TableauResult(
             satisfiable=len(models) > 0,
@@ -548,37 +540,31 @@ class Tableau:
     def _extract_model(self, branch: Branch) -> Optional[Model]:
         """Extract a model from an open branch."""
         # Get all atoms
-        atoms: set[str] = set()
-        for node in branch.nodes:
+        atoms = set()
+        for node_id in branch.node_ids:
+            node = self.nodes[node_id]
             atoms.update(node.formula.formula.get_atoms())
 
         # Build valuation
         valuations = {}
-
         for atom in atoms:
-            # Check what signs appear for this atom
-            has_t = any(
-                node.formula.sign == t and str(node.formula.formula) == atom
-                for node in branch.nodes
-            )
-            has_f = any(
-                node.formula.sign == f and str(node.formula.formula) == atom
-                for node in branch.nodes
-            )
-            has_e = any(
-                node.formula.sign == e and str(node.formula.formula) == atom
-                for node in branch.nodes
-            )
-            has_m = any(
-                node.formula.sign == m and str(node.formula.formula) == atom
-                for node in branch.nodes
-            )
-            has_n = any(
-                node.formula.sign == n and str(node.formula.formula) == atom
-                for node in branch.nodes
-            )
+            # Check what signs appear for this atom (keys are string, sign)
+            has_t = (atom, t) in branch.formula_index and branch.formula_index[
+                (atom, t)
+            ]
+            has_f = (atom, f) in branch.formula_index and branch.formula_index[
+                (atom, f)
+            ]
+            has_e = (atom, e) in branch.formula_index and branch.formula_index[
+                (atom, e)
+            ]
+            has_m = (atom, m) in branch.formula_index and branch.formula_index[
+                (atom, m)
+            ]
+            has_n = (atom, n) in branch.formula_index and branch.formula_index[
+                (atom, n)
+            ]
 
-            # Direct truth value signs take precedence
             if has_t:
                 valuations[atom] = TRUE
             elif has_f:
@@ -586,93 +572,317 @@ class Tableau:
             elif has_e:
                 valuations[atom] = UNDEFINED
             elif has_m:
-                # m means both t and f are possible - choose one
-                valuations[atom] = TRUE  # Could also be FALSE
+                # m means meaningful - can be either true or false
+                valuations[atom] = TRUE  # Choose true (could also be FALSE)
             elif has_n:
-                # n means both f and e are possible - choose f
-                valuations[atom] = FALSE  # Could also be UNDEFINED
+                # n means nontrue - can be either false or undefined
+                valuations[atom] = FALSE  # Choose false (could also be UNDEFINED)
             else:
-                # No constraint, default to undefined
                 valuations[atom] = UNDEFINED
 
         return Model(valuations, {})
 
-    def _select_optimal_branch(self) -> Optional[Branch]:
-        """Select the optimal branch to process next."""
-        if not self.open_branches:
+
+class WKrQTableau(Tableau):
+    """wKrQ-specific tableau."""
+
+    def __init__(self, initial_formulas: list[SignedFormula], trace: bool = False):
+        super().__init__(initial_formulas, trace=trace)
+
+    # Uses default _get_applicable_rule which uses wKrQ rules
+    # Uses default _check_contradiction which doesn't allow gluts
+
+
+class ACrQTableau(Tableau):
+    """ACrQ-specific tableau with bilateral predicate support."""
+
+    def __init__(
+        self,
+        initial_formulas: list[SignedFormula],
+        llm_evaluator: Optional[Callable] = None,
+        trace: bool = False,
+    ):
+        super().__init__(initial_formulas, trace=trace)
+        self.llm_evaluator = llm_evaluator
+        self.bilateral_pairs: dict[str, str] = {}
+
+        # Identify bilateral predicates
+        self._identify_bilateral_predicates(initial_formulas)
+
+    def _identify_bilateral_predicates(self, formulas: list[SignedFormula]) -> None:
+        """Identify and register bilateral predicate pairs."""
+
+        for sf in formulas:
+            self._extract_bilateral_pairs(sf.formula)
+
+    def _extract_bilateral_pairs(self, formula: Formula) -> None:
+        """Extract bilateral predicate pairs from a formula."""
+        from .formula import BilateralPredicateFormula
+
+        if isinstance(formula, BilateralPredicateFormula):
+            pos_name = formula.positive_name
+            neg_name = f"{formula.positive_name}*"
+            self.bilateral_pairs[pos_name] = neg_name
+            self.bilateral_pairs[neg_name] = pos_name
+        elif isinstance(formula, CompoundFormula):
+            for sub in formula.subformulas:
+                self._extract_bilateral_pairs(sub)
+        elif hasattr(formula, "restriction") and hasattr(formula, "matrix"):
+            self._extract_bilateral_pairs(formula.restriction)
+            self._extract_bilateral_pairs(formula.matrix)
+
+    def _check_contradiction(
+        self, node: TableauNode, branch: Branch
+    ) -> tuple[bool, Optional[int]]:
+        """Check for contradictions in ACrQ (allows gluts)."""
+        # Check if this is a bilateral glut case
+        if self._is_bilateral_glut(node, branch):
+            return False, None  # Gluts are allowed
+
+        # Otherwise use standard contradiction checking
+        return super()._check_contradiction(node, branch)
+
+    def _is_bilateral_glut(self, node: TableauNode, branch: Branch) -> bool:
+        """Check if this node forms a bilateral glut with existing formulas."""
+        from .formula import BilateralPredicateFormula
+
+        formula = node.formula.formula
+        sign = node.formula.sign
+
+        # Only check for gluts with t sign
+        if sign != t:
+            return False
+
+        # Check if this is a bilateral predicate
+        if not isinstance(formula, (PredicateFormula, BilateralPredicateFormula)):
+            return False
+
+        # Get base name
+        if isinstance(formula, BilateralPredicateFormula):
+            base_name = formula.get_base_name()
+            is_negative = formula.is_negative
+        else:
+            pred_name = formula.predicate_name
+            if pred_name.endswith("*"):
+                base_name = pred_name[:-1]
+                is_negative = True
+            else:
+                base_name = pred_name
+                is_negative = False
+
+        # Look for the dual with same sign (glut)
+        for other_node_id in branch.node_ids:
+            other_node = self.nodes[other_node_id]
+            if other_node.formula.sign != t:
+                continue
+
+            other_formula = other_node.formula.formula
+            if not isinstance(
+                other_formula, (PredicateFormula, BilateralPredicateFormula)
+            ):
+                continue
+
+            # Check if it's the dual
+            if isinstance(other_formula, BilateralPredicateFormula):
+                other_base = other_formula.get_base_name()
+                other_negative = other_formula.is_negative
+            else:
+                other_pred = other_formula.predicate_name
+                if other_pred.endswith("*"):
+                    other_base = other_pred[:-1]
+                    other_negative = True
+                else:
+                    other_base = other_pred
+                    other_negative = False
+
+            # If same base but different polarity with same args, it's a glut
+            if (
+                base_name == other_base
+                and is_negative != other_negative
+                and str(formula.terms) == str(other_formula.terms)
+            ):
+                return True
+
+        return False
+
+    def _get_applicable_rule(
+        self, node: TableauNode, branch: Branch
+    ) -> Optional[RuleInfo]:
+        """Get applicable rule using ACrQ rules."""
+        from .acrq_rules import get_acrq_rule
+
+        # Check if already processed
+        if node.id in branch.processed_node_ids:
+            if not isinstance(node.formula.formula, RestrictedUniversalFormula):
+                # Check for LLM evaluation if atomic
+                if self.llm_evaluator and node.formula.formula.is_atomic():
+                    return self._create_llm_evaluation_rule(node, branch)
+                return None
+
+        # Get existing and used constants
+        used_constants = None
+        if isinstance(node.formula.formula, RestrictedUniversalFormula):
+            key = (node.id, str(node.formula.formula))
+            used_constants = branch.universal_instantiations.get(key, set())
+
+        # Create fresh constant generator
+        def fresh_constant_generator() -> Constant:
+            return Constant(f"c_{self.node_counter}")
+
+        # Get ACrQ rule
+        rule = get_acrq_rule(
+            node.formula,
+            fresh_constant_generator,
+            list(branch.ground_terms) if branch.ground_terms else None,
+            used_constants,
+        )
+
+        if rule:
+            # Convert to RuleInfo
+            rule_type = RuleType.BETA if rule.is_branching() else RuleType.ALPHA
+            priority = 10 if rule_type == RuleType.ALPHA else 20
+
+            return RuleInfo(
+                name=rule.name,
+                rule_type=rule_type,
+                priority=priority,
+                conclusions=rule.conclusions,
+                instantiation_constant=rule.instantiation_constant,
+            )
+
+        # Try LLM evaluation for atomic formulas
+        if self.llm_evaluator and node.formula.formula.is_atomic():
+            return self._create_llm_evaluation_rule(node, branch)
+
+        return None
+
+    def _create_llm_evaluation_rule(
+        self, node: TableauNode, branch: Branch
+    ) -> Optional[RuleInfo]:
+        """Create an LLM evaluation rule."""
+        # Check if already evaluated
+        eval_key = f"llm_eval_{node.id}"
+        if eval_key in branch.processed_node_ids:
             return None
 
-        if self.branch_selection_strategy == "least_complex":
-            # Select branch with lowest complexity score
-            return min(self.open_branches, key=lambda b: b.complexity_score)
-        elif self.branch_selection_strategy == "depth_first":
-            # Select most recently created branch
-            return self.open_branches[-1]
-        elif self.branch_selection_strategy == "breadth_first":
-            # Select oldest branch
-            return self.open_branches[0]
-        else:
-            # Default: least complex
-            return min(self.open_branches, key=lambda b: b.complexity_score)
-
-    def _get_prioritized_rules(
-        self, branch: Branch
-    ) -> list[tuple[TableauNode, RuleInfo]]:
-        """Get all applicable rules for a branch, sorted by priority."""
-        applicable_rules = []
-
-        for node in branch.nodes:
-            rule_info = self._get_applicable_rule(node.formula, branch)
-            if rule_info:
-                applicable_rules.append((node, rule_info))
-
-        # Sort by rule priority (RuleInfo.__lt__ handles the logic)
-        applicable_rules.sort(key=lambda x: x[1])
-
-        return applicable_rules
-
-    def _try_extract_model(self, branch: Branch) -> Optional[Model]:
-        """Try to extract a model from a branch (non-destructive)."""
+        # Call LLM evaluator
+        if self.llm_evaluator is None:
+            return None
         try:
-            return self._extract_model(branch)
+            bilateral_value = self.llm_evaluator(node.formula.formula)
         except Exception:
             return None
 
+        # Convert to signed formulas
 
-def solve(formula: Formula, sign: Sign = t) -> TableauResult:
-    """Solve a formula with the given sign."""
+        conclusions = []
+        conclusion_set = []
+
+        # Determine what to add based on bilateral value
+        if bilateral_value.positive == TRUE and bilateral_value.negative == FALSE:
+            # Clear positive evidence
+            conclusion_set.append(SignedFormula(t, node.formula.formula))
+        elif bilateral_value.positive == FALSE and bilateral_value.negative == TRUE:
+            # Clear negative evidence
+            conclusion_set.append(SignedFormula(f, node.formula.formula))
+        elif bilateral_value.positive == TRUE and bilateral_value.negative == TRUE:
+            # Glut - add both
+            conclusion_set.append(SignedFormula(t, node.formula.formula))
+            # Also add dual for bilateral predicates
+            from .formula import BilateralPredicateFormula
+
+            if isinstance(
+                node.formula.formula, (PredicateFormula, BilateralPredicateFormula)
+            ):
+                if isinstance(node.formula.formula, BilateralPredicateFormula):
+                    dual = node.formula.formula.get_dual()
+                else:
+                    dual = BilateralPredicateFormula(
+                        positive_name=node.formula.formula.predicate_name,
+                        terms=node.formula.formula.terms,
+                        is_negative=True,
+                    )
+                conclusion_set.append(SignedFormula(t, dual))
+        elif bilateral_value.positive == FALSE and bilateral_value.negative == FALSE:
+            # Gap - explicit uncertainty: cannot verify AND cannot refute
+            # This is a speech act stating the limits of knowledge
+            conclusion_set.append(SignedFormula(f, node.formula.formula))
+
+            # Also add f: P*(x) for bilateral predicates
+            from .formula import BilateralPredicateFormula
+
+            if isinstance(
+                node.formula.formula, (PredicateFormula, BilateralPredicateFormula)
+            ):
+                if isinstance(node.formula.formula, BilateralPredicateFormula):
+                    dual = node.formula.formula.get_dual()
+                else:
+                    dual = BilateralPredicateFormula(
+                        positive_name=node.formula.formula.predicate_name,
+                        terms=node.formula.formula.terms,
+                        is_negative=True,
+                    )
+                conclusion_set.append(SignedFormula(f, dual))
+        elif (
+            bilateral_value.positive == UNDEFINED
+            or bilateral_value.negative == UNDEFINED
+        ):
+            # Error
+            conclusion_set.append(SignedFormula(e, node.formula.formula))
+
+        if conclusion_set:
+            conclusions.append(conclusion_set)
+
+            return RuleInfo(
+                name=f"LLM-Eval({node.formula.formula})",
+                rule_type=RuleType.LLM,
+                priority=30,  # Lower priority than logical rules
+                conclusions=conclusions,
+            )
+
+        return None
+
+
+def solve(formula: Formula, sign: Sign = t, trace: bool = False) -> TableauResult:
+    """Solve a formula with the given sign.
+
+    Args:
+        formula: The formula to solve
+        sign: The sign to assign (default: t)
+        trace: Whether to enable construction tracing
+
+    Returns:
+        TableauResult with optional construction_trace attribute
+    """
     signed_formula = SignedFormula(sign, formula)
-    tableau = Tableau([signed_formula])
-    return tableau.construct()
+    tableau = WKrQTableau([signed_formula], trace=trace)
+    result = tableau.construct()
+    if trace and tableau.construction_trace:
+        result.construction_trace = tableau.construction_trace
+    return result
 
 
 def valid(formula: Formula) -> bool:
     """Check if a formula is valid (true in all models).
 
-    In weak Kleene logic, validity means the formula receives value 't'
-    in ALL interpretations, not just those where premises are true.
-
-    A formula is valid iff:
-    - f:φ is unsatisfiable (cannot be false), AND
-    - e:φ is unsatisfiable (cannot be undefined)
+    A formula is valid iff it cannot be false or undefined.
     """
     # Check if formula can be false
     result_f = solve(formula, f)
     if result_f.satisfiable:
-        return False  # Can be false, so not valid
+        return False
 
     # Check if formula can be undefined
     result_e = solve(formula, e)
     if result_e.satisfiable:
-        return False  # Can be undefined, so not valid
+        return False
 
-    # If cannot be false or undefined, must be valid (always true)
+    # Cannot be false or undefined, must be valid
     return True
 
 
 def entails(premises: list[Formula], conclusion: Formula) -> bool:
     """Check if premises entail conclusion."""
-    # P1, ..., Pn |- Q iff (P1 & ... & Pn & ~Q) is unsatisfiable
     from .formula import Conjunction, Negation
 
     if not premises:

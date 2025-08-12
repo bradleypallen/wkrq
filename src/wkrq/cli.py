@@ -49,14 +49,14 @@ class TableauTreeRenderer:
         # Calculate maximum formula width for alignment
         if self.show_rules:
             self.max_formula_width = 0  # Reset before calculating
-            self._calculate_max_width(tableau.nodes[0], 0, is_unicode=False)
+            self._calculate_max_width(tableau.root, 0, is_unicode=False)
 
         lines: list[str] = []
-        self._render_node_ascii(tableau.nodes[0], lines, "", True)
+        self._render_node_ascii(tableau.root, lines, "", True)
         return "\n".join(lines)
 
     def _calculate_max_width(
-        self, node: TableauNode, depth: int, is_unicode: bool = False
+        self, node: "TableauNode", depth: int, is_unicode: bool = False
     ) -> None:
         """Calculate maximum formula width in the tree for alignment."""
         # Calculate the width of this node's display
@@ -79,31 +79,17 @@ class TableauTreeRenderer:
             self._calculate_max_width(child, depth + 1, is_unicode)
 
     def _mark_closed_paths(self, tableau: Tableau) -> None:
-        """Identify leaf nodes that represent closure points."""
-        # Build a path from each node to find which branches close
+        """Identify leaf nodes that represent closure points.
+
+        Uses the unified representation to directly check
+        which nodes caused closures.
+        """
         self.closed_leaf_nodes = set()
 
-        # Helper function to check if a path from node leads to only closed branches
-        def all_paths_closed(node: TableauNode) -> bool:
-            if not node.children:
-                # Leaf node - check if it's part of a closed tableau
-                return not tableau.open_branches
-            # Non-leaf - all children must lead to closed paths
-            return all(all_paths_closed(child) for child in node.children)
-
-        # Mark leaf nodes that are at the end of closed paths
-        def mark_closed_leaves(node: TableauNode) -> None:
-            if not node.children:
-                # This is a leaf node
-                if all_paths_closed(tableau.nodes[0]):
-                    # Part of a fully closed tableau
-                    self.closed_leaf_nodes.add(node.id)
-            else:
-                for child in node.children:
-                    mark_closed_leaves(child)
-
-        if tableau.nodes:
-            mark_closed_leaves(tableau.nodes[0])
+        # Unified tableau - nodes have closure tracking
+        for node_id, node in tableau.nodes.items():
+            if node.causes_closure and not node.children:
+                self.closed_leaf_nodes.add(node_id)
 
     def _render_node_ascii(
         self, node: TableauNode, lines: list[str], prefix: str, is_last: bool
@@ -162,10 +148,10 @@ class TableauTreeRenderer:
         # Calculate maximum formula width for alignment
         if self.show_rules:
             self.max_formula_width = 0  # Reset before calculating
-            self._calculate_max_width(tableau.nodes[0], 0, is_unicode=True)
+            self._calculate_max_width(tableau.root, 0, is_unicode=True)
 
         lines: list[str] = []
-        self._render_node_unicode(tableau.nodes[0], lines, "", True)
+        self._render_node_unicode(tableau.root, lines, "", True)
         return "\n".join(lines)
 
     def _render_node_unicode(
@@ -225,9 +211,9 @@ class TableauTreeRenderer:
 
         # Generate nodes
         node_positions = {}
-        for i, node in enumerate(tableau.nodes):
-            node_id = f"n{node.id}"
-            node_positions[node.id] = node_id
+        for i, (_node_id, node) in enumerate(tableau.nodes.items()):
+            tikz_id = f"n{node.id}"
+            node_positions[node.id] = tikz_id
 
             formula_str = str(node.formula).replace("&", "\\land").replace("|", "\\lor")
             formula_str = formula_str.replace("->", "\\rightarrow").replace(
@@ -235,23 +221,23 @@ class TableauTreeRenderer:
             )
 
             if i == 0:
-                lines.append(f"  \\node ({node_id}) {{{node.id}. {formula_str}}};")
+                lines.append(f"  \\node ({tikz_id}) {{{node.id}. {formula_str}}};")
             else:
                 # Position relative to parent
                 if node.parent:
                     parent_id = f"n{node.parent.id}"
                     lines.append(
-                        f"  \\node ({node_id}) [below of={parent_id}] {{{node.id}. {formula_str}}};"
+                        f"  \\node ({tikz_id}) [below of={parent_id}] {{{node.id}. {formula_str}}};"
                     )
 
         # Generate edges
-        for node in tableau.nodes:
+        for _node_id, node in tableau.nodes.items():
             if node.parent:
                 parent_id = f"n{node.parent.id}"
-                node_id = f"n{node.id}"
+                tikz_id = f"n{node.id}"
                 rule_label = node.rule_applied or ""
                 lines.append(
-                    f"  \\draw[->] ({parent_id}) -- node[right] {{{rule_label}}} ({node_id});"
+                    f"  \\draw[->] ({parent_id}) -- node[right] {{{rule_label}}} ({tikz_id});"
                 )
 
         lines.append("\\end{tikzpicture}")
@@ -260,13 +246,17 @@ class TableauTreeRenderer:
     def render_json(self, tableau: Tableau) -> dict:
         """Generate JSON representation of tableau tree."""
         nodes = []
-        for node in tableau.nodes:
+        for _node_id, node in tableau.nodes.items():
             node_data = {
                 "id": node.id,
                 "formula": str(node.formula),
                 "rule": node.rule_applied,
-                "closed": node.is_closed,
-                "closure_reason": node.closure_reason,
+                "closed": node.causes_closure,
+                "closure_reason": (
+                    f"Contradicts node {node.contradicts_with}"
+                    if node.causes_closure
+                    else None
+                ),
                 "children": [child.id for child in node.children],
             }
             if node.parent:
@@ -306,7 +296,7 @@ def display_result(
         print(f"  Branch details: {len(result.tableau.branches)} total branches")
         for i, branch in enumerate(result.tableau.branches):
             status = "CLOSED" if branch.is_closed else "OPEN"
-            print(f"    Branch {i}: {status} ({len(branch.nodes)} nodes)")
+            print(f"    Branch {i}: {status} ({len(branch.node_ids)} nodes)")
 
 
 def display_inference_result(
@@ -419,6 +409,12 @@ Examples:
     parser.add_argument(
         "--interactive", action="store_true", help="Step-by-step tableau construction"
     )
+    parser.add_argument(
+        "--trace", action="store_true", help="Show complete construction trace"
+    )
+    parser.add_argument(
+        "--trace-verbose", action="store_true", help="Show verbose construction trace"
+    )
 
     # Output formats
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
@@ -442,6 +438,33 @@ def handle_acrq_mode(args: argparse.Namespace) -> None:
         handle_acrq_inference(args, syntax_mode)
     else:
         handle_acrq_formula(args, syntax_mode)
+
+
+def _split_premises(premises_str: str) -> list[str]:
+    """Split premises by commas, respecting parentheses and brackets."""
+    premises = []
+    current_premise = ""
+    depth = 0
+
+    for char in premises_str:
+        if char in "([":
+            depth += 1
+        elif char in ")]":
+            depth -= 1
+        elif char == "," and depth == 0:
+            # Found a top-level comma, complete current premise
+            if current_premise.strip():
+                premises.append(current_premise.strip())
+            current_premise = ""
+            continue
+
+        current_premise += char
+
+    # Don't forget the last premise
+    if current_premise.strip():
+        premises.append(current_premise.strip())
+
+    return premises
 
 
 def _parse_inference_input(input_str: str, use_inference_flag: bool) -> str:
@@ -487,7 +510,9 @@ def handle_acrq_inference(args: argparse.Namespace, syntax_mode: "SyntaxMode") -
     # Parse premises
     premises = []
     if parts[0].strip():
-        for premise_str in parts[0].split(","):
+        # Split premises properly, respecting parentheses and brackets
+        premise_strings = _split_premises(parts[0].strip())
+        for premise_str in premise_strings:
             premise = parse_acrq_formula(premise_str.strip(), syntax_mode)
             premises.append(premise)
 
@@ -610,7 +635,10 @@ def handle_wkrq_inference(args: argparse.Namespace) -> None:
     # Parse input to handle --inference flag
     input_str = _parse_inference_input(args.input, args.inference)
     inference = parse_inference(input_str)
-    inference_result = check_inference(inference)
+
+    # Enable tracing if requested
+    trace = args.trace or args.trace_verbose
+    inference_result = check_inference(inference, trace=trace)
 
     if args.json:
         output = {
@@ -642,12 +670,24 @@ def handle_wkrq_inference(args: argparse.Namespace) -> None:
             )
             print(tree_str)
 
+        # Show trace if requested
+        if (
+            args.trace or args.trace_verbose
+        ) and inference_result.tableau_result.construction_trace:
+            print("\n" + "=" * 70)
+            print("CONSTRUCTION TRACE")
+            print("=" * 70)
+            inference_result.tableau_result.print_trace(verbose=args.trace_verbose)
+
 
 def handle_wkrq_formula(args: argparse.Namespace) -> None:
     """Handle wKrQ single formula processing."""
     formula = parse(args.input)
     sign = sign_from_string(args.sign)
-    tableau_result = solve(formula, sign)
+
+    # Enable tracing if requested
+    trace = args.trace or args.trace_verbose
+    tableau_result = solve(formula, sign, trace=trace)
 
     if args.json:
         output = {
@@ -676,6 +716,13 @@ def handle_wkrq_formula(args: argparse.Namespace) -> None:
             )
             tree_str = render_tree(tableau_result.tableau, args.format, renderer)
             print(tree_str)
+
+        # Show trace if requested
+        if (args.trace or args.trace_verbose) and tableau_result.construction_trace:
+            print("\n" + "=" * 70)
+            print("CONSTRUCTION TRACE")
+            print("=" * 70)
+            tableau_result.print_trace(verbose=args.trace_verbose)
 
 
 def main() -> None:

@@ -223,7 +223,11 @@ class PredicateFormula(Formula):
         return hash(("predicate", self.predicate_name, tuple(self.terms)))
 
     def get_atoms(self) -> set[str]:
-        return {str(self)}
+        # Only return this as an atom if all terms are constants (ground atom)
+        # Don't include predicates with variables in the model
+        if all(isinstance(term, Constant) for term in self.terms):
+            return {str(self)}
+        return set()
 
     def substitute(self, mapping: dict[str, Formula]) -> Formula:
         # For predicates, we might substitute the whole predicate
@@ -304,7 +308,11 @@ class BilateralPredicateFormula(PredicateFormula):
         )
 
     def get_atoms(self) -> set[str]:
-        return {str(self)}
+        # Only return this as an atom if all terms are constants (ground atom)
+        # Don't include predicates with variables in the model
+        if all(isinstance(term, Constant) for term in self.terms):
+            return {str(self)}
+        return set()
 
     def substitute(self, mapping: dict[str, Formula]) -> Formula:
         # For bilateral predicates, we might substitute the whole predicate

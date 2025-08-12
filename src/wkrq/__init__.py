@@ -20,9 +20,16 @@ from .formula import (
     Variable,
 )
 from .parser import parse, parse_inference
-from .semantics import BilateralTruthValue, TruthValue, WeakKleeneSemantics
+from .semantics import (
+    FALSE,
+    TRUE,
+    UNDEFINED,
+    BilateralTruthValue,
+    TruthValue,
+    WeakKleeneSemantics,
+)
 from .signs import Sign, SignedFormula, e, f, m, n, t
-from .tableau import Tableau, TableauResult, entails, solve, valid
+from .tableau import Tableau, TableauResult, WKrQTableau, entails, solve, valid
 
 __version__ = "2.0.0"
 
@@ -41,6 +48,9 @@ __all__ = [
     "WeakKleeneSemantics",
     "TruthValue",
     "BilateralTruthValue",
+    "TRUE",
+    "FALSE",
+    "UNDEFINED",
     # Signs
     "Sign",
     "SignedFormula",
@@ -51,6 +61,7 @@ __all__ = [
     "n",
     # Tableau
     "Tableau",
+    "WKrQTableau",
     "ACrQTableau",
     "TableauResult",
     # Main functions

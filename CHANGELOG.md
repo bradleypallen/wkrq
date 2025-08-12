@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Construction Tracing** - Complete step-by-step proof visualization
+  - Added `trace` parameter to `solve()`, `valid()`, `entails()`, `check_inference()`
+  - Shows what each rule produces, even formulas not added due to branch closure
+  - CLI flags `--trace` and `--trace-verbose` for command-line visualization
+  - Provides "whiteboard explanation" experience for understanding tableau construction
+  - `TableauConstructionTrace` class for programmatic access to trace data
+- **LLM Gap Semantics** - Knowledge gaps as explicit uncertainty
+  - LLM returning (FALSE, FALSE) now adds both f:P(x) and f:P*(x)
+  - Represents "I cannot verify AND I cannot refute" as speech acts
+  - Makes formal derivations conflict with explicit uncertainty
+
+### Fixed
+
+- **Quantifier Rule Completeness** - Fixed f-case for existential quantifiers to include all branches per Ferguson's specification
+  - f : [∃xφ(x)]ψ(x) now correctly generates m : φ(c) ○ m : ψ(c) ○ (n : φ(a) + n : ψ(a))
+  - Added generation of second constant (marked as '_arb') when no existing constants available
+  - Fixed m and n cases for existential quantifiers to include full branching structure
+- **Model Representation** - Models no longer show predicate variables (e.g., `Student(X)=e`)
+  - `get_atoms()` now returns only ground atoms (predicates with all constant terms)
+  - Prevents confusing output where variables appeared to have truth values
+- **Constant Naming** - Improved clarity of constant generation
+  - Fresh constants remain as `c_N`
+  - Arbitrary constants for n branches now named `c_N_arb` to distinguish them
+- **Documentation Updates** - Updated all documentation to reflect six-sign system
+  - Fixed references to old four-sign system (T, F, M, N) in README and docs
+  - Clarified that sign 'v' is a meta-sign for rule notation, not used in formulas
+  - Updated API documentation to note `get_atoms()` returns only ground atoms
+
 ## [2.0.0] - 2025-08-04
 
 ### Changed

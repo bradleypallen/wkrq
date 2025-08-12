@@ -16,9 +16,9 @@ from wkrq.tableau import solve
 
 # Add src directory to path
 src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "wkrq"))
-if os.path.exists(os.path.join(src_path, "ferguson_rules.py")):
+if os.path.exists(os.path.join(src_path, "wkrq_rules.py")):
     sys.path.insert(0, os.path.dirname(src_path))
-    from wkrq.ferguson_rules import (
+    from wkrq.wkrq_rules import (
         get_conjunction_rule,
         get_disjunction_rule,
         get_implication_rule,

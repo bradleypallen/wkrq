@@ -1,7 +1,7 @@
 """Tests for ACrQ-specific tableau functionality."""
 
 from wkrq.acrq_parser import SyntaxMode, parse_acrq_formula
-from wkrq.acrq_tableau import ACrQModel, ACrQTableau
+from wkrq.acrq_tableau import ACrQTableau, Model
 from wkrq.formula import (
     BilateralPredicateFormula,
     Conjunction,
@@ -10,7 +10,7 @@ from wkrq.formula import (
     PredicateFormula,
 )
 from wkrq.parser import parse
-from wkrq.semantics import FALSE, TRUE, UNDEFINED, BilateralTruthValue
+from wkrq.semantics import FALSE, TRUE, UNDEFINED
 from wkrq.signs import SignedFormula, f, m, n, t
 
 
@@ -202,14 +202,13 @@ class TestACrQTableau:
 
         assert result.satisfiable
         model = result.models[0]
-        assert isinstance(model, ACrQModel)
+        assert isinstance(model, Model)
 
-        # Check bilateral valuations
-        assert "Human(alice)" in model.bilateral_valuations
-        btv = model.bilateral_valuations["Human(alice)"]
-        assert isinstance(btv, BilateralTruthValue)
-        assert btv.positive == TRUE
-        assert btv.negative == FALSE
+        # Check valuations - in unified model, bilateral predicates are stored separately
+        assert "Human(alice)" in model.valuations
+        assert model.valuations["Human(alice)"] == TRUE
+        assert "Human*(alice)" in model.valuations
+        assert model.valuations["Human*(alice)"] == FALSE
 
     def test_no_general_negation_elimination(self):
         """Test that ACrQ doesn't eliminate negation on compound formulas."""

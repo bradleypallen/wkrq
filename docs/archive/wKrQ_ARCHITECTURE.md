@@ -74,19 +74,23 @@ This differs from **strong Kleene** logic where, for example, `t ∨ e = t`. In 
 
 The tableau system uses six signs to construct proofs:
 
-- **t**: Formula must have truth value **t**
-- **f**: Formula must have truth value **f**
-- **m**: Formula can have truth value **t or f** (multiple possibilities)
-- **n**: Formula must have truth value **e** (neither/undefined)
+- **t**: Formula must have truth value **t** (true)
+- **f**: Formula must have truth value **f** (false)
+- **e**: Formula must have truth value **e** (error/undefined)
+- **m**: Formula can have truth value **t or f** (meaningful - branching instruction)
+- **n**: Formula can have truth value **f or e** (nontrue - branching instruction)
+- **v**: Variable sign used in rule notation (represents any of t, f, e)
 
 #### Sign Truth Conditions
 
 ```python
 t.truth_conditions() = {t}        # Must be true
 f.truth_conditions() = {f}        # Must be false
+e.truth_conditions() = {e}        # Must be undefined
 m.truth_conditions() = {t, f}     # Can be true or false
-n.truth_conditions() = {e}        # Must be undefined
-```text
+n.truth_conditions() = {f, e}     # Can be false or undefined
+v.truth_conditions() = {t, f, e} # Variable (meta-sign)
+```
 
 ### Restricted Quantification
 

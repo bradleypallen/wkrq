@@ -11,6 +11,9 @@ the tableau system described in Ferguson (2021), particularly:
 import pytest
 
 from wkrq import (
+    FALSE,
+    TRUE,
+    UNDEFINED,
     Formula,
     SignedFormula,
     f,
@@ -52,8 +55,10 @@ class TestACrQFergusonCompliance:
         # Check that the conversion happened
         branch = result.tableau.open_branches[0]
         has_human_star = False
-        # Look through the actual formulas in the branch
-        for sf in branch.formulas:
+        # Look through the nodes in the branch
+        for node_id in branch.node_ids:
+            node = result.tableau.nodes[node_id]
+            sf = node.formula
             if sf.sign == t and isinstance(sf.formula, BilateralPredicateFormula):
                 if sf.formula.positive_name == "Human" and sf.formula.is_negative:
                     has_human_star = True
@@ -126,14 +131,16 @@ class TestACrQFergusonCompliance:
             and isinstance(sf.formula, PredicateFormula)
             and not isinstance(sf.formula, BilateralPredicateFormula)
             and sf.formula.predicate_name == "Human"
-            for sf in branch.formulas
+            for node_id in branch.node_ids
+            for sf in [result.tableau.nodes[node_id].formula]
         )
         has_robot_star = any(
             sf.sign == t
             and isinstance(sf.formula, BilateralPredicateFormula)
             and sf.formula.positive_name == "Robot"
             and sf.formula.is_negative
-            for sf in branch.formulas
+            for node_id in branch.node_ids
+            for sf in [result.tableau.nodes[node_id].formula]
         )
         assert has_human and has_robot_star
 
@@ -198,10 +205,14 @@ class TestACrQFergusonCompliance:
         assert result.satisfiable
         assert len(result.models) > 0
 
-        # Check the model
+        # Check the model - unified model stores predicates separately
         model = result.models[0]
-        assert model.bilateral_valuations["Human(alice)"].is_glut()
-        assert model.bilateral_valuations["Robot(alice)"].is_gap()
+        # Glut: both Human and Human* are true
+        assert model.valuations.get("Human(alice)") == TRUE
+        assert model.valuations.get("Human*(alice)") == TRUE
+        # Gap: both Robot and Robot* are false/undefined
+        assert model.valuations.get("Robot(alice)") in [FALSE, UNDEFINED]
+        assert model.valuations.get("Robot*(alice)") in [FALSE, UNDEFINED]
 
 
 if __name__ == "__main__":

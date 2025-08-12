@@ -81,7 +81,7 @@ def demonstrate_acrq():
     
     if result.models:
         model = result.models[0]
-        print(f"Model: {model.bilateral_valuations}")
+        print(f"Model: {model.valuations}")
     
     # 4. Standard contradictions still close
     print_section("4. Standard contradictions still close branches")
