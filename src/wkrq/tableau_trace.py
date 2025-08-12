@@ -5,11 +5,13 @@ This module provides detailed tracing of tableau construction,
 showing exactly what each rule produces and how the tableau evolves.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
 
 from .signs import SignedFormula
-from .tableau import Branch, RuleInfo, TableauNode
+from .tableau import Branch, TableauNode
 
 
 class TraceEvent(Enum):
@@ -171,4 +173,3 @@ class TableauConstructionTrace:
                 summary.append(f"  {formula} → {result}")
 
         return summary
-
