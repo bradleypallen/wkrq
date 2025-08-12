@@ -64,7 +64,7 @@ def create_penguin_llm_evaluator():
 
 
 def print_test_case_with_llm(description: str, signed_formula: SignedFormula, analysis: str = ""):
-    """Print a test case with LLM integration showing LLM-Eval rules."""
+    """Print a test case with LLM integration showing llm-eval rules."""
     print(f"\n{'-'*60}")
     print(f"Test: {description}")
     print(f"Formula: {signed_formula}")
@@ -287,7 +287,7 @@ def main():
         print()
         print("System components:")
         print("• ACrQ tableau rules for formal logical inference")
-        print("• LLM-Eval rules for atomic formula assessment")
+        print("• llm-eval rules for atomic formula assessment")
         print("• Bilateral truth values for paraconsistent reasoning")
         print("• Integrated contradiction detection and branch closure")
         print()

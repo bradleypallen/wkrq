@@ -67,7 +67,7 @@ def main():
     print("\nAnalysis:")
     print("  • Universal rule should instantiate with pluto")
     print("  • This derives Planet(pluto)")
-    print("  • LLM-Eval then evaluates Planet(pluto) → FALSE")
+    print("  • llm-eval then evaluates Planet(pluto) → FALSE")
     print("  • Conflict shows formal vs contemporary knowledge")
 
 

@@ -183,7 +183,7 @@ if result.tableau_result.construction_trace:
     
     # Examine specific steps
     for step in trace.rule_applications:
-        if "LLM-Eval" in step.rule_name:
+        if "llm-eval" in step.rule_name:
             print(f"LLM evaluated: {step.source_node.formula}")
             print(f"Produced: {step.produced_formulas}")
 ```

@@ -148,7 +148,7 @@ class TableauConstructionTrace:
             summary.append(f"  {rule}: {count} time(s)")
 
         # Show LLM evaluations specifically
-        llm_evals = [t for t in self.rule_applications if "LLM-Eval" in t.rule_name]
+        llm_evals = [t for t in self.rule_applications if "llm-eval" in t.rule_name]
         if llm_evals:
             summary.append("\nLLM Evaluations:")
             for trace in llm_evals:

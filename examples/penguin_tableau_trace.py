@@ -90,7 +90,7 @@ class TracingACrQTableau(ACrQTableau):
             print(f"   Formula: {node.formula}")
             print(f"   Type: {rule_info.rule_type.value}")
             
-            if "LLM-Eval" in rule_info.name:
+            if "llm-eval" in rule_info.name:
                 print("   🤖 LLM EVALUATION:")
                 
             # Apply the rule

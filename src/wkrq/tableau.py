@@ -834,7 +834,7 @@ class ACrQTableau(Tableau):
             conclusions.append(conclusion_set)
 
             return RuleInfo(
-                name=f"LLM-Eval({node.formula.formula})",
+                name=f"llm-eval({node.formula.formula})",
                 rule_type=RuleType.LLM,
                 priority=30,  # Lower priority than logical rules
                 conclusions=conclusions,
