@@ -5,7 +5,7 @@ This module provides automatic LLM integration for ACrQ tableau construction,
 requiring only LLM provider specification from users.
 """
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
 from .formula import BilateralPredicateFormula, Formula, PredicateFormula
 from .semantics import FALSE, TRUE, UNDEFINED, BilateralTruthValue
@@ -59,7 +59,7 @@ def create_llm_tableau_evaluator(
         warnings.warn(
             "bilateral-truth package not installed. "
             "Install with: pip install wkrq[llm] or pip install bilateral-truth",
-            ImportWarning,
+            ImportWarning, stacklevel=2,
         )
         return None
 
@@ -75,11 +75,11 @@ def create_llm_tableau_evaluator(
     except Exception as e:
         import warnings
 
-        warnings.warn(f"Failed to create LLM evaluator: {e}", RuntimeWarning)
+        warnings.warn(f"Failed to create LLM evaluator: {e}", RuntimeWarning, stacklevel=2)
         return None
 
     # Cache for bilateral predicates to avoid redundant LLM calls
-    cache: Dict[str, BilateralTruthValue] = {}
+    cache: dict[str, BilateralTruthValue] = {}
 
     def tableau_evaluator(formula: Formula) -> Optional[BilateralTruthValue]:
         """
@@ -97,11 +97,9 @@ def create_llm_tableau_evaluator(
 
         # Get the base predicate name and whether it's negative
         if isinstance(formula, BilateralPredicateFormula):
-            base_name = formula.positive_name
             is_negative = formula.is_negative
             formula_str = str(formula).replace("*", "")  # Remove * for LLM query
         elif isinstance(formula, PredicateFormula):
-            base_name = formula.predicate_name
             is_negative = False
             formula_str = str(formula)
         else:

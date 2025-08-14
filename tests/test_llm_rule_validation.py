@@ -158,7 +158,7 @@ class TestLLMRuleFormalSpecification:
         tableau = ACrQTableau(
             [SignedFormula(t, atom)], llm_evaluator=counting_evaluator
         )
-        result = tableau.construct()
+        tableau.construct()
 
         # LLM might be called multiple times due to implementation details
         # but should not evaluate the same formula excessively
@@ -187,7 +187,7 @@ class TestLLMRuleFormalSpecification:
         tableau = ACrQTableau(
             [SignedFormula(t, conj)], llm_evaluator=tracking_evaluator
         )
-        result = tableau.construct()
+        tableau.construct()
 
         # Check that conjunction was decomposed (should create P and Q)
         # and that LLM was called for the atomic formulas
@@ -300,7 +300,7 @@ class TestLLMRuleCompleteness:
             [SignedFormula(f, p_implies_p)],  # Try to prove it's false
             llm_evaluator=incomplete_evaluator,
         )
-        result = tableau.construct()
+        tableau.construct()
 
         # This demonstrates incompleteness - classical tautologies
         # may not be provable when LLM lacks knowledge
