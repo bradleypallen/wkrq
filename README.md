@@ -1,6 +1,6 @@
 # wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
-[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=3.0.0)](https://badge.fury.io/py/wkrq)
+[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=3.1.0)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
@@ -121,6 +121,19 @@ print(f"Contradiction satisfiable: {result.satisfiable}")  # True (glut allowed)
 # Different syntax modes for ACrQ
 transparent = parse_acrq_formula("~Human(x)", SyntaxMode.TRANSPARENT)  # Standard syntax
 bilateral = parse_acrq_formula("Human*(x)", SyntaxMode.BILATERAL)      # Explicit bilateral
+
+# LLM Integration (requires pip install wkrq[llm])
+from wkrq import create_openai_evaluator, ACrQTableau
+
+# One line to create LLM evaluator!
+evaluator = create_openai_evaluator(model='gpt-4')
+
+# Use with tableau - LLM provides real-world knowledge
+tableau = ACrQTableau(
+    [SignedFormula(t, parse_acrq_formula("Planet(pluto)"))],
+    llm_evaluator=evaluator
+)
+result = tableau.construct()  # LLM knows Pluto isn't a planet anymore
 ```
 
 ## Syntax and Semantics
@@ -243,6 +256,40 @@ formula3 = parse_acrq_formula("Human(x) & Robot*(y)", SyntaxMode.MIXED)
 | False | f | t | Negative evidence only |
 | Gap | f | f | No evidence (incomplete) |
 | Glut | t | t | Conflicting evidence (paraconsistent) |
+
+## LLM Integration (ACrQ)
+
+The ACrQ system seamlessly integrates with Large Language Models through the [bilateral-truth](https://github.com/bradleypallen/bilateral-truth) package. This integration is specific to ACrQ because it leverages bilateral predicates to handle LLM uncertainty and conflicting information:
+
+```bash
+# Install with LLM support
+pip install wkrq[llm]
+```
+
+```python
+from wkrq import create_openai_evaluator, ACrQTableau, parse_acrq_formula, SignedFormula, t
+
+# One line to connect to your LLM
+evaluator = create_openai_evaluator(model='gpt-4')  # Or use anthropic, google, local
+
+# Combine formal logic with LLM knowledge
+formulas = [
+    SignedFormula(t, parse_acrq_formula("[∀X Orbits(X, sun)]Planet(X)")),  # Formal rule
+    SignedFormula(t, parse_acrq_formula("Orbits(pluto, sun)")),            # Fact
+]
+
+tableau = ACrQTableau(formulas, llm_evaluator=evaluator)
+result = tableau.construct()
+# LLM knows modern astronomy: Pluto isn't a planet → contradiction detected
+```
+
+The bilateral-truth package handles all the complexity:
+- API connections and authentication
+- Prompt engineering for factuality assessment
+- Response parsing and error handling
+- Caching to minimize API calls
+
+Supported providers: OpenAI, Anthropic, Google, local models (Ollama), and more.
 
 ## Documentation
 

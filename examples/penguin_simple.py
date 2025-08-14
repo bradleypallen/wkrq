@@ -6,28 +6,37 @@ Focus on the core contradiction:
 "Penguins can fly" vs "Penguins cannot fly"
 """
 
-import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from wkrq import ACrQTableau, PropositionalAtom, SignedFormula, t, f
-from bilateral_truth import zeta_c, create_llm_evaluator, Assertion
+from bilateral_truth import Assertion, create_llm_evaluator, zeta_c
 from bilateral_truth.truth_values import TruthValueComponent
-from wkrq.semantics import BilateralTruthValue, TRUE, FALSE, UNDEFINED
+
+from wkrq import ACrQTableau, PropositionalAtom, SignedFormula, f, t
+from wkrq.semantics import FALSE, TRUE, UNDEFINED, BilateralTruthValue
 
 
 def create_evaluator():
     """Create bilateral-truth evaluator."""
-    evaluator = create_llm_evaluator('openai', model='gpt-4o-mini')
-    
+    evaluator = create_llm_evaluator("openai", model="gpt-4o-mini")
+
     def evaluate_formula(formula):
         assertion = Assertion(str(formula))
         result = zeta_c(assertion, evaluator.evaluate_bilateral)
         u, v = result.u, result.v
-        
-        pos = TRUE if u == TruthValueComponent.TRUE else (UNDEFINED if u == TruthValueComponent.UNDEFINED else FALSE)
-        neg = TRUE if v == TruthValueComponent.TRUE else (UNDEFINED if v == TruthValueComponent.UNDEFINED else FALSE)
-        
+
+        pos = (
+            TRUE
+            if u == TruthValueComponent.TRUE
+            else (UNDEFINED if u == TruthValueComponent.UNDEFINED else FALSE)
+        )
+        neg = (
+            TRUE
+            if v == TruthValueComponent.TRUE
+            else (UNDEFINED if v == TruthValueComponent.UNDEFINED else FALSE)
+        )
+
         # Determine evidence type
         if pos == TRUE and neg == FALSE:
             evidence = "✓ Strong positive evidence"
@@ -39,10 +48,10 @@ def create_evaluator():
             evidence = "? Insufficient evidence (gap)"
         else:
             evidence = "~ Mixed evidence"
-            
+
         print(f"    LLM Assessment: '{formula}' → <{u},{v}> → {evidence}")
         return BilateralTruthValue(positive=pos, negative=neg)
-    
+
     return evaluate_formula
 
 
@@ -51,7 +60,7 @@ def main():
     print()
     print("The Classic Problem:")
     print("• General knowledge: 'Birds can fly'")
-    print("• Specific knowledge: 'Penguins cannot fly'") 
+    print("• Specific knowledge: 'Penguins cannot fly'")
     print("• Fact: 'Penguins are birds'")
     print("• Question: Can penguins fly?")
     print()
@@ -72,14 +81,16 @@ def main():
     for statement, description in test_cases:
         print(f"Testing: {statement}")
         print(f"Context: {description}")
-        
+
         atom = PropositionalAtom(statement)
-        
+
         # Test positive assertion
         tableau_pos = ACrQTableau([SignedFormula(t, atom)], llm_evaluator=llm_eval)
         result_pos = tableau_pos.construct()
-        
-        print(f"    t:{statement} → {'Satisfiable' if result_pos.satisfiable else 'Unsatisfiable'}")
+
+        print(
+            f"    t:{statement} → {'Satisfiable' if result_pos.satisfiable else 'Unsatisfiable'}"
+        )
         print()
 
     # Now test the contradiction scenario
@@ -90,11 +101,11 @@ def main():
     print()
 
     penguin_fly = PropositionalAtom("Penguins can fly")
-    
+
     # Create tableau with contradictory assertions
     contradictory_formulas = [
         SignedFormula(t, penguin_fly),  # Penguins can fly
-        SignedFormula(f, penguin_fly)   # Penguins cannot fly  
+        SignedFormula(f, penguin_fly),  # Penguins cannot fly
     ]
 
     print("LLM will evaluate 'Penguins can fly':")
@@ -116,7 +127,7 @@ def main():
     print()
     print("=== Key Insights ===")
     print("1. LLM provides nuanced bilateral evidence")
-    print("2. ACrQ reasoning handles contradictions paraconsistently") 
+    print("2. ACrQ reasoning handles contradictions paraconsistently")
     print("3. No logical explosion despite conflicting knowledge")
     print("4. Formal logical reasoning enhanced with world knowledge")
 

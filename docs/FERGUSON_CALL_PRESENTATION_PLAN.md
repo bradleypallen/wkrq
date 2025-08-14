@@ -44,9 +44,9 @@ Lemma 5 (Glut tolerance)     →    bilateral_equivalence.py
 3. **Bilateral Predicates**: R/R* duality for paraconsistent reasoning
 4. **Parser Modes**: Transparent, Bilateral, Mixed
 
-### Part 3: Live Demonstrations (20 minutes)
+### Part 3: Live Demonstrations (25 minutes)
 
-#### Demo 1: Basic wKrQ Tableau Construction
+#### Demo 1: Basic wKrQ Tableau Construction (5 min)
 ```bash
 # Show tableau construction with trace
 wkrq solve "P & (P -> Q)" --trace
@@ -56,7 +56,7 @@ wkrq valid "(P & (P -> Q)) -> Q"
 # Result: NOT VALID (undefined when P=e, Q=e)
 ```
 
-#### Demo 2: Ferguson's 6-Sign System in Action
+#### Demo 2: Ferguson's 6-Sign System in Action (3 min)
 ```python
 # Interactive Python demo
 from wkrq import *
@@ -72,20 +72,38 @@ for sign in [t, f, e, m, n]:
     print(f"  Branches: {result.closed_branches}/{result.open_branches}")
 ```
 
-#### Demo 3: ACrQ Bilateral Predicates & Gluts
+#### Demo 3: Comprehensive ACrQ Demonstration (12 min)
 ```bash
-# Transparent mode (default): ¬P(x) becomes P*(x)
-wkrq solve "~Human(socrates)" --mode acrq
-
-# Bilateral mode: Explicit R/R* syntax
-wkrq solve "Human(x) & Human*(x)" --mode acrq --syntax bilateral
-
-# Show that gluts don't cause explosion
-wkrq valid "Human(x) & Human*(x) -> Mortal(y)" --mode acrq
-# Result: NOT VALID (paraconsistent!)
+# Run the complete ACrQ demo script
+python examples/acrq_demo_ferguson.py
 ```
 
-#### Demo 4: DeMorgan Transformations in ACrQ
+This interactive demo covers:
+1. **Bilateral Predicates** (Definition 17)
+   - R/R* duality for positive/negative evidence
+   - Transparent vs bilateral syntax modes
+   
+2. **Paraconsistent Reasoning** (Lemma 5)
+   - Contradictions don't explode
+   - Glut tolerance demonstration
+   
+3. **DeMorgan Transformations**
+   - Syntactic rules, not semantic validities
+   - Compound and quantifier negations
+   
+4. **Knowledge Gaps**
+   - Epistemic uncertainty representation
+   - Four information states (true/false/gap/glut)
+   
+5. **LLM Integration** (ACrQ-LLM)
+   - Hybrid formal-empirical reasoning
+   - Real-world knowledge incorporation
+   
+6. **Complete Example**
+   - Dragons, contradictions, and gluts
+   - Full tableau visualization
+
+#### Demo 4: DeMorgan Details in ACrQ (3 min)
 ```python
 # Show DeMorgan as transformation rules, not semantic validities
 from wkrq import *
@@ -99,7 +117,7 @@ result = valid(parse("~(P & Q) -> (~P | ~Q)"))
 print(f"DeMorgan valid in weak Kleene? {result}")  # FALSE!
 ```
 
-#### Demo 5: Tableau Visualization
+#### Demo 5: Tableau Visualization (2 min)
 ```bash
 # Generate visual tableau tree
 wkrq solve "[∀x Human(x)]Mortal(x)" --trace --format tree

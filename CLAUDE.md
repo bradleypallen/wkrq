@@ -3,6 +3,33 @@
 This file provides guidance to Claude Code (claude.ai/code) when working
 with code in this repository.
 
+## CRITICAL: bilateral-truth Package Usage
+
+**NEVER create mock LLM evaluators. ONLY use the bilateral-truth package via wkrq.llm_integration.**
+
+### Correct Usage:
+```python
+from wkrq.llm_integration import create_llm_tableau_evaluator
+
+# Create evaluator using wkrq's integration (handles all complexity)
+llm_evaluator = create_llm_tableau_evaluator('openai')  # or 'anthropic', 'google', 'mock'
+
+# Use directly in tableau - no wrapper needed!
+tableau = ACrQTableau(formulas, llm_evaluator=llm_evaluator)
+```
+
+### Under the Hood:
+- wkrq.llm_integration properly wraps bilateral-truth's create_llm_evaluator
+- Converts between GeneralizedTruthValue (u,v) and BilateralTruthValue (positive,negative)
+- Handles caching and bilateral predicate relationships
+- Mock evaluator returns <e,e> (undefined) for testing
+
+### Common Mistakes to AVOID:
+1. DO NOT create functions that return BilateralTruthValue objects directly
+2. DO NOT implement mock evaluators with if/else logic
+3. DO NOT use bilateral-truth's create_llm_evaluator directly - use wkrq.llm_integration
+4. DO NOT try to call evaluator.evaluate_bilateral manually - wkrq handles this
+
 ## Common Commands
 
 ### Development Setup
@@ -240,3 +267,4 @@ tests/
   - `docs/wKrQ_vs_ACrQ_COMPARISON.md`: Detailed system comparison
   - `docs/FERGUSON_2021_ANALYSIS.md`: Paper analysis
   - `docs/TABLEAU_OPTIMIZATIONS.md`: Performance notes
+- IMPORTANT: DO NOT UNDER ANY CIRCUMSTANCES USE AN LLM EVALUATOR OTHER THAN ONE FROM THE bilateral-truth PACKAGE!

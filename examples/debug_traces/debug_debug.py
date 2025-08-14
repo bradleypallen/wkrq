@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Debug script to test the quantifier fix."""
 
-from wkrq import parse, entails
+from wkrq import entails, parse
 
 # Test the basic case
 premise = parse("[exists X A(X)]B(X)")
@@ -16,4 +16,5 @@ try:
 except Exception as e:
     print(f"Error: {e}")
     import traceback
+
     traceback.print_exc()

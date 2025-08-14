@@ -794,6 +794,10 @@ class ACrQTableau(Tableau):
         except Exception:
             return None
 
+        # Check if evaluator returned None
+        if bilateral_value is None:
+            return None
+
         # Convert to signed formulas
 
         conclusions = []
