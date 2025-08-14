@@ -59,7 +59,8 @@ def create_llm_tableau_evaluator(
         warnings.warn(
             "bilateral-truth package not installed. "
             "Install with: pip install wkrq[llm] or pip install bilateral-truth",
-            ImportWarning, stacklevel=2,
+            ImportWarning,
+            stacklevel=2,
         )
         return None
 
@@ -75,7 +76,9 @@ def create_llm_tableau_evaluator(
     except Exception as e:
         import warnings
 
-        warnings.warn(f"Failed to create LLM evaluator: {e}", RuntimeWarning, stacklevel=2)
+        warnings.warn(
+            f"Failed to create LLM evaluator: {e}", RuntimeWarning, stacklevel=2
+        )
         return None
 
     # Cache for bilateral predicates to avoid redundant LLM calls
@@ -166,7 +169,9 @@ def _convert_component(component: "TruthValueComponent") -> Any:
 
 
 # Convenience functions for common providers
-def create_openai_evaluator(model: str = "gpt-4", **kwargs: Any) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
+def create_openai_evaluator(
+    model: str = "gpt-4", **kwargs: Any
+) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
     """Create an OpenAI LLM evaluator."""
     return create_llm_tableau_evaluator("openai", model=model, **kwargs)
 
@@ -178,11 +183,15 @@ def create_anthropic_evaluator(
     return create_llm_tableau_evaluator("anthropic", model=model, **kwargs)
 
 
-def create_google_evaluator(model: str = "gemini-pro", **kwargs: Any) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
+def create_google_evaluator(
+    model: str = "gemini-pro", **kwargs: Any
+) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
     """Create a Google Gemini evaluator."""
     return create_llm_tableau_evaluator("google", model=model, **kwargs)
 
 
-def create_local_evaluator(model: str = "llama2", **kwargs: Any) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
+def create_local_evaluator(
+    model: str = "llama2", **kwargs: Any
+) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
     """Create a local LLM evaluator (e.g., via Ollama)."""
     return create_llm_tableau_evaluator("local", model=model, **kwargs)
