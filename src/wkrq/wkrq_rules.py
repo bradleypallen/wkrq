@@ -132,7 +132,10 @@ def get_conjunction_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
             conclusions=[
                 [SignedFormula(f, left)],  # f ∧ _ = f
                 [SignedFormula(f, right)],  # _ ∧ f = f
-                [SignedFormula(e, left), SignedFormula(e, right)],  # e ∧ e = e (both must be e)
+                [
+                    SignedFormula(e, left),
+                    SignedFormula(e, right),
+                ],  # e ∧ e = e (both must be e)
             ],
         )
     elif sign == e:
@@ -167,7 +170,10 @@ def get_conjunction_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
             conclusions=[
                 [SignedFormula(f, left)],  # f case
                 [SignedFormula(f, right)],  # f case
-                [SignedFormula(e, left), SignedFormula(e, right)],  # e case (both must be e)
+                [
+                    SignedFormula(e, left),
+                    SignedFormula(e, right),
+                ],  # e case (both must be e)
             ],
         )
 
@@ -201,7 +207,10 @@ def get_disjunction_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
             conclusions=[
                 [SignedFormula(t, left)],  # t ∨ _ = t (covers t ∨ t, t ∨ f, t ∨ e)
                 [SignedFormula(t, right)],  # _ ∨ t = t (covers f ∨ t, e ∨ t, t ∨ t)
-                [SignedFormula(e, left), SignedFormula(e, right)],  # e ∨ e = e (error case)
+                [
+                    SignedFormula(e, left),
+                    SignedFormula(e, right),
+                ],  # e ∨ e = e (error case)
             ],
         )
     elif sign == f:
@@ -274,7 +283,10 @@ def get_implication_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
             conclusions=[
                 [SignedFormula(f, antecedent)],  # φ = f makes ~φ = t
                 [SignedFormula(t, consequent)],  # ψ = t
-                [SignedFormula(e, antecedent), SignedFormula(e, consequent)],  # e → e = e (error case)
+                [
+                    SignedFormula(e, antecedent),
+                    SignedFormula(e, consequent),
+                ],  # e → e = e (error case)
             ],
         )
     elif sign == f:

@@ -470,12 +470,12 @@ class TestACrQDeMorgansLaws:
     """Tests for De Morgan's Laws in ACrQ (paraconsistent system)."""
 
     def test_acrq_demorgan_basic(self):
-        """ACrQ De Morgan 1a: ¬(P(a) ∧ Q(a)) ⊬ ¬P(a) ∨ ¬Q(a) in ACrQ."""
+        """ACrQ De Morgan 1a: ¬(P(a) ∧ Q(a)) ⊢ ¬P(a) ∨ ¬Q(a) in ACrQ (after Ferguson Definition 18)."""
         stdout, _, _ = run_wkrq_command(
             ["--mode=acrq", "--inference", "~(P(a) & Q(a)) |- (~P(a) | ~Q(a))"]
         )
-        assert "✗ Invalid inference" in stdout
-        # In ACrQ, when P and Q are undefined, the inference fails
+        assert "✓ Valid inference" in stdout
+        # In ACrQ with DeMorgan transformation rules, this is now valid per Ferguson Definition 18
 
     def test_acrq_demorgan_bilateral_conversion(self):
         """ACrQ De Morgan with bilateral: ¬(P(a) ∧ Q(a)) becomes P*(a) ∨ Q*(a)."""

@@ -2,9 +2,16 @@
 ACrQ-specific tableau rules from Ferguson's Definition 18.
 
 This module implements the ACrQ tableau calculus which modifies wKrQ by:
-1. Dropping the negation elimination rule (~ rule)
+1. Dropping the general negation elimination rule (~ rule)
 2. Adding special rules for bilateral predicates (R*)
-3. Maintaining all other wKrQ rules unchanged
+3. Adding DeMorgan transformation rules for compound negations
+4. Maintaining all other wKrQ rules unchanged
+
+Includes DeMorgan transformations:
+- ~(φ ∧ ψ) → (~φ ∨ ~ψ)
+- ~(φ ∨ ψ) → (~φ ∧ ~ψ)
+- ~[∀xP(x)]Q(x) → [∃xP(x)]~Q(x)
+- ~[∃xP(x)]Q(x) → [∀xP(x)]~Q(x)
 
 Based on Ferguson (2021) Definition 18.
 """
@@ -33,18 +40,20 @@ from .wkrq_rules import (
 def get_acrq_negation_rule(signed_formula: SignedFormula) -> Optional[FergusonRule]:
     """Get ACrQ negation rule per Definition 18.
 
-    ACrQ drops the general negation elimination rule from wKrQ.
-    Only handles specific bilateral predicate cases:
+    ACrQ drops the general negation elimination rule from wKrQ but includes:
 
-    v : ~R(c₀,...,cₙ₋₁)
-    -------------------
-    v : R*(c₀,...,cₙ₋₁)
+    1. Bilateral predicate transformations:
+       v : ~R(c₀,...,cₙ₋₁) → v : R*(c₀,...,cₙ₋₁)
+       v : ~R*(c₀,...,cₙ₋₁) → v : R(c₀,...,cₙ₋₁)
 
-    v : ~R*(c₀,...,cₙ₋₁)
-    --------------------
-    v : R(c₀,...,cₙ₋₁)
+    2. Double negation elimination:
+       v : ~~φ → v : φ
 
-    Also handles: v : ~~φ → v : φ
+    3. DeMorgan transformations:
+       v : ~(φ ∧ ψ) → v : (~φ ∨ ~ψ)
+       v : ~(φ ∨ ψ) → v : (~φ ∧ ~ψ)
+       v : ~[∀xP(x)]Q(x) → v : [∃xP(x)]~Q(x)
+       v : ~[∃xP(x)]Q(x) → v : [∀xP(x)]~Q(x)
     """
     sign = signed_formula.sign
     formula = signed_formula.formula
@@ -103,8 +112,59 @@ def get_acrq_negation_rule(signed_formula: SignedFormula) -> Optional[FergusonRu
                 conclusions=[[SignedFormula(sign, negative)]],
             )
 
-    # For compound formulas other than predicates, we don't eliminate negation
-    # This is the key difference from wKrQ - no general negation elimination
+    # Handle DeMorgan transformation rules for compound formulas (Ferguson Definition 18)
+
+    # Handle negated conjunction: ~(φ ∧ ψ) → (~φ ∨ ~ψ)
+    if isinstance(subformula, CompoundFormula) and subformula.connective == "&":
+        left_neg = CompoundFormula("~", [subformula.subformulas[0]])
+        right_neg = CompoundFormula("~", [subformula.subformulas[1]])
+        demorgan_formula = CompoundFormula("|", [left_neg, right_neg])
+        return FergusonRule(
+            name=f"{sign.symbol}-demorgan-conjunction",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(sign, demorgan_formula)]],
+        )
+
+    # Handle negated disjunction: ~(φ ∨ ψ) → (~φ ∧ ~ψ)
+    if isinstance(subformula, CompoundFormula) and subformula.connective == "|":
+        left_neg = CompoundFormula("~", [subformula.subformulas[0]])
+        right_neg = CompoundFormula("~", [subformula.subformulas[1]])
+        demorgan_formula = CompoundFormula("&", [left_neg, right_neg])
+        return FergusonRule(
+            name=f"{sign.symbol}-demorgan-disjunction",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(sign, demorgan_formula)]],
+        )
+
+    # Handle negated universal quantifier: ~[∀xP(x)]Q(x) → [∃xP(x)]~Q(x)
+    if isinstance(subformula, RestrictedUniversalFormula):
+        neg_matrix = CompoundFormula("~", [subformula.matrix])
+        quantifier_demorgan = RestrictedExistentialFormula(
+            subformula.var,
+            subformula.restriction,
+            neg_matrix,
+        )
+        return FergusonRule(
+            name=f"{sign.symbol}-demorgan-universal",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(sign, quantifier_demorgan)]],
+        )
+
+    # Handle negated existential quantifier: ~[∃xP(x)]Q(x) → [∀xP(x)]~Q(x)
+    if isinstance(subformula, RestrictedExistentialFormula):
+        neg_matrix = CompoundFormula("~", [subformula.matrix])
+        universal_demorgan = RestrictedUniversalFormula(
+            subformula.var,
+            subformula.restriction,
+            neg_matrix,
+        )
+        return FergusonRule(
+            name=f"{sign.symbol}-demorgan-existential",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(sign, universal_demorgan)]],
+        )
+
+    # No other negation elimination in ACrQ
     return None
 
 

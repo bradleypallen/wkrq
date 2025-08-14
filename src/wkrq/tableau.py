@@ -634,13 +634,34 @@ class ACrQTableau(Tableau):
     def _check_contradiction(
         self, node: TableauNode, branch: Branch
     ) -> tuple[bool, Optional[int]]:
-        """Check for contradictions in ACrQ (allows gluts)."""
-        # Check if this is a bilateral glut case
+        """Check for contradictions in ACrQ using bilateral equivalence (Ferguson Lemma 5).
+
+        Per Ferguson's Lemma 5: Branches close when u:φ and v:ψ appear with
+        distinct signs where φ* = ψ* (bilateral equivalence).
+        """
+        from .bilateral_equivalence import check_acrq_closure
+
+        # Check if this is a bilateral glut case (t:R and t:R* don't close)
         if self._is_bilateral_glut(node, branch):
             return False, None  # Gluts are allowed
 
-        # Otherwise use standard contradiction checking
-        return super()._check_contradiction(node, branch)
+        # Check for bilateral equivalence closure
+        current_sign = node.formula.sign
+        current_formula = node.formula.formula
+
+        # Check against all formulas in the branch
+        for other_node_id in branch.node_ids:
+            other_node = self.nodes[other_node_id]
+            other_sign = other_node.formula.sign
+            other_formula = other_node.formula.formula
+
+            # Check if these cause closure by bilateral equivalence
+            if check_acrq_closure(
+                str(current_sign), current_formula, str(other_sign), other_formula
+            ):
+                return True, other_node_id
+
+        return False, None
 
     def _is_bilateral_glut(self, node: TableauNode, branch: Branch) -> bool:
         """Check if this node forms a bilateral glut with existing formulas."""

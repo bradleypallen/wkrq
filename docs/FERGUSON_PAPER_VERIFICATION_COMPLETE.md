@@ -59,9 +59,12 @@ After reviewing Ferguson (2021) "Tableaux and Restricted Quantification for Syst
 - Validity defined as truth preservation (Definition 6)
 
 ### 3. Restricted Quantification
+- Ferguson **rejects** standard strong/weak Kleene quantifiers (Definitions 7-8)
+- Instead uses innovative restricted quantifiers (Definition 3)
 - Quantifiers evaluate pairs ⟨restriction, matrix⟩
 - [∃xP(x)]Q(x): "There exists x such that P(x) and Q(x)"
 - [∀xP(x)]Q(x): "For all x, if P(x) then Q(x)"
+- Solves the problem where "all dogs are mammals" would be undefined due to "the number two is a dog" being meaningless
 - DeMorgan's laws fail for these quantifiers in weak Kleene
 
 ### 4. Notation Clarification

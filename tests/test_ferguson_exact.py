@@ -120,7 +120,7 @@ class TestFergusonConjunctionRules:
         assert rule.conclusions[0][1] == SignedFormula(t, q)
 
     def test_f_conjunction(self):
-        """Test f : φ ∧ ψ → branches for all ways to get f"""
+        """Test f : φ ∧ ψ → f:φ | f:ψ | (e:φ, e:ψ) per Ferguson Definition 9"""
         p = Formula.atom("p")
         q = Formula.atom("q")
         conj = p & q
@@ -130,12 +130,11 @@ class TestFergusonConjunctionRules:
 
         assert rule is not None
         assert rule.name == "f-conjunction"
-        assert len(rule.conclusions) == 4  # Four branches
-        # Should have branches for: f:p, f:q, e:p, e:q
-        assert SignedFormula(f, p) in [c[0] for c in rule.conclusions]
-        assert SignedFormula(f, q) in [c[0] for c in rule.conclusions]
-        assert SignedFormula(e, p) in [c[0] for c in rule.conclusions]
-        assert SignedFormula(e, q) in [c[0] for c in rule.conclusions]
+        assert len(rule.conclusions) == 3  # Three branches per Ferguson
+        # Should have branches for: [f:p], [f:q], [e:p, e:q]
+        assert [SignedFormula(f, p)] in rule.conclusions
+        assert [SignedFormula(f, q)] in rule.conclusions
+        assert [SignedFormula(e, p), SignedFormula(e, q)] in rule.conclusions
 
     def test_e_conjunction(self):
         """Test e : φ ∧ ψ → (e : φ) + (e : ψ)"""
@@ -157,7 +156,7 @@ class TestFergusonDisjunctionRules:
     """Test disjunction rules from Definition 9."""
 
     def test_t_disjunction(self):
-        """Test t : φ ∨ ψ → (t : φ) + (t : ψ)"""
+        """Test t : φ ∨ ψ → t:φ | t:ψ | (e:φ, e:ψ) per Ferguson Definition 9"""
         p = Formula.atom("p")
         q = Formula.atom("q")
         disj = p | q
@@ -167,9 +166,10 @@ class TestFergusonDisjunctionRules:
 
         assert rule is not None
         assert rule.name == "t-disjunction"
-        assert len(rule.conclusions) == 2  # Branching
-        assert rule.conclusions[0][0] == SignedFormula(t, p)
-        assert rule.conclusions[1][0] == SignedFormula(t, q)
+        assert len(rule.conclusions) == 3  # Three branches per Ferguson
+        assert [SignedFormula(t, p)] in rule.conclusions
+        assert [SignedFormula(t, q)] in rule.conclusions
+        assert [SignedFormula(e, p), SignedFormula(e, q)] in rule.conclusions
 
     def test_f_disjunction(self):
         """Test f : φ ∨ ψ → f : φ ○ f : ψ"""
@@ -207,7 +207,7 @@ class TestFergusonImplicationRules:
     """Test implication rules (as ~φ ∨ ψ)."""
 
     def test_t_implication(self):
-        """Test t : φ → ψ as t : ~φ ∨ ψ"""
+        """Test t : φ → ψ → f:φ | t:ψ | (e:φ, e:ψ) per Ferguson Definition 9"""
         p = Formula.atom("p")
         q = Formula.atom("q")
         impl = p.implies(q)
@@ -217,9 +217,10 @@ class TestFergusonImplicationRules:
 
         assert rule is not None
         assert rule.name == "t-implication"
-        assert len(rule.conclusions) == 2  # Branching
-        assert rule.conclusions[0][0] == SignedFormula(f, p)  # ~φ = t means φ = f
-        assert rule.conclusions[1][0] == SignedFormula(t, q)
+        assert len(rule.conclusions) == 3  # Three branches per Ferguson
+        assert [SignedFormula(f, p)] in rule.conclusions
+        assert [SignedFormula(t, q)] in rule.conclusions
+        assert [SignedFormula(e, p), SignedFormula(e, q)] in rule.conclusions
 
     def test_f_implication(self):
         """Test f : φ → ψ as f : ~φ ∨ ψ"""
