@@ -74,7 +74,8 @@ def get_negation_rule(signed_formula: SignedFormula) -> Optional[FergusonRule]:
         )
     elif sign == m:
         # m : ~φ means both t : ~φ and f : ~φ are possible
-        # This branches to: (f : φ) + (t : φ)
+        # t : ~φ → f : φ and f : ~φ → t : φ
+        # So m : ~φ → (f : φ) + (t : φ)
         return FergusonRule(
             name="m-negation",
             premise=signed_formula,
@@ -85,7 +86,8 @@ def get_negation_rule(signed_formula: SignedFormula) -> Optional[FergusonRule]:
         )
     elif sign == n:
         # n : ~φ means both f : ~φ and e : ~φ are possible
-        # This branches to: (t : φ) + (e : φ)
+        # f : ~φ → t : φ and e : ~φ → e : φ
+        # So n : ~φ → (t : φ) + (e : φ)
         return FergusonRule(
             name="n-negation",
             premise=signed_formula,
@@ -123,17 +125,14 @@ def get_conjunction_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
         )
     elif sign == f:
         # f : φ ∧ ψ → branches for all ways to get f
-        # f ∧ t = f, t ∧ f = f, f ∧ f = f, f ∧ e = e, e ∧ f = e, e ∧ e = e
-        # But in weak Kleene, any operation with e gives e, so we need:
-        # (f : φ) + (f : ψ) + (e : φ) + (e : ψ)
+        # Per Ferguson Definition 9: f:(φ ∧ ψ) → f:φ | f:ψ | (e:φ, e:ψ)
         return FergusonRule(
             name="f-conjunction",
             premise=signed_formula,
             conclusions=[
                 [SignedFormula(f, left)],  # f ∧ _ = f
                 [SignedFormula(f, right)],  # _ ∧ f = f
-                [SignedFormula(e, left)],  # e ∧ _ = e
-                [SignedFormula(e, right)],  # _ ∧ e = e
+                [SignedFormula(e, left), SignedFormula(e, right)],  # e ∧ e = e (both must be e)
             ],
         )
     elif sign == e:
@@ -160,15 +159,15 @@ def get_conjunction_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
         )
     elif sign == n:
         # n : φ ∧ ψ means both f and e are possible
-        # Combines f and e cases
+        # Per Ferguson Definition 9: n:(φ ∧ ψ) → f:φ | f:ψ | (e:φ, e:ψ)
+        # This combines the f and e cases
         return FergusonRule(
             name="n-conjunction",
             premise=signed_formula,
             conclusions=[
-                [SignedFormula(f, left)],
-                [SignedFormula(f, right)],
-                [SignedFormula(e, left)],
-                [SignedFormula(e, right)],
+                [SignedFormula(f, left)],  # f case
+                [SignedFormula(f, right)],  # f case
+                [SignedFormula(e, left), SignedFormula(e, right)],  # e case (both must be e)
             ],
         )
 
@@ -193,14 +192,16 @@ def get_disjunction_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
 
     if sign == t:
         # t : φ ∨ ψ → branches for all ways to get t
-        # t ∨ t = t, t ∨ f = t, f ∨ t = t
-        # But in weak Kleene, t ∨ e = e, so we only get t from non-e values
+        # In weak Kleene: t ∨ t = t, t ∨ f = t, f ∨ t = t, t ∨ e = e, e ∨ t = e
+        # But we also need to consider e ∨ e = e case for completeness
+        # Per Ferguson, we need: t : φ | t : ψ | (e : φ, e : ψ)
         return FergusonRule(
             name="t-disjunction",
             premise=signed_formula,
             conclusions=[
-                [SignedFormula(t, left)],  # t ∨ _ = t
-                [SignedFormula(t, right)],  # _ ∨ t = t
+                [SignedFormula(t, left)],  # t ∨ _ = t (covers t ∨ t, t ∨ f, t ∨ e)
+                [SignedFormula(t, right)],  # _ ∨ t = t (covers f ∨ t, e ∨ t, t ∨ t)
+                [SignedFormula(e, left), SignedFormula(e, right)],  # e ∨ e = e (error case)
             ],
         )
     elif sign == f:
@@ -264,12 +265,16 @@ def get_implication_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
     if sign == t:
         # t : φ → ψ means ~φ ∨ ψ = t
         # This happens when: ~φ = t (i.e., φ = f) or ψ = t
+        # But we also need the error case: both φ and ψ are e
+        # Since e → e = e (not t), this branch will close
+        # Per Ferguson, we need: f : φ | t : ψ | (e : φ, e : ψ)
         return FergusonRule(
             name="t-implication",
             premise=signed_formula,
             conclusions=[
                 [SignedFormula(f, antecedent)],  # φ = f makes ~φ = t
                 [SignedFormula(t, consequent)],  # ψ = t
+                [SignedFormula(e, antecedent), SignedFormula(e, consequent)],  # e → e = e (error case)
             ],
         )
     elif sign == f:
