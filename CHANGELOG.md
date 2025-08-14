@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-08-14
+
+### Added
+
+- **ACrQ System (Ferguson Definition 18)** - Complete implementation of paraconsistent bilateral logic
+  - New `--mode acrq` CLI option to select ACrQ tableau calculus
+  - Bilateral predicates with R/R* duality for handling contradictions
+  - DeMorgan transformation rules for compound negations
+  - Quantifier DeMorgan rules: ~[∀x P(x)]Q(x) → [∃x P(x)]~Q(x)
+  - Glut-tolerant closure conditions per Ferguson's Lemma 5
+  - Three parsing modes: Transparent (default), Bilateral, Mixed
+- **Bilateral Equivalence Module** - New `bilateral_equivalence.py` for ACrQ closure checking
+  - Implements φ* transformation to bilateral form
+  - Checks bilateral equivalence for branch closure
+  - Supports Ferguson's extended closure conditions
+- **Comprehensive Test Suite** - 584 tests validating both wKrQ and ACrQ
+  - DeMorgan transformation tests
+  - Bilateral predicate tests
+  - Ferguson compliance validation
+  - Performance regression tests
+
+### Fixed
+
+- **Critical: Error Branches** - Fixed missing error branches in tableau rules
+  - t-disjunction now correctly generates (e:P, e:Q) branch
+  - t-implication now correctly generates (e:P, e:Q) branch
+  - Essential for weak Kleene completeness
+- **Test Expectations** - Corrected tests expecting classical logic properties
+  - P→P is NOT valid in weak Kleene (can be undefined)
+  - Modus ponens is NOT valid in weak Kleene
+  - Double negation elimination does NOT hold
+- **Performance Thresholds** - Adjusted for correct error branching
+  - Node counts increased due to additional error branches
+  - Thresholds updated to reflect correct implementation
+
+### Changed
+
+- **Test Organization** - Converted xfailed tests for fixed bugs to regular tests
+  - 4 critical bug tests now pass normally
+  - 2 tests remain xfailed documenting deliberate simplifications
+- **Import Organization** - Fixed import sorting and unused imports throughout
+
 ## [2.1.0] - 2025-08-12
 
 ### Added

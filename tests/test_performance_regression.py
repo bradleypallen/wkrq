@@ -189,7 +189,7 @@ class TestScalabilityBenchmarks:
         elapsed = (end - start) * 1000
 
         assert result.satisfiable, "CNF formula should be satisfiable"
-        assert elapsed < 200.0, f"CNF formula time {elapsed:.3f}ms should be < 200ms"
+        assert elapsed < 500.0, f"CNF formula time {elapsed:.3f}ms should be < 500ms"
         assert (
             result.total_nodes < 1000  # With error branches, more nodes expected
         ), f"Node count {result.total_nodes} should be reasonable"
