@@ -2,7 +2,7 @@
 """
 ACrQ (Analytic Containment with restricted Quantification) Demo
 
-This demonstrates the ACrQ tableau system from Ferguson (2021) Definition 18.
+This demonstrates the ACrQ tableau system (Definition 18 in the formal specs).
 ACrQ extends wKrQ with bilateral predicates for paraconsistent reasoning.
 """
 
@@ -30,7 +30,7 @@ def demonstrate_acrq():
     """Demonstrate key features of ACrQ."""
 
     print("ACrQ DEMONSTRATION")
-    print("Based on Ferguson (2021) Definition 18")
+    print("Bilateral Logic with Paraconsistent Reasoning")
 
     # 1. Negation elimination is dropped
     print_section("1. ACrQ drops general negation elimination")
@@ -126,7 +126,7 @@ def demonstrate_acrq():
     print("3. Gluts allowed: R(x) ∧ R*(x) is satisfiable")
     print("4. Gaps allowed: ¬R(x) ∧ ¬R*(x) is satisfiable")
     print("5. Paraconsistent: contradictions don't explode")
-    print("6. Based on Ferguson (2021) Definition 18")
+    print("6. Based on formal Definition 18 specification")
 
 
 if __name__ == "__main__":

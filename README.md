@@ -1,6 +1,6 @@
 # wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
-[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=3.1.0)](https://badge.fury.io/py/wkrq)
+[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=3.1.1)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
@@ -78,12 +78,12 @@ wkrq "[∀X Human(X)]Mortal(X)"
 wkrq "[exists X Student(X)]Human(X)"
 wkrq "[forall X Human(X)]Mortal(X)"
 
-# Inference checking
-wkrq --inference "p & q |- p"
-wkrq --inference "[forall X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
+# Inference checking (uses |- turnstile syntax)
+wkrq "p & q |- p"
+wkrq "[forall X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
 
 # ACrQ paraconsistent reasoning (handles contradictions gracefully)
-wkrq "Human(x) & ~Human(x)"  # Shows paraconsistent model with "glut"
+wkrq --mode=acrq "Human(alice) & ~Human(alice)"  # Satisfiable with glut!
 ```
 
 ### Python API
@@ -114,13 +114,13 @@ print(f"Can be undefined: {result.satisfiable}")  # True
 from wkrq import parse_acrq_formula, SyntaxMode
 
 # Handle contradictions gracefully (no explosion)
-contradiction = parse_acrq_formula("Human(x) & ~Human(x)")
+contradiction = parse_acrq_formula("Human(alice) & ~Human(alice)")
 result = solve(contradiction, t)
 print(f"Contradiction satisfiable: {result.satisfiable}")  # True (glut allowed)
 
 # Different syntax modes for ACrQ
-transparent = parse_acrq_formula("~Human(x)", SyntaxMode.TRANSPARENT)  # Standard syntax
-bilateral = parse_acrq_formula("Human*(x)", SyntaxMode.BILATERAL)      # Explicit bilateral
+transparent = parse_acrq_formula("~Human(alice)", SyntaxMode.TRANSPARENT)  # Standard syntax
+bilateral = parse_acrq_formula("Human*(alice)", SyntaxMode.BILATERAL)      # Explicit bilateral
 
 # LLM Integration (requires pip install wkrq[llm])
 from wkrq import create_openai_evaluator, ACrQTableau
@@ -239,13 +239,13 @@ ACrQ extends wKrQ with **bilateral predicates** for paraconsistent and paracompl
 from wkrq import parse_acrq_formula, SyntaxMode
 
 # Transparent mode (default): Standard syntax, automatic translation
-formula1 = parse_acrq_formula("Human(x) & ~Human(x)")  # Handles gluts
+formula1 = parse_acrq_formula("Human(alice) & ~Human(alice)")  # Handles gluts
 
 # Bilateral mode: Explicit R/R* syntax required
-formula2 = parse_acrq_formula("Human(x) & Human*(x)", SyntaxMode.BILATERAL)
+formula2 = parse_acrq_formula("Human(alice) & Human*(alice)", SyntaxMode.BILATERAL)
 
 # Mixed mode: Both syntaxes allowed
-formula3 = parse_acrq_formula("Human(x) & Robot*(y)", SyntaxMode.MIXED)
+formula3 = parse_acrq_formula("Human(alice) & Robot*(bob)", SyntaxMode.MIXED)
 ```
 
 ### Information States

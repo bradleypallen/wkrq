@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2025-08-15
+
+### Fixed
+
+- **CLI Help Examples** - Corrected all examples in `wkrq --help`
+  - Fixed variable naming: uppercase for variables (X, Y, Z), lowercase for constants (alice, bob, socrates)
+  - Changed `--sign=M` to `--sign=m` (lowercase)
+  - Fixed quantified inference examples to use proper restricted quantification syntax
+  - Removed incorrect `--inference` flag usage; now uses `|-` turnstile syntax directly
+  - Fixed ACrQ examples to include `--mode=acrq` where needed
+
+- **README Examples** - Updated all code examples to match corrected CLI usage
+  - Fixed inference examples to use turnstile syntax without `--inference` flag
+  - Corrected variable/constant naming throughout documentation
+  - Updated ACrQ examples with proper mode specification
+
+- **Demo Files** - Removed personal references and made demos generic
+  - Renamed `acrq_demo_ferguson_final.py` to `acrq_demo_complete.py`
+  - Renamed `ferguson_validation_demo.py` to `wkrq_validation_demo.py`
+  - Updated all demo files to reference formal specifications rather than individuals
+  - Enhanced ACrQ demos with detailed reasoning traces showing LLM impact
+
+### Added
+
+- **Verbose CLI Examples** - Added comprehensive tableau visualization examples
+  - Examples with `--tree --show-rules` to display rule applications
+  - Unicode tree formatting examples
+  - Construction trace examples with `--trace` and `--trace-verbose`
+  - Examples showing quantifier rule applications and ACrQ bilateral transformations
+
 ## [3.1.0] - 2025-08-14
 
 ### Added

@@ -325,19 +325,35 @@ def create_argument_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  wkrq "p & ~p"                    # Test satisfiability
-  wkrq --sign=M "p | ~p"           # Test with M sign
-  wkrq "p, p -> q |- q"            # Test inference validity
+  # Basic propositional logic
+  wkrq "p & ~p"                    # Test satisfiability (contradiction)
+  wkrq --sign=m "p | ~p"           # Test with m sign (meaningful)
+  wkrq "p, p -> q |- q"            # Test inference validity (modus ponens)
   wkrq --inference "p, p -> q, q"  # Last item is conclusion when using --inference
   wkrq --tree "p & (q | r)"        # Show tableau tree
   wkrq --models "p | q"            # Show all models
   wkrq --tree --format=unicode "p -> q"  # Unicode tree display
 
-  # ACrQ mode (bilateral predicates)
-  wkrq --mode=acrq "Human(alice) & ¬Human(alice)"  # Transparent mode (default)
-  wkrq --mode=acrq --syntax=bilateral "Human*(alice)"  # Bilateral mode
-  wkrq --mode=acrq "Human(x) -> Nice(x), Human(alice) |- Nice(alice)"  # Inference
-  wkrq --mode=acrq --inference "P(a), ~P(a), Q(b)"  # ACrQ inference with --inference flag
+  # Quantified formulas (use uppercase for variables)
+  wkrq "[forall X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
+  wkrq "[exists X Student(X)]Smart(X)"  # Existential quantification
+
+  # ACrQ mode (bilateral predicates for paraconsistent reasoning)
+  wkrq --mode=acrq "Human(alice) & ~Human(alice)"  # Glut (satisfiable in ACrQ)
+  wkrq --mode=acrq --syntax=bilateral "Human*(alice)"  # Bilateral predicate
+  wkrq --mode=acrq "[forall X Human(X)]Nice(X), Human(alice) |- Nice(alice)"
+  wkrq --mode=acrq "P(a), ~P(a) |- P(a) | ~P(a)"  # Paraconsistent (no explosion)
+
+  # Verbose tableau tree displays
+  wkrq --tree --show-rules "p & (q | r)"  # Show rules applied at each node
+  wkrq --tree --show-rules --format=unicode "p -> q"  # Unicode with rules
+  wkrq --tree --highlight-closures "p & ~p"  # Highlight branch closures
+  wkrq --tree --show-rules "[forall X P(X)]Q(X), P(a) |- Q(a)"  # Quantifier rules
+  wkrq --mode=acrq --tree --show-rules "P(a) & ~P(a)"  # ACrQ bilateral transformation
+
+  # Trace construction (step-by-step)
+  wkrq --trace "p | (q & r)"  # Show construction trace
+  wkrq --trace-verbose "[exists X P(X)]Q(X)"  # Verbose trace with details
         """,
     )
 

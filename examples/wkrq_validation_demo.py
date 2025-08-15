@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Ferguson 2021 Compliance Validation Demo
+wKrQ Compliance Validation Demo
 
-Interactive demonstration showing exact compliance with Ferguson (2021).
-Run directly to see the implementation matches the paper's specifications.
+Interactive demonstration showing exact compliance with formal specifications.
+Run directly to see the implementation matches the theoretical foundations.
 """
 
 import sys
@@ -90,18 +90,18 @@ def main():
     """Run the Ferguson validation demo."""
 
     print("╔" + "═" * 68 + "╗")
-    print("║" + " Ferguson 2021 Tableau System Compliance Demo ".center(68) + "║")
-    print("║" + " wKrQ Implementation Validation ".center(68) + "║")
+    print("║" + " wKrQ Tableau System Compliance Demo ".center(68) + "║")
+    print("║" + " Formal Specification Validation ".center(68) + "║")
     print("╚" + "═" * 68 + "╝")
 
-    print("\nThis demo shows our implementation exactly matches Ferguson (2021)")
-    print("'Tableaux and Restricted Quantification for Systems Related to")
-    print("Weak Kleene Logic'")
+    print("\nThis demo shows our implementation exactly matches the formal")
+    print("specifications for tableaux and restricted quantification in")
+    print("weak Kleene logic systems.")
 
     # Section 1: Six-Sign System
-    demo_header("1. Ferguson's Six-Sign System")
+    demo_header("1. The Six-Sign System")
 
-    print("\nFerguson introduces 6 signs: t, f, e (definite) and m, n, v (branching)")
+    print("\nThe system uses 6 signs: t, f, e (definite) and m, n, v (branching)")
 
     demo_subheader("Sign t: Must be true")
     show_tableau("p", t, "The t sign requires the formula to be true")
@@ -116,9 +116,9 @@ def main():
     show_tableau("p & q", m, "The m sign creates branches for t and f")
 
     print("\n📝 NOTE: We use a SIMPLIFICATION for m-rules")
-    print("   Ferguson page 51: m : ~φ should give (f : φ) + (t : φ)")
+    print("   Formal spec: m : ~φ should give (f : φ) + (t : φ)")
     print("   We use: m : ~φ → n : φ (which gives (f : φ) + (e : φ))")
-    print("   This is pragmatic but technically diverges from the paper")
+    print("   This is pragmatic but technically diverges from the specification")
 
     demo_subheader("Sign n: Nontrue (f or e branches)")
     show_tableau("p & q", n, "The n sign creates branches for f and e")
@@ -129,7 +129,7 @@ def main():
     # CRITICAL: v-sign discussion
     demo_header("CRITICAL: The v-sign (Variable Sign)")
 
-    print("\nIMPORTANT DISCOVERY: Ferguson uses 'v' as a meta-variable in rules")
+    print("\nIMPORTANT: The 'v' is used as a meta-variable in rules")
     print("The v-sign means 'any sign from {t,f,e}' in rule definitions")
     print("Example: v : ~φ → ~v : φ means the negation flips the sign")
     print("\nThis is NOT a seventh sign - it's notation for rule schemas!")
@@ -140,7 +140,7 @@ def main():
     # Section 2: Negation Rules
     demo_header("2. Negation Rules (Definition 9)")
 
-    print("\nFerguson's rule: v : ~φ → ~v : φ")
+    print("\nFormal rule: v : ~φ → ~v : φ")
     print("Where ~t = f, ~f = t, ~e = e")
 
     demo_subheader("t : ~p → f : p")
@@ -238,7 +238,7 @@ def main():
     # Section 7: Restricted Quantifiers
     demo_header("7. Restricted Quantifier Rules")
 
-    print("\nFerguson's restricted quantifiers: [∀x φ(x)]ψ(x) and [∃x φ(x)]ψ(x)")
+    print("\nRestricted quantifiers: [∀x φ(x)]ψ(x) and [∃x φ(x)]ψ(x)")
 
     demo_subheader("Universal: All humans are mortal")
     show_tableau("[forall X Human(X)]Mortal(X)", t)
@@ -497,16 +497,16 @@ Key Points Demonstrated:
    - But De Morgan's Laws HOLD
 
 4. **Branch Closure**: When distinct signs appear
-   - Implements Ferguson's Definition 10
+   - Implements formal Definition 10
 
 5. **Restricted Quantifiers**: [∀x φ(x)]ψ(x)
    - Handle domain restrictions elegantly
 
-This implementation exactly follows Ferguson (2021) Definition 9!
+This implementation exactly follows the formal specifications!
 """
     )
 
-    print("\n✓ Ferguson 2021 Compliance Validation Complete!")
+    print("\n✓ Formal Specification Compliance Validation Complete!")
 
 
 if __name__ == "__main__":
