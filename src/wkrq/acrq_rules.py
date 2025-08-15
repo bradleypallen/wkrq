@@ -26,7 +26,7 @@ from .formula import (
     RestrictedExistentialFormula,
     RestrictedUniversalFormula,
 )
-from .signs import SignedFormula
+from .signs import SignedFormula, e, f, m, n, t
 from .wkrq_rules import (
     FergusonRule,
     get_conjunction_rule,
@@ -222,9 +222,23 @@ def get_acrq_rule(
     plus special handling for bilateral predicates.
     """
     formula = signed_formula.formula
+    sign = signed_formula.sign
 
     # Handle bilateral predicates - they are atomic
     if isinstance(formula, BilateralPredicateFormula):
+        # But still need to handle meta-signs!
+        if sign == m:
+            return FergusonRule(
+                name="m-bilateral",
+                premise=signed_formula,
+                conclusions=[[SignedFormula(t, formula)], [SignedFormula(f, formula)]],
+            )
+        elif sign == n:
+            return FergusonRule(
+                name="n-bilateral",
+                premise=signed_formula,
+                conclusions=[[SignedFormula(f, formula)], [SignedFormula(e, formula)]],
+            )
         return None
 
     # Try compound formula rules
@@ -249,5 +263,19 @@ def get_acrq_rule(
         if const is None:
             return None
         return get_restricted_universal_rule(signed_formula, const)
+
+    # Handle meta-signs on other atomic formulas (predicates, propositions)
+    if sign == m:
+        return FergusonRule(
+            name="m-atomic",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(t, formula)], [SignedFormula(f, formula)]],
+        )
+    elif sign == n:
+        return FergusonRule(
+            name="n-atomic",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(f, formula)], [SignedFormula(e, formula)]],
+        )
 
     return None

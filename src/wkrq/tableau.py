@@ -907,20 +907,24 @@ def valid(formula: Formula) -> bool:
 
 
 def entails(premises: list[Formula], conclusion: Formula) -> bool:
-    """Check if premises entail conclusion."""
-    from .formula import Conjunction, Negation
+    """Check if premises entail conclusion using Ferguson Definition 11.
 
+    Definition 11: {φ₀, ..., φₙ₋₁} ⊢wKrQ φ when every branch of a tableau T
+    with initial nodes {t : φ₀, ..., t : φₙ₋₁, n : φ} closes.
+    """
     if not premises:
         # Empty premises, check if conclusion is valid
         return valid(conclusion)
 
-    # Combine premises
-    combined_premises = premises[0]
-    for p in premises[1:]:
-        combined_premises = Conjunction(combined_premises, p)
+    # Ferguson Definition 11: Start with t:premises and n:conclusion
+    signed_formulas = []
+    for premise in premises:
+        signed_formulas.append(SignedFormula(t, premise))
+    signed_formulas.append(SignedFormula(n, conclusion))
 
-    # Test satisfiability of premises & ~conclusion
-    test_formula = Conjunction(combined_premises, Negation(conclusion))
-    result = solve(test_formula, t)
+    # Create tableau and check if all branches close
+    tableau = WKrQTableau(signed_formulas)
+    result = tableau.construct()
 
+    # Entailment holds if tableau is unsatisfiable (all branches closed)
     return not result.satisfiable

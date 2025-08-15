@@ -1,38 +1,53 @@
-# wKrQ Documentation
+# wKrQ/ACrQ Documentation
 
-**wKrQ** (weak Kleene logic with restricted quantification) is a three-valued logic system with restricted quantifiers for first-order reasoning, based on Ferguson (2021).
+This directory contains the essential documentation for understanding and using the wKrQ/ACrQ tableau systems for weak Kleene logic with restricted quantification.
 
-## Quick Start
+## Essential Documentation (Start Here)
 
-```bash
-# Install
-pip install wkrq
+### System Architecture & Implementation
+1. **[ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md)** - Complete system architecture with diagrams and pseudo-code
+2. **[SOUNDNESS_COMPLETENESS_UPDATE.md](SOUNDNESS_COMPLETENESS_UPDATE.md)** - Current soundness and completeness properties
+3. **[IMPLEMENTATION_VERIFICATION.md](IMPLEMENTATION_VERIFICATION.md)** - Detailed rule-by-rule verification and known limitations
 
-# Test a formula
-wkrq "p & ~p"                    # Contradiction (unsatisfiable)
-wkrq "p | ~p"                    # Tautology in classical logic
-wkrq --tree "p -> q"             # Show tableau proof tree
+### Ferguson (2021) Paper Analysis
+4. **[FERGUSON_DEFINITIONS.md](FERGUSON_DEFINITIONS.md)** - Consolidated definitions from the paper (Definitions 9, 10, 11, 17, 18, Lemma 5)
+5. **[FERGUSON_QUANTIFIER_DEFINITIONS.md](FERGUSON_QUANTIFIER_DEFINITIONS.md)** - Detailed restricted quantifier semantics and rules
+6. **[FERGUSON_DEFINITION_9_COMPLETE.md](FERGUSON_DEFINITION_9_COMPLETE.md)** - Complete wKrQ tableau rules with annotations
+7. **[FERGUSON_THEOREMS_3_4_ACRQ.md](FERGUSON_THEOREMS_3_4_ACRQ.md)** - Soundness and completeness theorems
 
-# Test an inference
-wkrq "p, p -> q |- q"            # Modus ponens (valid)
+### Bilateral Logic & ACrQ
+8. **[FERGUSON_DEFINITION_17_BILATERAL.md](FERGUSON_DEFINITION_17_BILATERAL.md)** - Bilateral translation rules
+9. **[FERGUSON_DEFINITION_18_ACRQ.md](FERGUSON_DEFINITION_18_ACRQ.md)** - ACrQ as modified wKrQ
+10. **[FERGUSON_LEMMA_5_CLOSURE.md](FERGUSON_LEMMA_5_CLOSURE.md)** - Bilateral closure conditions
+11. **[BILATERAL_EQUIVALENCE_IMPLEMENTATION.md](BILATERAL_EQUIVALENCE_IMPLEMENTATION.md)** - Implementation details
 
-# ACrQ mode (paraconsistent with bilateral predicates)
-wkrq --mode=acrq "Human(x) & ~Human(x)"  # Glut allowed!
-```
+### User Documentation
+12. **[API.md](API.md)** - Python API reference
+13. **[CLI.md](CLI.md)** - Command-line interface guide
+14. **[EXAMPLES.md](EXAMPLES.md)** - Usage examples and tutorials
 
-## Documentation
+### Specialized Topics
+15. **[DEMORGAN_IMPLEMENTATION_COMPLETE.md](DEMORGAN_IMPLEMENTATION_COMPLETE.md)** - DeMorgan laws in ACrQ
+16. **[LLM_RULE_FORMAL_SPECIFICATION.md](LLM_RULE_FORMAL_SPECIFICATION.md)** - LLM integration for predicate evaluation
 
-- **[API.md](API.md)** - Complete API reference for Python usage
-- **[CLI.md](CLI.md)** - Command-line interface guide
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and Ferguson compliance
-- **[EXAMPLES.md](EXAMPLES.md)** - Usage patterns and examples
+## Quick Start Guide
+
+### If you're new to the system:
+1. Read [ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md) for the big picture
+2. Review [EXAMPLES.md](EXAMPLES.md) for practical usage
+3. Check [API.md](API.md) or [CLI.md](CLI.md) depending on your use case
+
+### For theoretical understanding:
+1. Start with [FERGUSON_DEFINITIONS.md](FERGUSON_DEFINITIONS.md) for core concepts
+2. Read [SOUNDNESS_COMPLETENESS_UPDATE.md](SOUNDNESS_COMPLETENESS_UPDATE.md) for theoretical properties
+3. Review [IMPLEMENTATION_VERIFICATION.md](IMPLEMENTATION_VERIFICATION.md) for implementation details
 
 ## System Overview
 
 ### wKrQ (Standard System)
 - Three-valued logic: `t` (true), `f` (false), `e` (undefined/error)
 - Weak Kleene semantics: any operation with undefined yields undefined
-- No tautologies: every formula can be undefined when inputs are undefined
+- No classical tautologies: `p ∨ ¬p` can be undefined
 - Restricted quantification: `[∃x P(x)]Q(x)` and `[∀x P(x)]Q(x)`
 - Ferguson's 6-sign tableau system: `t`, `f`, `e`, `m`, `n`, `v`
 

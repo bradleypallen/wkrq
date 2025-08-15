@@ -513,13 +513,25 @@ class TestRuleNonApplication:
     """Test that rules don't fire when they shouldn't."""
 
     def test_atomic_formula_no_rules(self):
-        """Atomic formulas should not trigger logical rules."""
+        """Atomic formulas should not trigger logical rules except meta-signs."""
         p = PredicateFormula("P", [Constant("a")])
 
-        for sign in [t, f, e, m, n]:
+        # t, f, e signs have no rules for atomic formulas
+        for sign in [t, f, e]:
             signed = SignedFormula(sign, p)
             rule = get_wkrq_rule(signed, lambda: Constant("c1"))
             assert rule is None, f"No rule should apply to {sign}: P(a)"
+
+        # m and n meta-signs must expand even for atomic formulas (Ferguson completeness)
+        signed_m = SignedFormula(m, p)
+        rule_m = get_wkrq_rule(signed_m, lambda: Constant("c1"))
+        assert rule_m is not None, "m-sign should expand for atomic formulas"
+        assert rule_m.name == "m-atomic"
+
+        signed_n = SignedFormula(n, p)
+        rule_n = get_wkrq_rule(signed_n, lambda: Constant("c1"))
+        assert rule_n is not None, "n-sign should expand for atomic formulas"
+        assert rule_n.name == "n-atomic"
 
     def test_wrong_sign_no_rule(self):
         """Rules should not fire for wrong signs."""

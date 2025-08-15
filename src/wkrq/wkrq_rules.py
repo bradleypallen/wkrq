@@ -198,19 +198,19 @@ def get_disjunction_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
 
     if sign == t:
         # t : φ ∨ ψ → branches for all ways to get t
-        # In weak Kleene: t ∨ t = t, t ∨ f = t, f ∨ t = t, t ∨ e = e, e ∨ t = e
-        # But we also need to consider e ∨ e = e case for completeness
-        # Per Ferguson, we need: t : φ | t : ψ | (e : φ, e : ψ)
+        # Per Ferguson Definition 9: t:φ | t:ψ | (e:φ, e:ψ)
+        # The (e,e) branch is included for completeness even though it contradicts t:(φ∨ψ)
+        # This ensures we explore all valuations systematically
         return FergusonRule(
             name="t-disjunction",
             premise=signed_formula,
             conclusions=[
-                [SignedFormula(t, left)],  # t ∨ _ = t (covers t ∨ t, t ∨ f, t ∨ e)
-                [SignedFormula(t, right)],  # _ ∨ t = t (covers f ∨ t, e ∨ t, t ∨ t)
+                [SignedFormula(t, left)],  # t ∨ _ = t
+                [SignedFormula(t, right)],  # _ ∨ t = t
                 [
                     SignedFormula(e, left),
                     SignedFormula(e, right),
-                ],  # e ∨ e = e (error case)
+                ],  # e ∨ e = e (will close)
             ],
         )
     elif sign == f:
@@ -273,10 +273,9 @@ def get_implication_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
 
     if sign == t:
         # t : φ → ψ means ~φ ∨ ψ = t
-        # This happens when: ~φ = t (i.e., φ = f) or ψ = t
-        # But we also need the error case: both φ and ψ are e
-        # Since e → e = e (not t), this branch will close
-        # Per Ferguson, we need: f : φ | t : ψ | (e : φ, e : ψ)
+        # Per Ferguson Definition 9: f:φ | t:ψ | (e:φ, e:ψ)
+        # The (e,e) branch is included for completeness even though e→e = e
+        # This branch will close due to contradiction with t:(φ→ψ)
         return FergusonRule(
             name="t-implication",
             premise=signed_formula,
@@ -286,7 +285,7 @@ def get_implication_rule(signed_formula: SignedFormula) -> Optional[FergusonRule
                 [
                     SignedFormula(e, antecedent),
                     SignedFormula(e, consequent),
-                ],  # e → e = e (error case)
+                ],  # e→e = e (will close)
             ],
         )
     elif sign == f:
@@ -511,7 +510,9 @@ def get_restricted_existential_rule(
 
 
 def get_restricted_universal_rule(
-    signed_formula: SignedFormula, instantiation_constant: Constant
+    signed_formula: SignedFormula,
+    instantiation_constant: Constant,
+    additional_fresh_constant: Optional[Constant] = None,
 ) -> Optional[FergusonRule]:
     """Get restricted universal quantifier rule per Ferguson Definition 9.
 
@@ -587,16 +588,39 @@ def get_restricted_universal_rule(
         )
     elif sign == n:
         # n branches to both f and e cases
+        conclusions = [
+            # f case with given constant
+            [SignedFormula(t, restriction_inst), SignedFormula(f, matrix_inst)],
+            # e cases with given constant
+            [SignedFormula(e, restriction_inst)],
+            [SignedFormula(e, matrix_inst)],
+        ]
+
+        # If we have an additional fresh constant, add branches for it too
+        if additional_fresh_constant:
+            fresh_restriction = formula.restriction.substitute_term(
+                {formula.var.name: additional_fresh_constant}
+            )
+            fresh_matrix = formula.matrix.substitute_term(
+                {formula.var.name: additional_fresh_constant}
+            )
+            conclusions.extend(
+                [
+                    # f case with fresh constant
+                    [
+                        SignedFormula(t, fresh_restriction),
+                        SignedFormula(f, fresh_matrix),
+                    ],
+                    # e cases with fresh constant
+                    [SignedFormula(e, fresh_restriction)],
+                    [SignedFormula(e, fresh_matrix)],
+                ]
+            )
+
         return FergusonRule(
             name="n-restricted-forall",
             premise=signed_formula,
-            conclusions=[
-                # f case
-                [SignedFormula(t, restriction_inst), SignedFormula(f, matrix_inst)],
-                # e case
-                [SignedFormula(e, restriction_inst)],
-                [SignedFormula(e, matrix_inst)],
-            ],
+            conclusions=conclusions,
             instantiation_constant=instantiation_constant.name,
         )
 
@@ -668,6 +692,7 @@ def get_applicable_rule(
 ) -> Optional[FergusonRule]:
     """Get the applicable Ferguson rule for a signed formula."""
     formula = signed_formula.formula
+    sign = signed_formula.sign
 
     # Try compound formula rules
     if isinstance(formula, CompoundFormula):
@@ -696,8 +721,25 @@ def get_applicable_rule(
             # First f-case instantiation - always use fresh to avoid the bug
             # where existential witnesses are incorrectly reused
             const = fresh_constant_generator()
+        elif signed_formula.sign == n:
+            # n-sign needs to find counterexamples (false or undefined cases)
+            # Special handling: on first application, try BOTH existing and fresh constants
+
+            if used_constants and len(used_constants) > 0:
+                # Already applied once, don't apply again to prevent infinite loop
+                return None
+
+            if existing_constants:
+                # Use first existing constant and also generate a fresh one
+                const = Constant(existing_constants[0])
+                # Generate fresh constant for additional branches
+                fresh = fresh_constant_generator()
+                return get_restricted_universal_rule(signed_formula, const, fresh)
+            else:
+                # No existing constants, just use fresh
+                const = fresh_constant_generator()
         else:
-            # For other cases (t, e, m, n), use standard logic
+            # For other cases (t, e, m), use standard logic
             maybe_const = _get_universal_constant(
                 existing_constants, used_constants, fresh_constant_generator
             )
@@ -706,4 +748,22 @@ def get_applicable_rule(
             const = maybe_const
         return get_restricted_universal_rule(signed_formula, const)
 
+    # Handle meta-signs on atomic formulas
+    # CRITICAL: m and n signs must be expanded even for atomic formulas!
+    if sign == m:
+        # m:φ branches to (t:φ) | (f:φ)
+        return FergusonRule(
+            name="m-atomic",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(t, formula)], [SignedFormula(f, formula)]],
+        )
+    elif sign == n:
+        # n:φ branches to (f:φ) | (e:φ)
+        return FergusonRule(
+            name="n-atomic",
+            premise=signed_formula,
+            conclusions=[[SignedFormula(f, formula)], [SignedFormula(e, formula)]],
+        )
+
+    # No rule for t, f, e on atomic formulas
     return None

@@ -34,7 +34,10 @@ def check_inference(
     inference: Inference, consequence: str = "strong", trace: bool = False
 ) -> InferenceResult:
     """
-    Test the validity of an inference.
+    Test the validity of an inference using Ferguson Definition 11.
+
+    Definition 11: {φ₀, ..., φₙ₋₁} ⊢wKrQ φ when every branch of a tableau T
+    with initial nodes {t : φ₀, ..., t : φₙ₋₁, n : φ} closes.
 
     Args:
         inference: The inference to test
@@ -44,13 +47,20 @@ def check_inference(
     Returns:
         InferenceResult with validity information and optional trace
     """
-    # Convert inference to formula for tableau testing
-    test_formula = inference.to_formula()
+    from .signs import SignedFormula, n
+    from .tableau import WKrQTableau
 
-    # Test satisfiability
-    result = solve(test_formula, t, trace=trace)
+    # Ferguson Definition 11: Start with t:premises and n:conclusion
+    signed_formulas = []
+    for premise in inference.premises:
+        signed_formulas.append(SignedFormula(t, premise))
+    signed_formulas.append(SignedFormula(n, inference.conclusion))
 
-    # Inference is valid if test formula is unsatisfiable
+    # Create tableau and check if all branches close
+    tableau = WKrQTableau(signed_formulas, trace=trace)
+    result = tableau.construct()
+
+    # Inference is valid if tableau is unsatisfiable (all branches closed)
     is_valid = not result.satisfiable
     countermodels = result.models if not is_valid else []
 

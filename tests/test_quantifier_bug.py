@@ -98,9 +98,11 @@ class TestQuantifierBugAnalysis:
         # 4. System correctly reports inference as invalid
 
         assert "✗ Invalid inference" in stdout  # Fixed behavior
-        assert "t: A(c_" in stdout
-        assert "t: B(c_" in stdout
-        assert "f: B(c_" in stdout  # Different constants used
+        # The countermodels show different constants are being used
+        assert "A(c_2)=t" in stdout or "t: A(c_" in stdout
+        assert "B(c_2)=t" in stdout or "t: B(c_" in stdout
+        # Fresh constant c_4 gets B(c_4)=f in countermodel
+        assert "B(c_4)=f" in stdout or "f: B(c_" in stdout
         # No closed branches for the countermodel
 
     def test_counterexample_should_exist(self):

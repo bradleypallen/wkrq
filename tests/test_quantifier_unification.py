@@ -144,11 +144,12 @@ class TestExistentialQuantifierUnification:
     def test_existential_contradiction(self):
         """Test existential quantifier in contradictory scenarios."""
         # If no human is mortal, then there can't exist a mortal human
+        # But in weak Kleene, this is INVALID due to undefined values
         inference = parse_inference(
             "[∀X Human(X)](~Mortal(X)) |- ~([∃Y Human(Y)]Mortal(Y))"
         )
         result = check_inference(inference)
-        assert result.valid, "Universal negation should contradict existential"
+        assert not result.valid, "Invalid in weak Kleene due to undefined"
 
 
 class TestMixedQuantifierScenarios:

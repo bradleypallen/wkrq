@@ -33,7 +33,15 @@ class Inference:
     conclusion: Formula
 
     def to_formula(self) -> Formula:
-        """Convert inference to formula for satisfiability testing."""
+        """Convert inference to formula for satisfiability testing.
+
+        DEPRECATED: This method doesn't correctly implement Ferguson Definition 11.
+        Use check_inference() or entails() instead, which properly use
+        t:premises with n:conclusion rather than t:(premises & ~conclusion).
+
+        This method is retained for backward compatibility but should not be used
+        for inference checking in weak Kleene logic.
+        """
         # Test if (P1 & P2 & ... & Pn) & ~Q is satisfiable
         if not self.premises:
             return Negation(self.conclusion)

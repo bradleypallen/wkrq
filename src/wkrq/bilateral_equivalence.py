@@ -189,6 +189,11 @@ def check_acrq_closure(
     Returns:
         True if these cause closure
     """
+    # Only truth value signs (t, f, e) can cause closure
+    # Meta-signs (m, n, v) are branching instructions, not truth values
+    if sign1 not in ["t", "f", "e"] or sign2 not in ["t", "f", "e"]:
+        return False
+
     # Signs must be distinct
     if sign1 == sign2:
         return False

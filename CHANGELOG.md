@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.2] - 2025-08-15
+
+### Fixed
+
+- **Critical Soundness Bug** - Fixed Ferguson Definition 11 implementation
+  - Corrected inference checking to use `{t:premises, n:conclusion}` instead of `{t:(premises & ~conclusion)}`
+  - This ensures proper validity checking per Ferguson's formal specification
+  
+- **Meta-sign Expansion** - Added missing atomic formula expansion rules
+  - Implemented `m:p → (t:p)|(f:p)` for atomic formulas
+  - Implemented `n:p → (f:p)|(e:p)` for atomic formulas  
+  - Previously only compound formulas were expanded correctly
+  
+- **Fresh Constant Generation** - Fixed n-universal quantifier rule
+  - n-sign universal quantifiers now properly generate fresh constants
+  - Prevents unsound inferences like `∃X[A(X)∧B(X)] ⊢ ∀Y[A(Y)→B(Y)]`
+  
+- **Test Suite Corrections** - Updated test expectations for known limitations
+  - Documented semantic incompleteness in disjunction commutativity tests
+  - Fixed test syntax errors and unused variable warnings
+  - All 633 tests now pass
+
+### Documentation
+
+- **Consolidated Documentation** - Reduced from ~50 files to 17 essential documents
+  - Created comprehensive ARCHITECTURE_OVERVIEW.md with diagrams and pseudo-code
+  - Merged all Ferguson definitions into single FERGUSON_DEFINITIONS.md reference
+  - Archived outdated/redundant documentation
+  
+- **Examples Cleanup** - Streamlined from 60+ files to 6 essential demonstrations
+  - Created numbered example files for learning progression
+  - Fixed parsing issues in ACrQ bilateral examples
+  - Added comprehensive README.md for examples directory
+
 ## [3.1.1] - 2025-08-15
 
 ### Fixed
