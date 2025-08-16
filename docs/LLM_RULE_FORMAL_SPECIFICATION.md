@@ -204,7 +204,7 @@ def _create_llm_evaluation_rule(
     # ... etc per formal specification
 ```
 
-### 6.2 Test Coverage
+### 6.2 Test Coverage and Verification
 
 ```python
 # tests/test_llm_integration.py
@@ -212,15 +212,80 @@ def _create_llm_evaluation_rule(
 class TestLLMEvaluationRule:
     def test_llm_positive_confirmation(self):
         """LLM(P(a)) = (TRUE, FALSE) with t:P(a) → satisfiable"""
+        # SEMANTIC verification (unchanged)
+        assert result.satisfiable
+        
+        # NEW: OBSERVABLE verification  
+        tree = verify_observable_properties(tableau)
+        # Note: Confirmation cases may not show visible rules
         
     def test_llm_refutation(self):
         """LLM(P(a)) = (FALSE, TRUE) with t:P(a) → unsatisfiable"""
+        # SEMANTIC verification (unchanged)
+        assert not result.satisfiable
+        
+        # NEW: OBSERVABLE verification - contradiction should be visible
+        tree = verify_observable_properties(tableau)
+        assert "llm-eval(P(a))" in tree  # LLM rule visible
+        assert "×" in tree  # Branch closure visible
         
     def test_llm_glut(self):
         """LLM(P(a)) = (TRUE, TRUE) → both t:P(a) and t:P*(a)"""
+        # SEMANTIC verification (unchanged)
+        assert result.satisfiable  # Gluts allowed
+        
+        # NEW: OBSERVABLE verification - glut should be visible
+        tree = verify_observable_properties(tableau)
+        assert "llm-eval(P(a))" in tree  # LLM rule visible
+        assert "P*(a)" in tree or "P*" in tree  # Bilateral dual visible
         
     def test_llm_gap(self):
         """LLM(P(a)) = (FALSE, FALSE) → epistemic uncertainty"""
+        # SEMANTIC verification (unchanged)
+        assert not result.satisfiable  # Gap with assertion closes
+        
+        # NEW: OBSERVABLE verification
+        tree = verify_observable_properties(tableau)
+        assert "llm-eval(P(a))" in tree  # LLM rule visible
+
+def verify_observable_properties(tableau):
+    """Verify tree connectivity and rule visibility."""
+    renderer = TableauTreeRenderer(show_rules=True, compact=False)
+    tree = renderer.render_ascii(tableau)
+    
+    # Check connectivity (regression prevention)
+    connected_nodes = collect_connected_nodes(tableau.root)
+    assert len(connected_nodes) == len(tableau.nodes), "Tree connectivity broken"
+    
+    return tree
+```
+
+### 6.3 Enhanced Verification Post Tree-Connectivity Fix
+
+**Critical Improvement (Version 3.2.0+)**: The tree connectivity fix enables complete LLM rule verification:
+
+**Before Fix**: 
+- LLM rules applied correctly (semantic)
+- LLM rules were invisible (observable) ❌
+- No way to verify rule applications in rendered trees
+
+**After Fix**:
+- LLM rules applied correctly (semantic) ✓
+- LLM rules are visible (observable) ✓  
+- Complete verification of rule applications in trees
+
+**Test Enhancement Pattern**:
+```python
+def test_llm_rule_enhanced(self):
+    # Original semantic test (unchanged)
+    result = tableau.construct()
+    assert result.satisfiable == expected
+    
+    # NEW: Observable verification
+    tree = verify_observable_properties(tableau)
+    if creates_new_information(llm_result):
+        assert "llm-eval(...)" in tree  # Rule visible
+    assert all_nodes_connected(tableau)  # No regression
 ```
 
 ## 7. Documentation Requirements

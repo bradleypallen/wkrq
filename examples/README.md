@@ -26,18 +26,14 @@ This directory contains essential examples demonstrating the wKrQ and ACrQ table
 - Practical belief revision examples
 
 ### 4. LLM Integration (`04_llm_integration.py`)
-- Integration with bilateral-truth package
-- Real-world knowledge evaluation
-- Bilateral truth values from LLMs
-- Knowledge base validation
+- Comprehensive LLM integration with ACrQ tableau reasoning
+- Basic LLM evaluation of predicates
+- Tableau tree visualization with LLM rules
+- Universal rule derivation with LLM evaluation
+- Bilateral predicate handling with conflicting evidence
+- Medical diagnosis with conflicting guidelines
+- Complex reasoning patterns and knowledge base validation
 - Requires: `pip install bilateral-truth`
-
-### 5. Ferguson Compliance Validation (`wkrq_validation_demo.py`)
-- Comprehensive demonstration of Ferguson (2021) compliance
-- Six-sign system explanation
-- All tableau rules with examples
-- Classical syllogisms testing
-- Interactive walkthrough of formal specifications
 
 ## Running the Examples
 
@@ -47,15 +43,6 @@ python 01_basic_wkrq.py
 python 02_quantifier_reasoning.py
 python 03_acrq_bilateral.py
 python 04_llm_integration.py
-```
-
-For the validation demo:
-```bash
-# Interactive mode (with pauses between sections)
-python wkrq_validation_demo.py
-
-# Non-interactive mode
-python wkrq_validation_demo.py --no-pause
 ```
 
 ## Requirements

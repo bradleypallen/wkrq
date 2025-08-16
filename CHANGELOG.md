@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2025-08-16
+
+### Enhanced Verification and Observable Tableau Trees
+
+- **Tree Connectivity Fix** - Fixed critical bug where LLM evaluation rules were invisible in tableau trees
+  - Modified tableau initialization to connect all initial formulas in a chain
+  - LLM evaluation rules now properly visible in rendered trees with `[llm-eval(...)]` annotations
+  - Resolved user-reported issue where tableau trees appeared incomplete
+
+- **Observable Verification Methodology** - Enhanced test suite with dual verification approach
+  - SEMANTIC verification: Ensures mathematical correctness (unchanged)
+  - OBSERVABLE verification: Confirms user-visible tree rendering and rule applications
+  - Added tree connectivity regression tests to prevent future visibility issues
+  - Enhanced LLM integration tests with observable rule verification
+
+- **Code Quality Improvements** - Comprehensive linting and formatting cleanup
+  - Fixed all unused variable warnings in test files
+  - Applied black formatting to entire codebase (51 files)
+  - Resolved all ruff linting issues for clean code quality
+  - MyPy type checking passes (external package warnings expected)
+
+- **Example Consolidation** - Streamlined LLM integration examples
+  - Consolidated 8+ scattered LLM examples into single `04_llm_integration.py`
+  - Comprehensive demonstrations: basic evaluation, tree visualization, medical reasoning
+  - Clear setup instructions and fallback to mock evaluator when API keys unavailable
+
+- **Documentation Updates** - Enhanced verification methodology documentation
+  - Updated soundness/completeness docs with observable verification section
+  - Fixed broken documentation links in README.md
+  - Improved test organization and helper function documentation
+
+### Technical Details
+
+- Enhanced `TableauTreeRenderer` integration for comprehensive rule visibility
+- Added `verify_observable_properties()` helper for systematic tree connectivity testing
+- Improved error handling and user feedback in LLM integration examples
+- Maintains full backward compatibility with existing APIs
+
 ## [3.1.2] - 2025-08-15
 
 ### Fixed

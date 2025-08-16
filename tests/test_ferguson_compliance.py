@@ -16,9 +16,34 @@ All tests in this file should PASS to confirm Ferguson compliance.
 """
 
 from wkrq.api import entails, solve, valid
+
+# Observable verification helpers (inline to avoid import issues)
+from wkrq.cli import TableauTreeRenderer
 from wkrq.formula import Formula
 from wkrq.semantics import FALSE, TRUE, UNDEFINED, WeakKleeneSemantics
 from wkrq.signs import f, m, n, t
+
+
+def verify_observable_properties(tableau):
+    """Verify tree connectivity and rule visibility."""
+    renderer = TableauTreeRenderer(show_rules=True, compact=False)
+    tree = renderer.render_ascii(tableau)
+
+    # Check connectivity
+    connected_nodes = set()
+
+    def collect_connected(node):
+        connected_nodes.add(node.id)
+        for child in node.children:
+            collect_connected(child)
+
+    if tableau.root:
+        collect_connected(tableau.root)
+
+    assert len(connected_nodes) == len(
+        tableau.nodes
+    ), f"Tree connectivity broken: {len(connected_nodes)}/{len(tableau.nodes)} nodes connected"
+    return tree
 
 
 class TestFergusonTruthTables:
@@ -239,7 +264,12 @@ class TestFergusonRestrictedQuantifiers:
             ), f"{sign}:[∀X Human(X)]Mortal(X) should be satisfiable"
 
     def test_quantifier_domain_reasoning(self):
-        """Test that restricted quantifiers support domain-specific reasoning."""
+        """Test that restricted quantifiers support domain-specific reasoning.
+        Enhanced with observable verification of quantifier rules.
+        """
+        from wkrq import SignedFormula
+        from wkrq.tableau import WKrQTableau
+
         x = Formula.variable("X")
         human_x = Formula.predicate("Human", [x])
         mortal_x = Formula.predicate("Mortal", [x])
@@ -250,14 +280,32 @@ class TestFergusonRestrictedQuantifiers:
         socrates_human = Formula.predicate("Human", [socrates])
         socrates_mortal = Formula.predicate("Mortal", [socrates])
 
-        # Test basic entailment
+        # SEMANTIC verification (unchanged)
         premises = [all_humans_mortal, socrates_human]
         conclusion = socrates_mortal
-
-        # This should be valid (following Ferguson's practical applications)
         assert entails(
             premises, conclusion
         ), "Restricted quantifier inference should work for practical reasoning"
+
+        # NEW: OBSERVABLE verification - check quantifier rule visibility
+        signed_formulas = [
+            SignedFormula(t, all_humans_mortal),
+            SignedFormula(t, socrates_human),
+            SignedFormula(
+                f, socrates_mortal
+            ),  # Try to prove Socrates not mortal (should fail)
+        ]
+        tableau = WKrQTableau(signed_formulas)
+        result = tableau.construct()
+
+        # Should close (contradiction with universal rule)
+        assert not result.satisfiable, "Universal quantifier inference should close"
+
+        # Observable verification
+        tree = verify_observable_properties(tableau)
+        assert (
+            "t-restricted-forall" in tree
+        ), "Universal quantifier rule should be visible"
 
 
 class TestFergusonTableauSoundnessCompleteness:
@@ -267,16 +315,38 @@ class TestFergusonTableauSoundnessCompleteness:
         """Test Ferguson's Theorem 1: If Γ ⊢wKrQ φ then Γ ⊨wK φ.
 
         Anything our tableau derives should be semantically valid.
+        Enhanced with observable verification.
         """
+        from wkrq import SignedFormula
+        from wkrq.tableau import WKrQTableau
+
         p, q = Formula.atoms("p", "q")
 
         # Modus ponens: p, p → q ⊢ q
         premises = [p, p.implies(q)]
         conclusion = q
 
-        # If tableau derives this, it should be semantically valid
+        # SEMANTIC verification (unchanged)
         is_entailed = entails(premises, conclusion)
         assert is_entailed, "Modus ponens should be valid (soundness test)"
+
+        # NEW: OBSERVABLE verification - check tableau construction
+        # Create tableau to test n:q with premises t:p and t:(p→q)
+        signed_formulas = [
+            SignedFormula(t, p),
+            SignedFormula(t, p.implies(q)),
+            SignedFormula(n, q),  # Try to prove q is not-true (should fail)
+        ]
+        tableau = WKrQTableau(signed_formulas)
+        result = tableau.construct()
+
+        # Should close (can't have q be nontrue when modus ponens applies)
+        assert not result.satisfiable, "Modus ponens tableau should close"
+
+        # Observable verification
+        tree = verify_observable_properties(tableau)
+        assert "t-implication" in tree, "Implication rule should be visible"
+        assert "×" in tree, "Branch closure should be visible"
 
         # Invalid inference should be rejected
         invalid_premises = [p]

@@ -31,7 +31,7 @@ from .semantics import (
 from .signs import Sign, SignedFormula, e, f, m, n, t
 from .tableau import Tableau, TableauResult, WKrQTableau, entails, solve, valid
 
-__version__ = "3.1.2"
+__version__ = "3.2.0"
 
 __all__ = [
     # Core types

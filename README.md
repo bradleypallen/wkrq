@@ -293,9 +293,20 @@ Supported providers: OpenAI, Anthropic, Google, local models (Ollama), and more.
 
 ## Documentation
 
-- 📖 [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/CLI_GUIDE.md) - Complete command-line reference with examples
-- 🔧 [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/API_REFERENCE.md) - Full Python API documentation with code examples
-- 📋 [Comprehensive Examples](https://github.com/bradleypallen/wkrq/blob/main/examples/validation.txt) - Literature validation with tableau trees
+### Core Documentation
+- 📖 [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/CLI.md) - Complete command-line reference with examples
+- 🔧 [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/API.md) - Full Python API documentation with code examples
+- 📋 [Examples Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/EXAMPLES.md) - Comprehensive examples with tableau trees
+- 🏗️ [Architecture Overview](https://github.com/bradleypallen/wkrq/blob/main/docs/ARCHITECTURE_OVERVIEW.md) - System design and implementation details
+
+### Ferguson Compliance
+- 📚 [Ferguson Definitions](https://github.com/bradleypallen/wkrq/blob/main/docs/FERGUSON_DEFINITIONS.md) - Complete reference to Ferguson (2021)
+- ✅ [Implementation Verification](https://github.com/bradleypallen/wkrq/blob/main/docs/IMPLEMENTATION_VERIFICATION.md) - Soundness and completeness analysis
+- 🔍 [Soundness/Completeness Update](https://github.com/bradleypallen/wkrq/blob/main/docs/SOUNDNESS_COMPLETENESS_UPDATE.md) - Enhanced verification methodology
+
+### ACrQ and LLM Integration
+- 🤖 [LLM Rule Formal Specification](https://github.com/bradleypallen/wkrq/blob/main/docs/LLM_RULE_FORMAL_SPECIFICATION.md) - ACrQ-LLM system specification
+- ⚖️ [Bilateral Equivalence](https://github.com/bradleypallen/wkrq/blob/main/docs/BILATERAL_EQUIVALENCE_IMPLEMENTATION.md) - Paraconsistent logic implementation
 
 ## Examples
 
@@ -388,6 +399,7 @@ MIT License - see [LICENSE](https://github.com/bradleypallen/wkrq/blob/main/LICE
 - [PyPI Package](https://pypi.org/project/wkrq/)
 - [GitHub Repository](https://github.com/bradleypallen/wkrq)
 - [Issue Tracker](https://github.com/bradleypallen/wkrq/issues)
-- [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/CLI_GUIDE.md)
-- [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/API_REFERENCE.md)
-- [wKrQ vs ACrQ Comparison](https://github.com/bradleypallen/wkrq/blob/main/docs/wKrQ_vs_ACrQ_COMPARISON.md)
+- [CLI Guide](https://github.com/bradleypallen/wkrq/blob/main/docs/CLI.md)
+- [API Reference](https://github.com/bradleypallen/wkrq/blob/main/docs/API.md)
+- [Examples](https://github.com/bradleypallen/wkrq/blob/main/examples/README.md)
+- [Documentation](https://github.com/bradleypallen/wkrq/blob/main/docs/README.md)

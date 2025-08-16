@@ -200,11 +200,17 @@ class Tableau:
         self.branches.append(initial_branch)
         self.open_branches.append(initial_branch)
 
-        # Add all initial formulas as separate nodes
+        # Add all initial formulas as a connected chain
+        prev_node: Optional[TableauNode] = None
         for i, signed_formula in enumerate(initial_formulas):
             node = self._create_node(signed_formula)
             if i == 0:
                 self.root = node  # First node is the root
+            else:
+                if prev_node is not None:  # Type guard for mypy
+                    prev_node.add_child(node)  # Connect to previous node
+
+            prev_node = node
 
             # Check for closure when adding each initial formula
             if self._add_node_to_branch(node, initial_branch):

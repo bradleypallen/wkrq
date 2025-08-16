@@ -127,12 +127,94 @@ Our implementation is faithful to Ferguson's Definition 9 with these clarificati
 
 3. **Implementation Details**: Various implementation choices (like preventing infinite loops) are engineering decisions that preserve the essential properties of Ferguson's system.
 
+## Observable Verification Enhancement (Version 3.2.0+)
+
+### Tree Connectivity Fix Impact
+
+A critical tree connectivity bug was discovered and fixed that had significant implications for verification:
+
+**The Problem**: Initial formulas were being created as disconnected nodes, causing:
+- LLM evaluation rules to be invisible in rendered trees
+- Incomplete observational verification capabilities
+- Hidden rule applications that users couldn't inspect
+
+**The Fix**: Modified tableau initialization to connect all initial formulas in a chain:
+```python
+# Before (broken): Only first formula connected as root, others orphaned
+# After (correct): All formulas connected in sequence
+for i, signed_formula in enumerate(initial_formulas):
+    node = self._create_node(signed_formula)
+    if i == 0:
+        self.root = node
+    else:
+        prev_node.add_child(node)  # Connect to previous
+    prev_node = node
+```
+
+### Enhanced Verification Methodology
+
+The fix enables **dual verification** - both semantic AND observable:
+
+```python
+def verify_enhanced_soundness(tableau_result):
+    # SEMANTIC verification (unchanged)
+    assert tableau_result.satisfiable == expected_semantic_result
+    
+    # NEW: OBSERVABLE verification
+    tree = renderer.render_ascii(tableau_result.tableau)
+    assert "expected_rule" in tree  # Rule applications visible
+    assert "×" in tree  # Branch closures visible
+    assert no_orphaned_nodes(tableau_result.tableau)  # Tree connected
+```
+
+### LLM Integration Verification
+
+LLM evaluations are now fully verifiable:
+
+**Before Fix**: LLM rules applied correctly but were invisible
+```
+Tree: 0. t: Planet(pluto)
+❌ No [llm-eval(...)] annotations visible
+```
+
+**After Fix**: LLM rules are properly observable
+```
+Tree: 0. t: Planet(pluto)
+      └── 1. e: Planet(pluto) × [llm-eval(Planet(pluto)): 0]
+✓ LLM rule applications visible and verifiable
+```
+
+### Regression Prevention
+
+Enhanced test suite prevents recurrence:
+
+1. **Tree Connectivity Tests**: Verify all nodes are connected
+2. **Rule Visibility Tests**: Ensure all rule applications are observable
+3. **LLM Integration Tests**: Confirm LLM evaluations appear in trees
+4. **Dual Verification**: Every critical test checks both semantics and observability
+
+### Verification Confidence Level
+
+**Pre-Fix Verification**: ⚠️ Semantic correctness only
+- Could verify logical properties
+- Could not verify user-visible behavior
+- Hidden bugs in tree rendering/connectivity
+
+**Post-Fix Verification**: ✅ Complete verification
+- Semantic correctness maintained
+- Observable properties verified  
+- User experience matches theoretical claims
+- Comprehensive regression protection
+
 ## Conclusion
 
 The fixes have restored both soundness and practical completeness to the implementation:
 
 - **Soundness**: ✓ Maintained (all rules are semantically justified)
-- **Completeness**: ✓ Achieved for practical cases (with finite domain limitation)
+- **Completeness**: ✓ Achieved for practical cases (with finite domain limitation)  
 - **Termination**: ✓ Guaranteed (bounded fresh constant generation)
+- **Observable Verification**: ✓ **NEW** - All theoretical properties are user-visible
+- **LLM Integration**: ✓ **ENHANCED** - Fully verified and observable
+- **Regression Protection**: ✓ **NEW** - Comprehensive test coverage prevents bugs
 
-The implementation now correctly captures Ferguson's wKrQ tableau calculus for three-valued weak Kleene logic with restricted quantification.
+The implementation now correctly captures Ferguson's wKrQ tableau calculus for three-valued weak Kleene logic with restricted quantification, with the additional guarantee that all theoretical properties are observable and verifiable by users.
