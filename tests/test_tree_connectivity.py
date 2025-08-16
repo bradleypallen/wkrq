@@ -107,12 +107,12 @@ class TestTreeConnectivity:
 
         # Verify connectivity and LLM integration if available
         tree = verify_observable_properties(tableau)
-        
+
         # LLM evaluation may or may not appear depending on rule application order
         # The key is that the tree is connected and substantial
         llm_count = tree.count("llm-eval")
         print(f"LLM evaluations found: {llm_count}")
-        
+
         # If LLM evaluation happened, it should be visible
         if llm_count > 0:
             assert "llm-eval" in tree, "LLM evaluation should be visible when it occurs"
@@ -287,11 +287,11 @@ class TestObservableVerificationHelpers:
 
         # This should pass and detect connectivity
         tree = verify_observable_properties(tableau)
-        
+
         # LLM integration may or may not trigger evaluation
         llm_count = tree.count("llm-eval")
         print(f"LLM evaluations found: {llm_count}")
-        
+
         # If LLM evaluation happened, it should be visible
         if llm_count > 0:
             assert "llm-eval" in tree, "LLM evaluation should be visible when it occurs"
