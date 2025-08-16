@@ -112,6 +112,44 @@ twine upload dist/*
   GitHub, monitor the GitHub Actions to make sure the repo was pushed
   successfully.
 
+## Release Checklist
+
+When creating a new release, follow this checklist to ensure consistency:
+
+1. **Version Updates**:
+   - [ ] Update version in `pyproject.toml`
+   - [ ] Update version in `src/wkrq/__init__.py`
+   - [ ] Update `CHANGELOG.md` with release notes
+   - [ ] Update documentation headers in `docs/*.md` files with new version
+   - [ ] Update PyPI badge version parameter in `README.md`
+
+2. **Code Quality**:
+   - [ ] Run `black src tests` (formatting)
+   - [ ] Run `ruff check src tests` (linting)
+   - [ ] Run `mypy src` (type checking)
+   - [ ] Run full test suite `pytest`
+
+3. **Commit and Push**:
+   - [ ] Commit all version updates with descriptive message
+   - [ ] Push to GitHub main branch
+
+4. **GitHub Actions Verification**:
+   - [ ] Monitor GitHub Actions tests with `gh run list`
+   - [ ] Verify all tests pass before proceeding
+   - [ ] Wait for successful completion (green checkmark)
+
+5. **Release Creation**:
+   - [ ] Create GitHub release with `gh release create v{VERSION}`
+   - [ ] Include comprehensive release notes
+   - [ ] Monitor PyPI publication workflow
+   - [ ] Verify package appears on PyPI
+
+6. **Post-Release Verification**:
+   - [ ] Confirm PyPI package is installable: `pip install wkrq=={VERSION}`
+   - [ ] Check that PyPI badge updates automatically
+
+**CRITICAL**: Never tag and release while GitHub Actions tests are failing. Always wait for test success confirmation before creating releases.
+
 ## Architecture Overview
 
 wKrQ implements Ferguson's (2021) tableau calculus for three-valued weak
