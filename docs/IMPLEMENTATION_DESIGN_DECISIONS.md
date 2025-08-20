@@ -97,6 +97,29 @@ for i, signed_formula in enumerate(initial_formulas):
 **Ferguson Reference**: Extension beyond paper scope
 **Key Design**: Use wkrq.llm_integration wrapper to ensure proper bilateral semantics
 
+### 7. Mixed Propositional and First-Order Formulas
+
+**Decision**: Allow mixing propositional atoms and first-order predicates in same tableau
+**Theoretical Justification**: Unified tableau engine can process both via Ferguson's sign system
+
+**Code Location**: Formula hierarchy in `formula.py`, tableau initialization
+```python
+# Currently allowed:
+p = Formula.atom("p")  # propositional
+human_X = Formula.predicate("Human", [Formula.variable("X")])  # first-order
+mixed = p & human_X  # p & Human(X) - mixed formula
+```
+
+**Ferguson Reference**: Not explicitly addressed in paper (focuses on pure cases)
+**Alternative Considered**: Separate propositional and first-order tableau modes
+**Why Current Approach**: Simpler unified architecture, users can combine formula types naturally
+
+**Semantic Concerns**:
+- **Domain ambiguity**: What domain are we quantifying over when propositional atoms present?
+- **Model extraction complexity**: Mixed domains require careful handling
+- **Quantifier scope**: Free variables in mixed formulas can be semantically unclear
+- **Variable/constant distinction**: Variables uppercase (X), constants lowercase (socrates)
+
 ## Theoretical Tradeoffs
 
 ### Completeness vs Termination
@@ -139,7 +162,13 @@ for i, signed_formula in enumerate(initial_formulas):
 - Should certain rules have priority over others?
 - Impact on tableau structure and verification?
 
-### 5. Branch Closure Edge Cases
+### 5. Mixed Propositional and First-Order Formulas
+- Should the system allow mixing propositional atoms and first-order predicates?
+- What are the semantic implications for domain construction and model extraction?
+- Should users be warned about potential semantic ambiguities?
+- How should quantifier scope be handled with free variables in mixed contexts?
+
+### 6. Branch Closure Edge Cases
 - Any ambiguous cases in Definition 10?
 - How should meta-signs interact with closure conditions?
 - ACrQ glut handling vs wKrQ standard closure?
