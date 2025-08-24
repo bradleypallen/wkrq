@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2025-08-24
+
+### Fixed
+
+- **LLM Negative Evidence Handling** - Fixed critical semantic issue in ACrQ tableau LLM integration
+  - LLM negative evidence (FALSE, TRUE) now creates bilateral predicates (t:P*) instead of contradictions
+  - Enables proper paraconsistent handling of conflicting evidence between formal rules and real-world knowledge
+  - Example: When formal rules derive "Pluto is a planet" but LLM knows it's not, both t:Planet(pluto) and t:Planet*(pluto) coexist as a glut
+  - Updated tests and documentation to reflect correct glut-based semantics
+  - Fixed example 04_llm_integration.py to properly load .env file for API keys
+
 ## [3.2.0] - 2025-08-16
 
 ### Enhanced Verification and Observable Tableau Trees
