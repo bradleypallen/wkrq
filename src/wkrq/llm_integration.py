@@ -32,12 +32,13 @@ def create_llm_tableau_evaluator(
     (gaps) and conflicting information (gluts).
 
     Args:
-        provider: LLM provider ('openai', 'anthropic', 'google', 'local', etc.)
+        provider: LLM provider ('openai', 'anthropic', 'openrouter', 'mock')
         model: Model name (defaults to provider's default model)
         **kwargs: Additional provider-specific configuration
 
     Returns:
-        Evaluator function compatible with ACrQ tableau, or None if unavailable
+        Evaluator function compatible with ACrQ tableau, or None if unavailable.
+        The function has a .model_info attribute with provider and model details.
 
     Example:
         >>> from wkrq import ACrQTableau, SignedFormula, t
@@ -45,6 +46,7 @@ def create_llm_tableau_evaluator(
         >>>
         >>> # That's it! Just specify your LLM
         >>> evaluator = create_llm_tableau_evaluator('openai', model='gpt-4')
+        >>> print(evaluator.model_info)  # {'provider': 'openai', 'model': 'gpt-4'}
         >>>
         >>> # Use it with tableau
         >>> tableau = ACrQTableau(
@@ -66,13 +68,37 @@ def create_llm_tableau_evaluator(
 
     # Create the bilateral-truth evaluator with user's specifications
     try:
+        # Import here to check for OpenRouter support
+        from bilateral_truth.model_router import OpenRouterEvaluator
+
         # Mock evaluator doesn't accept model parameter
         if provider == "mock":
             bt_evaluator = create_llm_evaluator("mock")
+        elif provider == "openrouter":
+            # OpenRouter needs special handling
+            bt_evaluator = OpenRouterEvaluator(
+                model=model or "openrouter/auto", **kwargs
+            )
         elif model:
             bt_evaluator = create_llm_evaluator(provider, model=model, **kwargs)
         else:
             bt_evaluator = create_llm_evaluator(provider, **kwargs)
+    except ImportError:
+        # Older bilateral-truth without OpenRouter support
+        try:
+            if provider == "mock":
+                bt_evaluator = create_llm_evaluator("mock")
+            elif model:
+                bt_evaluator = create_llm_evaluator(provider, model=model, **kwargs)
+            else:
+                bt_evaluator = create_llm_evaluator(provider, **kwargs)
+        except Exception as e:
+            import warnings
+
+            warnings.warn(
+                f"Failed to create LLM evaluator: {e}", RuntimeWarning, stacklevel=2
+            )
+            return None
     except Exception as e:
         import warnings
 
@@ -80,6 +106,16 @@ def create_llm_tableau_evaluator(
             f"Failed to create LLM evaluator: {e}", RuntimeWarning, stacklevel=2
         )
         return None
+
+    # Extract the actual model being used from the evaluator
+    # bilateral-truth evaluators store the model in .model attribute
+    actual_model = "unknown"
+    if hasattr(bt_evaluator, "model"):
+        actual_model = bt_evaluator.model
+    elif provider == "mock":
+        actual_model = "mock-model"
+    elif model:
+        actual_model = model
 
     # Cache for bilateral predicates to avoid redundant LLM calls
     cache: dict[str, BilateralTruthValue] = {}
@@ -152,6 +188,9 @@ def create_llm_tableau_evaluator(
             # On error, return None to let tableau proceed without LLM
             return None
 
+    # Attach model information to the evaluator function
+    tableau_evaluator.model_info = {"provider": provider, "model": actual_model}  # type: ignore[attr-defined]
+
     return tableau_evaluator
 
 
@@ -177,21 +216,21 @@ def create_openai_evaluator(
 
 
 def create_anthropic_evaluator(
-    model: str = "claude-3-opus-20240229", **kwargs: Any
+    model: str = "claude-sonnet-4-20250514", **kwargs: Any
 ) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
     """Create an Anthropic Claude evaluator."""
     return create_llm_tableau_evaluator("anthropic", model=model, **kwargs)
 
 
-def create_google_evaluator(
-    model: str = "gemini-pro", **kwargs: Any
+def create_openrouter_evaluator(
+    model: str = "openrouter/auto", **kwargs: Any
 ) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
-    """Create a Google Gemini evaluator."""
-    return create_llm_tableau_evaluator("google", model=model, **kwargs)
+    """Create an OpenRouter evaluator for accessing various LLM providers."""
+    return create_llm_tableau_evaluator("openrouter", model=model, **kwargs)
 
 
-def create_local_evaluator(
-    model: str = "llama2", **kwargs: Any
+def create_mock_evaluator(
+    **kwargs: Any,
 ) -> Optional[Callable[[Formula], Optional[BilateralTruthValue]]]:
-    """Create a local LLM evaluator (e.g., via Ollama)."""
-    return create_llm_tableau_evaluator("local", model=model, **kwargs)
+    """Create a mock evaluator for testing."""
+    return create_llm_tableau_evaluator("mock", **kwargs)

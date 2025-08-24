@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wkrq"
-version = "3.2.1"
+version = "3.3.0"
 description = "A Python implementation of a semantic tableau calculus for weak Kleene logic with restricted quantification"
 readme = "README.md"
 license = "MIT"
@@ -53,6 +53,7 @@ Changelog = "https://github.com/bradleypallen/wkrq/releases"
 
 [project.scripts]
 wkrq = "wkrq.cli:main"
+acrq-llm = "wkrq.theory_cli:main"
 
 [project.optional-dependencies]
 dev = [

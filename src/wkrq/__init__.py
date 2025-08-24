@@ -30,8 +30,14 @@ from .semantics import (
 )
 from .signs import Sign, SignedFormula, e, f, m, n, t
 from .tableau import Tableau, TableauResult, WKrQTableau, entails, solve, valid
+from .theory_manager import (
+    InformationState,
+    NaturalLanguageTranslator,
+    Statement,
+    TheoryManager,
+)
 
-__version__ = "3.2.1"
+__version__ = "3.3.0"
 
 __all__ = [
     # Core types
@@ -75,21 +81,22 @@ __all__ = [
     # ACrQ parser (minimal)
     "parse_acrq_formula",
     "SyntaxMode",
+    # Theory management
+    "TheoryManager",
+    "NaturalLanguageTranslator",
+    "Statement",
+    "InformationState",
     # LLM Integration (optional)
     "create_llm_tableau_evaluator",
     "create_openai_evaluator",
     "create_anthropic_evaluator",
-    "create_google_evaluator",
-    "create_local_evaluator",
 ]
 
 # Conditional imports for LLM integration
 try:
     from .llm_integration import (
         create_anthropic_evaluator,
-        create_google_evaluator,
         create_llm_tableau_evaluator,
-        create_local_evaluator,
         create_openai_evaluator,
     )
 except ImportError:

@@ -173,6 +173,12 @@ mixed = p & human_X  # p & Human(X) - mixed formula
 - How should meta-signs interact with closure conditions?
 - ACrQ glut handling vs wKrQ standard closure?
 
+### 7. Parser Syntax Modes (Transparent vs Bilateral vs Mixed)
+- Is the three-mode parser design (Transparent, Bilateral, Mixed) appropriate for ACrQ?
+- Should Mixed mode be the default to avoid mode detection issues?
+- How should formulas mixing `~P(x)` and `P*(x)` syntax be handled?
+- Is automatic conversion of `~P(x)` to `P*(x)` in Transparent mode semantically correct?
+
 ## Implementation Quality Assessment
 
 ### Strengths

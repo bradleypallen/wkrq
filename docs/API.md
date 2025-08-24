@@ -221,6 +221,40 @@ for model in result.models:
         print(f"{const}: {formulas}")
 ```
 
+## Theory Manager
+
+```python
+from wkrq.theory_manager import TheoryManager
+from wkrq.llm_integration import create_llm_tableau_evaluator
+
+# Create theory manager
+manager = TheoryManager()
+
+# Configure LLM (optional)
+manager.llm_evaluator = create_llm_tableau_evaluator('openai')
+
+# Add statements
+stmt1 = manager.assert_statement("Socrates is human")
+stmt2 = manager.assert_statement("All humans are mortal")
+
+# Run inference
+inferred = manager.infer_consequences()
+for stmt in inferred:
+    print(f"Inferred: {stmt.formula}")
+
+# Check satisfiability and information states
+is_sat, info_states = manager.check_satisfiability()
+for state in info_states:
+    if state.state_type == 'glut':
+        print(f"Glut detected: {state.predicate}")
+    elif state.state_type == 'gap':
+        print(f"Gap detected: {state.predicate}")
+
+# Save/load theories
+manager.save()  # Saves to theory.json
+manager.load()  # Loads from theory.json
+```
+
 ## Complete Example
 
 ```python

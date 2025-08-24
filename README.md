@@ -1,6 +1,6 @@
 # wKrQ: A Python Implementation of a Semantic Tableau Calculus for Weak Kleene Logic with Restricted Quantification
 
-[![PyPI version](https://badge.fury.io/py/wkrq.svg)](https://badge.fury.io/py/wkrq)
+[![PyPI version](https://badge.fury.io/py/wkrq.svg?v=3.3.0)](https://badge.fury.io/py/wkrq)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml/badge.svg)](https://github.com/bradleypallen/wkrq/actions/workflows/tests.yml)
@@ -84,6 +84,10 @@ wkrq "[forall X Human(X)]Mortal(X), Human(socrates) |- Mortal(socrates)"
 
 # ACrQ paraconsistent reasoning (handles contradictions gracefully)
 wkrq --mode=acrq "Human(alice) & ~Human(alice)"  # Satisfiable with glut!
+
+# Interactive theory manager with LLM integration for ACrQ
+acrq-llm  # Start interactive session
+acrq-llm --file examples/example_13_maier_et_al.json  # Load existing theory
 ```
 
 ### Python API
@@ -135,6 +139,37 @@ tableau = ACrQTableau(
 )
 result = tableau.construct()  # LLM knows Pluto isn't a planet anymore
 ```
+
+### Theory Manager
+
+The interactive theory manager provides a powerful environment for building and reasoning with logical theories:
+
+```bash
+# Start the ACrQ theory manager with LLM support
+acrq-llm
+
+# In the interactive session:
+theory> assert Socrates is human
+theory> assert All humans are mortal
+theory> infer
+# Infers: Mortal(socrates)
+
+theory> claim firstManOnTheMoon(armstrong)  # LLM verifies: TRUE
+theory> claim firstManOnTheMoon(scott)      # LLM refutes: FALSE
+
+theory> check  # Check satisfiability and detect gluts/gaps
+theory> save my_theory.json
+```
+
+Key features:
+- Natural language assertions with automatic translation
+- LLM-verified factual claims with the `claim` command
+- Paraconsistent reasoning (handles contradictions without explosion)
+- Gap and glut detection for information analysis
+- Persistent storage in JSON format
+- Integration with LLM providers for fact-checking
+
+See the [Theory Manager Tutorial](docs/THEORY_MANAGER_TUTORIAL.md) for detailed usage.
 
 ## Syntax and Semantics
 

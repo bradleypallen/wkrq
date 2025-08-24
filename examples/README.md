@@ -35,6 +35,20 @@ This directory contains essential examples demonstrating the wKrQ and ACrQ table
 - Complex reasoning patterns and knowledge base validation
 - Requires: `pip install bilateral-truth`
 
+### 5. Theory Management (`05_theory_management.py`)
+- Building logical theories programmatically
+- Natural language to formula translation
+- Inference and consequence derivation
+- Gap and glut detection
+- Theory persistence with JSON
+- LLM integration for fact-checking
+
+### 6. CLI with LLM Demo (`06_cli_with_llm.py`)
+- Demonstrates CLI integration with LLM evaluators
+- Command-line tableau construction with LLM
+- Factual claim verification
+- Example of real-world reasoning
+
 ## Running the Examples
 
 Basic usage:
@@ -43,6 +57,20 @@ python 01_basic_wkrq.py
 python 02_quantifier_reasoning.py
 python 03_acrq_bilateral.py
 python 04_llm_integration.py
+python 05_theory_management.py
+python 06_cli_with_llm.py
+```
+
+Interactive ACrQ theory manager with LLM:
+```bash
+# Start the ACrQ theory manager CLI
+acrq-llm
+
+# Load an example theory
+acrq-llm --file example_13_maier_et_al.json
+
+# Start with LLM provider
+acrq-llm --llm openai
 ```
 
 ## Requirements

@@ -121,6 +121,33 @@ wkrq> p, p -> q |- q
 wkrq> quit
 ```
 
+### ACrQ Theory Manager with LLM
+```bash
+# Start interactive ACrQ theory manager
+acrq-llm
+
+# Use a specific theory file
+acrq-llm --file my_theory.json
+
+# Start with LLM provider configured
+acrq-llm --llm openai
+
+# Theory manager commands:
+theory> assert Socrates is human        # Natural language assertion
+theory> assert formula Human(socrates)  # Direct formula
+theory> claim firstManOnTheMoon(neil)   # LLM-verified claim
+theory> list                            # Show all statements
+theory> infer                           # Run inference engine
+theory> check                           # Check satisfiability
+theory> save my_theory.json            # Save to file
+theory> load other_theory.json         # Load from file
+theory> retract S0001                  # Remove statement
+theory> clear                           # Clear all statements
+theory> llm openai                     # Configure LLM provider
+theory> help                            # Show all commands
+theory> exit                            # Exit theory manager
+```
+
 ## Complete Examples
 
 ### Example 1: Propositional Logic

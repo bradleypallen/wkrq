@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2025-08-24
+
+### Added
+
+- **ACrQ Theory Manager with LLM Integration** - New interactive CLI for building and reasoning with logical theories
+  - `acrq-llm` command for interactive theory management
+  - Natural language assertions with automatic formula translation
+  - `claim` command for LLM-verified factual assertions
+  - Paraconsistent reasoning with gap and glut detection
+  - Theory persistence in JSON format
+  - Comprehensive inference engine with LLM support
+  - File protection to prevent accidental overwrites
+
+### Changed
+
+- **Parser Mode Handling** - Theory manager now uses MIXED mode by default
+  - Fixes issues with formulas mixing `~P(x)` and `P*(x)` syntax
+  - Eliminates false positives in bilateral predicate detection
+  - Ensures consistent parsing across all formula types
+
+### Fixed
+
+- **Formula Parsing** - Direct formula input like `firstManOnTheMoon(armstrong)` now works correctly
+  - System recognizes valid formulas and uses them directly
+  - No longer fails to translate syntactically valid formulas
+
 ## [3.2.1] - 2025-08-24
 
 ### Fixed
