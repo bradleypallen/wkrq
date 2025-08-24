@@ -39,22 +39,28 @@ class TestBasicLLMIntegration:
         assert str(model.valuations.get("Human(socrates)")) == "t"
 
     def test_llm_negative_evidence(self):
-        """Test LLM providing negative evidence."""
+        """Test LLM providing negative evidence creates bilateral glut."""
 
         def llm_evaluator(formula):
-            if str(formula) == "Robot(socrates)":
+            # Handle both Robot and Robot* queries
+            formula_str = str(formula)
+            if "Robot" in formula_str and "socrates" in formula_str:
+                # Robot is false - return negative evidence
                 return BilateralTruthValue(positive=FALSE, negative=TRUE)
-            return BilateralTruthValue(positive=FALSE, negative=FALSE)
+            return None  # No opinion on other predicates
 
         socrates = Constant("socrates")
         robot = PredicateFormula("Robot", [socrates])
 
-        # t:Robot(socrates) should be unsatisfiable with LLM refutation
+        # t:Robot(socrates) with LLM negative evidence should create glut
+        # LLM says Robot(socrates) is false, which adds t:Robot*(socrates)
+        # This creates a glut: t:Robot(socrates) and t:Robot*(socrates)
         tableau = ACrQTableau([SignedFormula(t, robot)], llm_evaluator=llm_evaluator)
         result = tableau.construct()
 
-        assert not result.satisfiable
-        assert result.closed_branches == 1
+        # Should be satisfiable as a glut in ACrQ
+        assert result.satisfiable, "ACrQ should handle negative evidence as glut"
+        assert len(result.models) == 1
 
     def test_llm_knowledge_gap(self):
         """Test LLM returning knowledge gap (no evidence)."""
@@ -143,12 +149,14 @@ class TestLLMWithBilateralPredicates:
         result1 = tableau1.construct()
         assert result1.satisfiable
 
-        # t:Human*(socrates) should be unsatisfiable
+        # t:Human*(socrates) with LLM saying Human* is false (i.e., Human is true)
+        # creates a glut: t:Human*(socrates) and t:Human(socrates)
         tableau2 = ACrQTableau(
             [SignedFormula(t, human_neg)], llm_evaluator=llm_evaluator
         )
         result2 = tableau2.construct()
-        assert not result2.satisfiable
+        # Should be satisfiable as a glut
+        assert result2.satisfiable, "ACrQ should handle Human* glut"
 
 
 class TestLLMErrorHandling:

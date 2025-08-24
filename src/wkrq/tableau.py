@@ -814,8 +814,33 @@ class ACrQTableau(Tableau):
             # Clear positive evidence
             conclusion_set.append(SignedFormula(t, node.formula.formula))
         elif bilateral_value.positive == FALSE and bilateral_value.negative == TRUE:
-            # Clear negative evidence
-            conclusion_set.append(SignedFormula(f, node.formula.formula))
+            # Clear negative evidence - use bilateral predicate for ACrQ
+            # This allows gluts instead of contradictions
+            from .formula import BilateralPredicateFormula
+
+            if isinstance(
+                node.formula.formula, (PredicateFormula, BilateralPredicateFormula)
+            ):
+                if isinstance(node.formula.formula, BilateralPredicateFormula):
+                    if node.formula.formula.is_negative:
+                        # If checking P*, negative evidence means t:P
+                        dual = node.formula.formula.get_dual()
+                        conclusion_set.append(SignedFormula(t, dual))
+                    else:
+                        # If checking P, negative evidence means t:P*
+                        dual = node.formula.formula.get_dual()
+                        conclusion_set.append(SignedFormula(t, dual))
+                else:
+                    # Regular predicate - create bilateral negative
+                    dual = BilateralPredicateFormula(
+                        positive_name=node.formula.formula.predicate_name,
+                        terms=node.formula.formula.terms,
+                        is_negative=True,
+                    )
+                    conclusion_set.append(SignedFormula(t, dual))
+            else:
+                # Non-predicate formulas still use f
+                conclusion_set.append(SignedFormula(f, node.formula.formula))
         elif bilateral_value.positive == TRUE and bilateral_value.negative == TRUE:
             # Glut - add both
             conclusion_set.append(SignedFormula(t, node.formula.formula))

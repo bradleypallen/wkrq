@@ -115,7 +115,7 @@ class TestLLMRuleFormalSpecification:
         # The key is that the result is semantically correct
 
     def test_gamma_llm_refutation(self):
-        """Test Γ_LLM(t, P(a), FALSE, TRUE) → {f: P(a)} closes branch"""
+        """Test Γ_LLM(t, P(a), FALSE, TRUE) → {t: P*(a)} creates glut"""
 
         def evaluator(formula):
             return BilateralTruthValue(positive=FALSE, negative=TRUE)
@@ -125,17 +125,19 @@ class TestLLMRuleFormalSpecification:
         tableau = ACrQTableau([SignedFormula(t, atom)], llm_evaluator=evaluator)
         result = tableau.construct()
 
-        # SEMANTIC verification (unchanged)
-        assert not result.satisfiable
-        assert len(tableau.closed_branches) >= 1
+        # SEMANTIC verification - should be satisfiable as glut
+        assert (
+            result.satisfiable
+        ), "Negative evidence should create glut, not contradiction"
+        assert len(result.models) == 1
 
-        # NEW: OBSERVABLE verification - LLM contradiction should be visible
+        # NEW: OBSERVABLE verification - glut should be visible
         tree = verify_observable_properties(tableau)
 
-        # This case SHOULD show LLM evaluation since it creates contradiction
+        # This case SHOULD show LLM evaluation creating bilateral predicate
         assert "llm-eval(P(a))" in tree  # LLM rule should be visible
-        assert "×" in tree  # Branch closure should be visible
-        assert "t: P(a)" in tree and "f: P(a)" in tree  # Contradiction visible
+        assert "t: P(a)" in tree  # Original assertion
+        assert "P*(a)" in tree  # Bilateral negative from LLM
 
     def test_gamma_llm_glut(self):
         """Test Γ_LLM(t, P(a), TRUE, TRUE) → {t: P(a), t: P*(a)}"""
@@ -202,8 +204,12 @@ class TestLLMRuleFormalSpecification:
 
         # For t: P*(a), if LLM(P) returns (TRUE, FALSE),
         # the bilateral handling should swap to (FALSE, TRUE)
-        # which contradicts t: P*(a), closing the branch
-        assert not result.satisfiable
+        # With our new glut handling, this creates t:P(a)
+        # So we have both t:P*(a) and t:P(a) - a glut
+        assert result.satisfiable, "Should handle as glut"
+        # Check that we have both P and P* true
+        model = result.models[0]
+        assert "P*(a)" in str(model) and "P(a)" in str(model)
 
     def test_llm_evaluation_marks_as_evaluated(self):
         """Test that formulas are marked as evaluated to prevent duplicates."""
@@ -280,8 +286,8 @@ class TestLLMRuleClosureSemantics:
         assert not result.satisfiable
         assert result.closed_branches == 1
 
-    def test_refutation_closes_with_assertion(self):
-        """Refutation (FALSE, TRUE) with t: P(a) closes branch."""
+    def test_refutation_creates_glut(self):
+        """Refutation (FALSE, TRUE) with t: P(a) creates glut."""
 
         def refutation_evaluator(formula):
             return BilateralTruthValue(positive=FALSE, negative=TRUE)
@@ -292,8 +298,9 @@ class TestLLMRuleClosureSemantics:
         )
         result = tableau.construct()
 
-        assert not result.satisfiable
-        assert result.closed_branches == 1
+        # Should be satisfiable as glut: t:P(a) and t:P*(a)
+        assert result.satisfiable, "ACrQ handles negative evidence as glut"
+        assert result.open_branches == 1
 
     def test_glut_preserves_acrq_semantics(self):
         """Glut (TRUE, TRUE) respects ACrQ glut tolerance."""
@@ -336,12 +343,12 @@ class TestLLMRuleNonMonotonicity:
         # Change LLM state
         llm_state["believes_true"] = False
 
-        # Second query - LLM believes false
+        # Second query - LLM believes false (creates glut)
         tableau2 = ACrQTableau(formulas, llm_evaluator=stateful_evaluator)
         result2 = tableau2.construct()
-        assert not result2.satisfiable
+        assert result2.satisfiable, "Negative evidence creates glut, still satisfiable"
 
-        # Demonstrates non-monotonicity
+        # Demonstrates non-monotonicity through changing glut status
 
 
 class TestLLMRuleCompleteness:

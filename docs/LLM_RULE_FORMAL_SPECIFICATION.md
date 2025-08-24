@@ -53,11 +53,11 @@ Where `Γ_LLM` generates conclusions based on the bilateral truth value:
 Γ_LLM(σ, φ, u, v) = 
   case (σ, u, v) of
     (t, TRUE, FALSE)  → {t : φ}                    // Confirmation
-    (t, FALSE, TRUE)  → {f : φ}                    // Refutation (closes branch)
+    (t, FALSE, TRUE)  → {t : φ*}                   // Refutation (creates glut)
     (t, TRUE, TRUE)   → {t : φ, t : φ*}           // Glut
     (t, FALSE, FALSE) → {f : φ, f : φ*}           // Gap (closes branch)
     (f, TRUE, FALSE)  → {t : φ}                    // Contradiction (closes branch)
-    (f, FALSE, TRUE)  → {f : φ}                    // Confirmation
+    (f, FALSE, TRUE)  → {t : φ*}                   // Confirmation (f:φ with negative evidence)
     (f, TRUE, TRUE)   → {t : φ, t : φ*}           // Glut (closes branch)
     (f, FALSE, FALSE) → {f : φ, f : φ*}           // Gap
 ```
@@ -125,7 +125,7 @@ ACrQ closure (Lemma 5):
 ACrQ-LLM closure:
   - Same as ACrQ for formal derivations
   - LLM gap (FALSE, FALSE) with t:P(a) → closed
-  - LLM refutation with assertion → closed
+  - LLM refutation (FALSE, TRUE) with t:P(a) → creates glut (t:P(a), t:P*(a)), branch stays open
 ```
 
 ## 4. Formal Rule Specification

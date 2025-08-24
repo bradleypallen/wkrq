@@ -13,9 +13,22 @@ Shows:
 REQUIRES: pip install bilateral-truth
 """
 
+from pathlib import Path
+
 from wkrq import ACrQTableau, SignedFormula, f, parse_acrq_formula, t
 from wkrq.cli import TableauTreeRenderer
 from wkrq.llm_integration import create_llm_tableau_evaluator
+
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"Loaded .env from {env_path}")
+except ImportError:
+    pass  # dotenv not installed
 
 
 def section(title):
@@ -34,7 +47,7 @@ def get_llm_evaluator():
                 if llm_evaluator:
                     print(f"✅ Using {provider} LLM evaluator")
                     return llm_evaluator
-            except:
+            except Exception:
                 continue
 
         # Fall back to mock if no API keys available
