@@ -491,12 +491,18 @@ class TheoryCLI(cmd.Cmd):
 
         # Evaluate using the LLM
         print(f"Verifying claim with LLM: {formula}")
-        if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
+        if self.manager.llm_evaluator is not None and hasattr(
+            self.manager.llm_evaluator, "model_info"
+        ):
             model_info = self.manager.llm_evaluator.model_info
             print(f"Using: {model_info['provider']} / {model_info['model']}")
 
         try:
-            result = self.manager.llm_evaluator(formula) if self.manager.llm_evaluator is not None else None
+            result = (
+                self.manager.llm_evaluator(formula)
+                if self.manager.llm_evaluator is not None
+                else None
+            )
 
             if result is None:
                 print("No LLM evaluation available, asserting as true")
@@ -557,7 +563,9 @@ class TheoryCLI(cmd.Cmd):
 
             # Store LLM metadata
             stmt.metadata["llm_evaluated"] = True
-            if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
+            if self.manager.llm_evaluator is not None and hasattr(
+                self.manager.llm_evaluator, "model_info"
+            ):
                 stmt.metadata.update(self.manager.llm_evaluator.model_info)
 
             if self.manager.auto_save:
@@ -618,12 +626,18 @@ class TheoryCLI(cmd.Cmd):
 
         # Evaluate using the LLM
         print(f"\nEvaluating: {formula}")
-        if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
+        if self.manager.llm_evaluator is not None and hasattr(
+            self.manager.llm_evaluator, "model_info"
+        ):
             model_info = self.manager.llm_evaluator.model_info
             print(f"Using: {model_info['provider']} / {model_info['model']}")
 
         try:
-            result = self.manager.llm_evaluator(formula) if self.manager.llm_evaluator is not None else None if self.manager.llm_evaluator else None
+            result = (
+                self.manager.llm_evaluator(formula)
+                if self.manager.llm_evaluator is not None
+                else None if self.manager.llm_evaluator else None
+            )
 
             if result is None:
                 print("Result: No evaluation available")
@@ -671,7 +685,9 @@ class TheoryCLI(cmd.Cmd):
                         "source": "llm_evaluation",
                         "evaluation_type": "direct_query",
                     }
-                    if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
+                    if self.manager.llm_evaluator is not None and hasattr(
+                        self.manager.llm_evaluator, "model_info"
+                    ):
                         metadata.update(self.manager.llm_evaluator.model_info)
 
                     stmt = Statement(
@@ -708,7 +724,9 @@ class TheoryCLI(cmd.Cmd):
                         "source": "llm_evaluation",
                         "evaluation_type": "direct_query",
                     }
-                    if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
+                    if self.manager.llm_evaluator is not None and hasattr(
+                        self.manager.llm_evaluator, "model_info"
+                    ):
                         metadata.update(self.manager.llm_evaluator.model_info)
 
                     stmt = Statement(
