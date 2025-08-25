@@ -145,11 +145,9 @@ class TheoryManager:
     def __init__(
         self,
         theory_file: Path = Path("theory.json"),
-        auto_save: bool = True,
         llm_evaluator: Optional[Callable] = None,
     ):
         self.theory_file = theory_file
-        self.auto_save = auto_save
         self.llm_evaluator = llm_evaluator
         self.translator = NaturalLanguageTranslator()
 
@@ -157,9 +155,7 @@ class TheoryManager:
         self.statements: dict[str, Statement] = {}
         self.next_id = 1
 
-        # Load existing theory if it exists
-        if self.theory_file.exists():
-            self.load()
+        # Don't auto-load - let user explicitly load if desired
 
     def assert_statement(
         self,
@@ -223,18 +219,12 @@ class TheoryManager:
         )
 
         self.statements[stmt_id] = stmt
-
-        if self.auto_save:
-            self.save()
-
         return stmt
 
     def retract_statement(self, stmt_id: str) -> bool:
         """Retract a statement from the theory."""
         if stmt_id in self.statements:
             del self.statements[stmt_id]
-            if self.auto_save:
-                self.save()
             return True
         return False
 
@@ -460,9 +450,6 @@ class TheoryManager:
 
             self.statements[stmt_id] = stmt
 
-            if self.auto_save:
-                self.save()
-
     def infer_consequences(self) -> list[Statement]:
         """Infer logical consequences from the current theory."""
         inferred: list[Statement] = []
@@ -539,9 +526,6 @@ class TheoryManager:
                     inferred.append(stmt)
                     self.statements[stmt.id] = stmt
 
-        if self.auto_save and inferred:
-            self.save()
-
         return inferred
 
     def _is_new_fact(self, predicate: str, truth_value: Any) -> bool:
@@ -608,8 +592,6 @@ class TheoryManager:
         """Clear all statements."""
         self.statements = {}
         self.next_id = 1
-        if self.auto_save:
-            self.save()
 
     def list_statements(self, only_asserted: bool = False) -> list[Statement]:
         """List all statements."""

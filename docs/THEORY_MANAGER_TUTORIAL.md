@@ -1,4 +1,4 @@
-# ACrQ-LLM Theory Manager Tutorial - wKrQ v3.3.1
+# ACrQ-LLM Theory Manager Tutorial - wKrQ v3.3.2
 
 A comprehensive guide to using the ACrQ Theory Manager with LLM integration for paraconsistent reasoning.
 
@@ -62,7 +62,7 @@ acrq-llm --llm openai
 Here's a simple example to get you started:
 
 ```
-ACrQ Theory Manager - wkrq version 3.3.0
+ACrQ Theory Manager - wkrq version 3.3.2
 Type 'help' for available commands.
 
 theory> assert Socrates is human
@@ -342,10 +342,6 @@ Satisfiable with 1 glut:
 # Save current theory
 theory> save my_theory.json
 Theory saved to my_theory.json
-
-# Enable auto-save (saves after each change)
-theory> save --auto my_theory.json
-Auto-save enabled for my_theory.json
 ```
 
 ### Loading Theories
@@ -357,7 +353,7 @@ Loaded 5 statements from my_theory.json
 
 # Loading protects the file from accidental overwrite
 theory> clear
-Theory cleared (auto-save disabled for loaded file)
+Theory cleared
 ```
 
 ### Theory File Format
@@ -636,8 +632,7 @@ theory> exit
 ### File Locations
 
 Default save location: Current working directory
-Auto-save: Updates file after each modification
-Protected files: Loaded files won't be overwritten by clear command
+Theory files: Saved in JSON format with .json extension
 
 ### Best Practices
 

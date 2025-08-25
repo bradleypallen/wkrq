@@ -45,6 +45,14 @@ class TheoryCLI(cmd.Cmd):
         self.llm_provider: Optional[str] = None
         self.loaded_from: Optional[Path] = None  # Track what file we loaded from
 
+        # Enable tab completion (if readline is available)
+        try:
+            import readline
+
+            readline.set_completer_delims(" \t\n;")  # Customize word delimiters
+        except ImportError:
+            pass  # readline not available (e.g., on Windows)
+
         # Build intro message with LLM status
         self._build_intro_message()
 
@@ -315,6 +323,45 @@ class TheoryCLI(cmd.Cmd):
         else:
             print("Cancelled")
 
+    def complete_save(
+        self, text: str, line: str, begidx: int, endidx: int
+    ) -> list[str]:
+        """Provide filename completion for save command."""
+        import glob
+        import os
+
+        # Get the directory and partial filename
+        if "/" in text:
+            # Has directory component
+            dir_path = os.path.dirname(text)
+            partial = os.path.basename(text)
+            search_pattern = os.path.join(dir_path, partial + "*")
+        else:
+            # Current directory
+            partial = text
+            search_pattern = partial + "*"
+
+        # Find matching files and directories
+        matches = []
+        has_dir = False
+        for path in glob.glob(search_pattern):
+            if os.path.isdir(path):
+                matches.append(path + "/")
+                has_dir = True
+            else:
+                # Prefer .json files but show all
+                matches.append(path)
+
+        # Only suggest .json extension if:
+        # 1. We have a partial name without extension
+        # 2. No directories match (to avoid "examples.json" when typing "examples/")
+        # 3. No exact matches already exist
+        if partial and "." not in partial and not has_dir and not matches:
+            json_suggestion = partial + ".json"
+            matches.append(json_suggestion)
+
+        return matches
+
     def do_save(self, arg: str) -> None:
         """save [filename] - Save the theory to a file.
 
@@ -344,10 +391,54 @@ class TheoryCLI(cmd.Cmd):
         self.manager.save()
         print(f"✓ Theory saved to {file_path}")
 
-        # Re-enable auto-save after explicit save
-        if not self.manager.auto_save:
-            self.manager.auto_save = True
-            print("  Auto-save re-enabled")
+        # Save was successful
+
+    def complete_load(
+        self, text: str, line: str, begidx: int, endidx: int
+    ) -> list[str]:
+        """Provide filename completion for load command."""
+        import glob
+        import os
+
+        # Check if we're completing the --merge flag
+        if text.startswith("--"):
+            return ["--merge"]
+
+        # Check if --merge was already typed
+        if "--merge" in line[:begidx]:
+            # We're after --merge, complete filenames
+            pass
+        elif " " in line and not text:
+            # Space after filename, suggest --merge
+            return ["--merge"]
+
+        # Get the directory and partial filename
+        if "/" in text:
+            # Has directory component
+            dir_path = os.path.dirname(text)
+            partial = os.path.basename(text)
+            search_pattern = os.path.join(dir_path, partial + "*")
+        else:
+            # Current directory
+            partial = text
+            search_pattern = partial + "*"
+
+        # Find matching files and directories
+        matches = []
+        for path in glob.glob(search_pattern):
+            if os.path.isdir(path):
+                matches.append(path + "/")
+            elif path.endswith(".json"):
+                # Prioritize .json files
+                matches.insert(0, path)
+            else:
+                matches.append(path)
+
+        # If no matches and we have a partial name, suggest .json extension
+        if partial and "." not in partial and not matches:
+            matches.append(partial + ".json")
+
+        return matches
 
     def do_load(self, arg: str) -> None:
         """load [filename] [--merge] - Load a theory from a file.
@@ -429,12 +520,8 @@ class TheoryCLI(cmd.Cmd):
             print(f"✓ Theory loaded from {file_path}")
             print(f"  Loaded {len(self.manager.statements)} statements")
 
-            # Track that we loaded from this file and disable auto-save
+            # Track that we loaded from this file
             self.loaded_from = file_path
-            if self.manager.auto_save:
-                self.manager.auto_save = False
-                print("  Auto-save disabled to protect loaded file")
-                print("  Use 'save' to explicitly save changes")
 
     def do_claim(self, arg: str) -> None:
         """claim <statement> - Assert a factual claim, verifying with LLM if available.
@@ -568,8 +655,7 @@ class TheoryCLI(cmd.Cmd):
             ):
                 stmt.metadata.update(self.manager.llm_evaluator.model_info)
 
-            if self.manager.auto_save:
-                self.manager.save()
+            # Statement added successfully
 
         except Exception as e:
             print(f"Error evaluating with LLM: {e}")
@@ -749,9 +835,6 @@ class TheoryCLI(cmd.Cmd):
                     print(
                         "\n⚠ Cannot assert: LLM evaluation is not definite (glut or gap)"
                     )
-
-                if self.manager.auto_save:
-                    self.manager.save()
 
         except Exception as e:
             print(f"Error during evaluation: {e}")

@@ -1,7 +1,7 @@
 {
   "metadata": {
     "version": "1.0",
-    "created": "2025-08-24T21:34:11.643723",
+    "created": "2025-08-25T09:10:28.673034",
     "next_id": 10
   },
   "statements": [
@@ -87,28 +87,6 @@
       "metadata": {
         "source": "user_assertion",
         "note": "Tom is a member of the response team unit1"
-      }
-    },
-    {
-      "id": "I0008",
-      "natural_language": "Inferred: Sedan(i90) is f",
-      "formula": "~Sedan(i90)",
-      "sign": "t",
-      "is_inferred": true,
-      "timestamp": "2025-08-24T21:34:11.643714",
-      "metadata": {
-        "source": "tableau_inference"
-      }
-    },
-    {
-      "id": "I0009",
-      "natural_language": "Inferred: Van*(c435) is t",
-      "formula": "Van*(c435)",
-      "sign": "t",
-      "is_inferred": true,
-      "timestamp": "2025-08-24T21:34:11.643720",
-      "metadata": {
-        "source": "tableau_inference"
       }
     }
   ]

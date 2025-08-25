@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2025-08-25
+
+### Added
+
+- **Filename Autocomplete** - Added tab completion for load/save commands in acrq-llm CLI
+  - Completes file paths and directory names
+  - Prioritizes .json files for theory storage
+  - Smart completion that avoids incorrect suggestions
+
+### Changed
+
+- **Removed Auto-save Functionality** - Theory files are no longer automatically saved
+  - Eliminates risk of accidental overwrites
+  - Users must explicitly save changes with the `save` command
+  - Cleaner user experience with more predictable behavior
+
 ## [3.3.1] - 2025-08-25
 
 ### Fixed
