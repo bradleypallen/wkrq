@@ -42,13 +42,13 @@ class TheoryCLI(cmd.Cmd):
     def __init__(self, theory_file: Path = Path("theory.json")):
         super().__init__()
         self.manager = TheoryManager(theory_file=theory_file)
-        self.llm_provider = None
+        self.llm_provider: Optional[str] = None
         self.loaded_from: Optional[Path] = None  # Track what file we loaded from
 
         # Build intro message with LLM status
         self._build_intro_message()
 
-    def _build_intro_message(self):
+    def _build_intro_message(self) -> None:
         """Build intro message with version and LLM status."""
         intro_lines = [f"ACrQ Theory Manager - wkrq version {__version__}"]
 
@@ -71,7 +71,7 @@ class TheoryCLI(cmd.Cmd):
         # Set the intro message
         self.intro = "\n".join(intro_lines) + "\n"
 
-    def do_assert(self, arg):
+    def do_assert(self, arg: str) -> None:
         """assert [sign:] <statement> - Add a statement with optional sign.
 
         Signs: t (true), f (false), e (error/undefined), m (meaningful), n (nontrue), v (variable)
@@ -111,7 +111,7 @@ class TheoryCLI(cmd.Cmd):
         except ValueError as e:
             print(f"Error: {e}")
 
-    def do_retract(self, arg):
+    def do_retract(self, arg: str) -> None:
         """retract <id> [id2 id3...] | --inferred - Remove statement(s) by ID or all inferred.
 
         Examples:
@@ -165,7 +165,7 @@ class TheoryCLI(cmd.Cmd):
             if not_found:
                 print(f"Error: Not found: {', '.join(not_found)}")
 
-    def do_list(self, arg):
+    def do_list(self, arg: str) -> None:
         """list [asserted] - List all statements or only asserted ones."""
         only_asserted = arg.lower() == "asserted"
         statements = self.manager.list_statements(only_asserted)
@@ -207,7 +207,7 @@ class TheoryCLI(cmd.Cmd):
         if len(types_present) > 1:
             print("Legend: [A]=Asserted, [I]=Inferred, [E]=LLM Evidence")
 
-    def do_check(self, arg):
+    def do_check(self, arg: str) -> None:
         """check - Check if the current theory is satisfiable."""
         print("Checking satisfiability...")
         satisfiable, info_states = self.manager.check_satisfiability()
@@ -279,7 +279,7 @@ class TheoryCLI(cmd.Cmd):
         if not gluts and not gaps and satisfiable:
             print("✓ No gluts or gaps detected")
 
-    def do_infer(self, arg):
+    def do_infer(self, arg: str) -> None:
         """infer - Infer logical consequences from the current theory."""
         print("Inferring consequences...")
         inferred = self.manager.infer_consequences()
@@ -301,12 +301,12 @@ class TheoryCLI(cmd.Cmd):
         else:
             print("No new consequences could be inferred")
 
-    def do_report(self, arg):
+    def do_report(self, arg: str) -> None:
         """report - Generate a comprehensive analysis report."""
         report = self.manager.get_report()
         print("\n" + report)
 
-    def do_clear(self, arg):
+    def do_clear(self, arg: str) -> None:
         """clear - Clear all statements from the theory."""
         confirm = input("Are you sure you want to clear all statements? (y/n): ")
         if confirm.lower() == "y":
@@ -315,7 +315,7 @@ class TheoryCLI(cmd.Cmd):
         else:
             print("Cancelled")
 
-    def do_save(self, arg):
+    def do_save(self, arg: str) -> None:
         """save [filename] - Save the theory to a file.
 
         Without filename: saves to current working file (theory.json by default)
@@ -349,7 +349,7 @@ class TheoryCLI(cmd.Cmd):
             self.manager.auto_save = True
             print("  Auto-save re-enabled")
 
-    def do_load(self, arg):
+    def do_load(self, arg: str) -> None:
         """load [filename] [--merge] - Load a theory from a file.
 
         By default, replaces the current theory. Use --merge to combine.
@@ -436,7 +436,7 @@ class TheoryCLI(cmd.Cmd):
                 print("  Auto-save disabled to protect loaded file")
                 print("  Use 'save' to explicitly save changes")
 
-    def do_claim(self, arg):
+    def do_claim(self, arg: str) -> None:
         """claim <statement> - Assert a factual claim, verifying with LLM if available.
 
         For atomic formulas with LLM available: queries LLM first, then asserts the result.
@@ -491,12 +491,12 @@ class TheoryCLI(cmd.Cmd):
 
         # Evaluate using the LLM
         print(f"Verifying claim with LLM: {formula}")
-        if hasattr(self.manager.llm_evaluator, "model_info"):
+        if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
             model_info = self.manager.llm_evaluator.model_info
             print(f"Using: {model_info['provider']} / {model_info['model']}")
 
         try:
-            result = self.manager.llm_evaluator(formula)
+            result = self.manager.llm_evaluator(formula) if self.manager.llm_evaluator is not None else None
 
             if result is None:
                 print("No LLM evaluation available, asserting as true")
@@ -557,7 +557,7 @@ class TheoryCLI(cmd.Cmd):
 
             # Store LLM metadata
             stmt.metadata["llm_evaluated"] = True
-            if hasattr(self.manager.llm_evaluator, "model_info"):
+            if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
                 stmt.metadata.update(self.manager.llm_evaluator.model_info)
 
             if self.manager.auto_save:
@@ -568,7 +568,7 @@ class TheoryCLI(cmd.Cmd):
             print("Falling back to regular assertion")
             return self.do_assert(arg)
 
-    def do_evaluate(self, arg):
+    def do_evaluate(self, arg: str) -> None:
         """evaluate <formula> [--assert] - Get LLM evaluation for an atomic formula.
 
         Examples:
@@ -618,12 +618,12 @@ class TheoryCLI(cmd.Cmd):
 
         # Evaluate using the LLM
         print(f"\nEvaluating: {formula}")
-        if hasattr(self.manager.llm_evaluator, "model_info"):
+        if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
             model_info = self.manager.llm_evaluator.model_info
             print(f"Using: {model_info['provider']} / {model_info['model']}")
 
         try:
-            result = self.manager.llm_evaluator(formula)
+            result = self.manager.llm_evaluator(formula) if self.manager.llm_evaluator is not None else None if self.manager.llm_evaluator else None
 
             if result is None:
                 print("Result: No evaluation available")
@@ -671,7 +671,7 @@ class TheoryCLI(cmd.Cmd):
                         "source": "llm_evaluation",
                         "evaluation_type": "direct_query",
                     }
-                    if hasattr(self.manager.llm_evaluator, "model_info"):
+                    if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
                         metadata.update(self.manager.llm_evaluator.model_info)
 
                     stmt = Statement(
@@ -708,7 +708,7 @@ class TheoryCLI(cmd.Cmd):
                         "source": "llm_evaluation",
                         "evaluation_type": "direct_query",
                     }
-                    if hasattr(self.manager.llm_evaluator, "model_info"):
+                    if self.manager.llm_evaluator is not None and hasattr(self.manager.llm_evaluator, "model_info"):
                         metadata.update(self.manager.llm_evaluator.model_info)
 
                     stmt = Statement(
@@ -738,7 +738,7 @@ class TheoryCLI(cmd.Cmd):
         except Exception as e:
             print(f"Error during evaluation: {e}")
 
-    def do_llm(self, arg):
+    def do_llm(self, arg: str) -> None:
         """llm <provider> [model] [api_key] - Enable LLM evaluator.
 
         Providers: openai, anthropic, openrouter, mock
@@ -851,7 +851,7 @@ class TheoryCLI(cmd.Cmd):
                     }.get(provider)
                     if api_key:
                         print("  Using provided API key")
-                    elif os.getenv(env_var):
+                    elif env_var and os.getenv(env_var):
                         print("  Using API key from environment")
             else:
                 print(f"Error: Could not create LLM evaluator for {provider}")
@@ -861,14 +861,14 @@ class TheoryCLI(cmd.Cmd):
                         "anthropic": "ANTHROPIC_API_KEY",
                         "openrouter": "OPENROUTER_API_KEY",
                     }.get(provider)
-                    if not os.getenv(env_var):
+                    if env_var and not os.getenv(env_var):
                         print(
                             f"  No {env_var} found. Provide with: llm {provider} <api_key>"
                         )
         except Exception as e:
             print(f"Error: {e}")
 
-    def do_help(self, arg):
+    def do_help(self, arg: str) -> None:
         """help [command] - Show available commands or help for a specific command.
 
         Examples:
@@ -910,15 +910,15 @@ class TheoryCLI(cmd.Cmd):
             print("  quit                - Exit")
             print("\nNote: Commands can optionally be prefixed with '/'\n")
 
-    def do_quit(self, arg):
+    def do_quit(self, arg: str) -> bool:
         """quit - Exit the theory manager."""
         return True
 
-    def do_exit(self, arg):
+    def do_exit(self, arg: str) -> bool:
         """Alias for quit."""
         return self.do_quit(arg)
 
-    def default(self, line):
+    def default(self, line: str) -> None:
         """Handle unrecognized input. Slash prefix is optional for commands."""
         if line.startswith("/"):
             # Extract command and args (slash prefix is optional but supported)
@@ -944,11 +944,11 @@ class TheoryCLI(cmd.Cmd):
                 print("Type 'help' for available commands.")
                 print("To make an assertion, use: assert <statement>")
 
-    def emptyline(self):
+    def emptyline(self) -> bool:
         """Do nothing on empty line."""
-        pass
+        return False
 
-    def precmd(self, line):
+    def precmd(self, line: str) -> str:
         """Pre-process commands to handle slash syntax."""
         # Strip leading/trailing whitespace
         line = line.strip()
@@ -964,7 +964,7 @@ class TheoryCLI(cmd.Cmd):
         return line
 
 
-def main():
+def main() -> None:
     """Main entry point for the theory CLI."""
     import argparse
 
