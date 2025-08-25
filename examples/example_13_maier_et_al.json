@@ -1,8 +1,115 @@
 {
   "metadata": {
     "version": "1.0",
-    "created": "2025-08-24T15:29:32.520034",
-    "next_id": 1
+    "created": "2025-08-24T21:34:11.643723",
+    "next_id": 10
   },
-  "statements": []
+  "statements": [
+    {
+      "id": "S0001",
+      "natural_language": "c435 is a Sedan",
+      "formula": "Sedan(c435)",
+      "sign": "t",
+      "is_inferred": false,
+      "timestamp": "2024-12-24T00:00:01",
+      "metadata": {
+        "source": "user_assertion",
+        "note": "Vehicle c435 is classified as a sedan"
+      }
+    },
+    {
+      "id": "S0002",
+      "natural_language": "c435 is a Van",
+      "formula": "Van(c435)",
+      "sign": "t",
+      "is_inferred": false,
+      "timestamp": "2024-12-24T00:00:02",
+      "metadata": {
+        "source": "user_assertion",
+        "note": "Vehicle c435 is also classified as a van"
+      }
+    },
+    {
+      "id": "S0003",
+      "natural_language": "Sedan and Van are disjoint (nothing can be both)",
+      "formula": "[forall X Sedan(X)]~Van(X)",
+      "sign": "t",
+      "is_inferred": false,
+      "timestamp": "2024-12-24T00:00:03",
+      "metadata": {
+        "source": "user_assertion",
+        "note": "Sedan \u2291 \u00acVan - disjointness axiom"
+      }
+    },
+    {
+      "id": "S0004",
+      "natural_language": "i90 is an Incident",
+      "formula": "Incident(i90)",
+      "sign": "t",
+      "is_inferred": false,
+      "timestamp": "2024-12-24T00:00:04",
+      "metadata": {
+        "source": "user_assertion",
+        "note": "i90 represents an accident incident"
+      }
+    },
+    {
+      "id": "S0005",
+      "natural_language": "c435 was involved in incident i90",
+      "formula": "involvedIn(c435, i90)",
+      "sign": "t",
+      "is_inferred": false,
+      "timestamp": "2024-12-24T00:00:05",
+      "metadata": {
+        "source": "user_assertion",
+        "note": "Vehicle c435 was involved in the accident"
+      }
+    },
+    {
+      "id": "S0006",
+      "natural_language": "unit1 was assigned to incident i90",
+      "formula": "assignedTo(unit1, i90)",
+      "sign": "t",
+      "is_inferred": false,
+      "timestamp": "2024-12-24T00:00:06",
+      "metadata": {
+        "source": "user_assertion",
+        "note": "Response unit1 was assigned to handle the incident"
+      }
+    },
+    {
+      "id": "S0007",
+      "natural_language": "tom is a member of unit1",
+      "formula": "memberOf(tom, unit1)",
+      "sign": "t",
+      "is_inferred": false,
+      "timestamp": "2024-12-24T00:00:07",
+      "metadata": {
+        "source": "user_assertion",
+        "note": "Tom is a member of the response team unit1"
+      }
+    },
+    {
+      "id": "I0008",
+      "natural_language": "Inferred: Sedan(i90) is f",
+      "formula": "~Sedan(i90)",
+      "sign": "t",
+      "is_inferred": true,
+      "timestamp": "2025-08-24T21:34:11.643714",
+      "metadata": {
+        "source": "tableau_inference"
+      }
+    },
+    {
+      "id": "I0009",
+      "natural_language": "Inferred: Van*(c435) is t",
+      "formula": "Van*(c435)",
+      "sign": "t",
+      "is_inferred": true,
+      "timestamp": "2025-08-24T21:34:11.643720",
+      "metadata": {
+        "source": "tableau_inference"
+      }
+    }
+  ]
 }

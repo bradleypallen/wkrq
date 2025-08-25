@@ -1,4 +1,4 @@
-# ACrQ-LLM Theory Manager Tutorial - wKrQ v3.3.0
+# ACrQ-LLM Theory Manager Tutorial - wKrQ v3.3.1
 
 A comprehensive guide to using the ACrQ Theory Manager with LLM integration for paraconsistent reasoning.
 

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2025-08-25
+
+### Fixed
+
+- **Bilateral Predicate Conversion Bug** - Fixed critical bug in ACrQ parser
+  - `_convert_to_bilateral` was incorrectly re-converting BilateralPredicateFormula objects
+  - This caused formulas like `Van*(X)` to become `Van**(X)` with wrong attributes
+  - Glut detection now works correctly for formulas like `[forall X Sedan(X)]~Van(X)` with `Van(c435)`
+  - Fixed by checking for BilateralPredicateFormula before PredicateFormula in the instanceof chain
+
 ## [3.3.0] - 2025-08-24
 
 ### Added

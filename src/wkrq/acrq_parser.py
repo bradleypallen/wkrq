@@ -451,7 +451,11 @@ class ACrQParser:
 
     def _convert_to_bilateral(self, formula: Formula) -> Formula:
         """Convert predicates in a formula to bilateral form."""
-        if isinstance(formula, PredicateFormula):
+        # Check for BilateralPredicateFormula first since it inherits from PredicateFormula
+        if isinstance(formula, BilateralPredicateFormula):
+            # Already bilateral, return unchanged
+            return formula
+        elif isinstance(formula, PredicateFormula):
             return BilateralPredicateFormula(
                 positive_name=formula.predicate_name,
                 terms=formula.terms,
