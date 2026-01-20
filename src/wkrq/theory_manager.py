@@ -67,11 +67,13 @@ class NaturalLanguageTranslator:
                 re.compile(r"if (\w+) is a (\w+) then (\w+) is a (\w+)"),
                 r"\2(\1) -> \4(\3)",
             ),
-            # Universals
+            # Universals - capture plural consequent for singularization
+            (re.compile(r"all (\w+)s are (\w+)s"), r"[forall X \1(X)]\2(X)"),
             (re.compile(r"all (\w+)s are (\w+)"), r"[forall X \1(X)]\2(X)"),
             (re.compile(r"every (\w+) can (\w+)"), r"[forall X \1(X)]\2(X)"),
             (re.compile(r"every (\w+) is a (\w+)"), r"[forall X \1(X)]\2(X)"),
             # Existentials
+            (re.compile(r"some (\w+)s are (\w+)s"), r"[exists X \1(X)]\2(X)"),
             (re.compile(r"some (\w+)s are (\w+)"), r"[exists X \1(X)]\2(X)"),
             (re.compile(r"some (\w+) is a (\w+)"), r"[exists X \1(X)]\2(X)"),
             (
@@ -86,13 +88,40 @@ class NaturalLanguageTranslator:
             (re.compile(r"(\w+) (\w+) (\w+)"), r"\2(\1, \3)"),
         ]
 
+    def _singularize(self, word: str) -> str:
+        """Convert a plural word to singular form (simple heuristic)."""
+        # Handle common irregular plurals
+        irregulars = {
+            "analyses": "analysis",
+            "indices": "index",
+            "vertices": "vertex",
+        }
+        if word.lower() in irregulars:
+            return irregulars[word.lower()]
+
+        # Handle words ending in 'ies' -> 'y' (e.g., 'properties' -> 'property')
+        if word.endswith("ies") and len(word) > 3:
+            return word[:-3] + "y"
+
+        # Handle words ending in 'es' after s, x, z, ch, sh
+        if word.endswith("es") and len(word) > 2:
+            if word[-3] in "sxz" or word[-4:-2] in ["ch", "sh"]:
+                return word[:-2]
+
+        # Handle regular plurals ending in 's'
+        if word.endswith("s") and not word.endswith("ss") and len(word) > 1:
+            return word[:-1]
+
+        return word
+
     def translate(self, text: str) -> Optional[str]:
         """Translate natural language to ACrQ formula."""
         text = text.lower().strip()
 
         # Try pattern matching first
+        # Use fullmatch to ensure the entire string is matched
         for pattern, replacement in self.patterns:
-            match = pattern.match(text)
+            match = pattern.fullmatch(text)
             if match:
                 formula = pattern.sub(replacement, text)
                 # Capitalize predicates and constants appropriately
@@ -109,13 +138,16 @@ class NaturalLanguageTranslator:
         """Capitalize predicates and constants appropriately."""
         import re
 
-        # Fix predicates to have capital first letter
+        # Fix predicates: capitalize first letter AND singularize
         # Pattern: word(args) where word starts with lowercase
-        formula = re.sub(
-            r"\b([a-z])(\w*)\(",
-            lambda m: m.group(1).upper() + m.group(2) + "(",
-            formula,
-        )
+        def capitalize_and_singularize(m: re.Match) -> str:
+            pred = m.group(1) + m.group(2)
+            # Singularize the predicate name
+            singular = self._singularize(pred)
+            # Capitalize first letter
+            return singular[0].upper() + singular[1:] + "("
+
+        formula = re.sub(r"\b([a-z])(\w*)\(", capitalize_and_singularize, formula)
 
         # Ensure ALL X variables are uppercase (comprehensive replacement)
         # Replace any lowercase x that appears to be a variable
@@ -451,95 +483,390 @@ class TheoryManager:
             self.statements[stmt_id] = stmt
 
     def infer_consequences(self) -> list[Statement]:
-        """Infer logical consequences from the current theory."""
+        """Infer logical consequences from the current theory using forward chaining.
+
+        This method uses proper forward-chaining inference for restricted universal
+        quantifiers: [∀X P(X)]Q(X) only derives Q(c) when P(c) is already true.
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
         inferred: list[Statement] = []
 
-        # Get current formulas
-        formulas = []
+        from .acrq_parser import SyntaxMode
+        from .formula import (
+            RestrictedUniversalFormula,
+        )
+
+        # Step 1: Parse all formulas and collect ground facts and universals
+        ground_facts: dict[str, set[str]] = {}  # predicate_name -> set of constants
+        universal_rules: list[tuple[str, RestrictedUniversalFormula]] = []
+        all_constants: set[str] = set()
+
         for stmt in self.statements.values():
             if stmt.formula and not stmt.formula.startswith("//"):
                 try:
-                    # Use MIXED mode to handle both syntaxes correctly
-                    from .acrq_parser import SyntaxMode
-
                     formula = parse_acrq_formula(stmt.formula, SyntaxMode.MIXED)
-                    formulas.append(SignedFormula(t, formula))
-                except Exception:
+                    # Collect constants from all formulas
+                    all_constants.update(self._extract_constants(formula))
+
+                    # Only consider formulas with sign 't' for forward chaining
+                    if stmt.sign == "t":
+                        if isinstance(formula, RestrictedUniversalFormula):
+                            universal_rules.append((stmt.id, formula))
+                            logger.debug(
+                                f"Found universal rule {stmt.id}: {stmt.formula}"
+                            )
+                        elif self._is_ground_atomic(formula):
+                            # Ground atomic fact
+                            pred_name, const_name = self._extract_predicate_constant(
+                                formula
+                            )
+                            if pred_name and const_name:
+                                if pred_name not in ground_facts:
+                                    ground_facts[pred_name] = set()
+                                ground_facts[pred_name].add(const_name)
+                                logger.debug(
+                                    f"Found ground fact: {pred_name}({const_name})"
+                                )
+                except Exception as e:
+                    logger.debug(f"Failed to parse formula '{stmt.formula}': {e}")
                     continue
 
-        if not formulas:
-            return inferred
+        logger.debug(f"All constants: {all_constants}")
+        logger.debug(f"Ground facts: {ground_facts}")
+        logger.debug(f"Universal rules: {len(universal_rules)}")
 
-        # Create tableau and analyze
-        tableau = ACrQTableau(formulas, llm_evaluator=self.llm_evaluator)
-        result = tableau.construct()
+        # Step 2: Forward chaining - apply universal rules until fixed point
+        new_inferences: list[tuple[str, str, str]] = (
+            []
+        )  # (predicate, constant, from_rule)
+        changed = True
+        iteration = 0
+        max_iterations = 100  # Safety limit
 
-        if result.satisfiable and result.models:
-            # Extract new facts from models
-            model = result.models[0]
+        while changed and iteration < max_iterations:
+            changed = False
+            iteration += 1
+            logger.debug(f"Forward chaining iteration {iteration}")
 
-            # Also check tableau nodes to identify LLM-generated formulas
-            llm_generated = set()
-            for node in tableau.nodes.values():
-                if node.rule_applied and "llm-eval" in node.rule_applied:
-                    # This node was created by LLM evaluation
-                    formula_str = str(node.formula.formula)
-                    llm_generated.add(formula_str)
+            for rule_id, universal in universal_rules:
+                # universal is [∀X P(X)]Q(X)
+                # restriction is P(X), matrix is Q(X)
+                restriction = universal.restriction
+                matrix = universal.matrix
 
-            for pred_str, truth_value in model.valuations.items():
-                # Check if this is a new fact not already in theory
-                if self._is_new_fact(pred_str, truth_value):
-                    # Determine if this came from LLM or inference
-                    is_llm = pred_str in llm_generated
-
-                    if is_llm:
-                        # LLM-generated evidence
-                        nl = f"LLM evidence: {pred_str} is {truth_value}"
-                        stmt_id = f"E{self.next_id:04d}"  # E for Evidence
-
-                        # Get model info from the evaluator if available
-                        metadata = {"source": "llm_evaluation"}
-                        if self.llm_evaluator and hasattr(
-                            self.llm_evaluator, "model_info"
-                        ):
-                            metadata.update(self.llm_evaluator.model_info)
-                    else:
-                        # Regular inference
-                        nl = f"Inferred: {pred_str} is {truth_value}"
-                        stmt_id = f"I{self.next_id:04d}"  # I for Inferred
-                        metadata = {"source": "tableau_inference"}
-
-                    formula_str = (
-                        pred_str if str(truth_value) == "t" else f"~{pred_str}"
+                # Get the predicate name from the restriction
+                restrictor_pred = self._get_predicate_name(restriction)
+                if not restrictor_pred:
+                    logger.debug(
+                        f"Could not extract predicate from restriction: {restriction}"
                     )
+                    continue
 
-                    stmt = Statement(
-                        id=stmt_id,
-                        natural_language=nl,
-                        formula=formula_str,
-                        sign="t",
-                        is_inferred=True,
-                        metadata=metadata,
-                    )
-                    self.next_id += 1
+                # Get the predicate name from the matrix
+                matrix_pred = self._get_predicate_name(matrix)
+                if not matrix_pred:
+                    logger.debug(f"Could not extract predicate from matrix: {matrix}")
+                    continue
 
-                    inferred.append(stmt)
-                    self.statements[stmt.id] = stmt
+                logger.debug(
+                    f"Rule {rule_id}: {restrictor_pred}(X) -> {matrix_pred}(X)"
+                )
+
+                # Check which constants satisfy the restriction
+                satisfying_constants = ground_facts.get(restrictor_pred, set())
+                logger.debug(
+                    f"Constants satisfying {restrictor_pred}: {satisfying_constants}"
+                )
+
+                for const in satisfying_constants:
+                    # Check if we already have matrix_pred(const)
+                    existing_matrix_facts = ground_facts.get(matrix_pred, set())
+                    if const not in existing_matrix_facts:
+                        # New inference!
+                        logger.debug(
+                            f"New inference: {matrix_pred}({const}) from rule {rule_id}"
+                        )
+                        if matrix_pred not in ground_facts:
+                            ground_facts[matrix_pred] = set()
+                        ground_facts[matrix_pred].add(const)
+                        new_inferences.append((matrix_pred, const, rule_id))
+                        changed = True
+
+        logger.debug(f"Forward chaining completed after {iteration} iterations")
+        logger.debug(f"New inferences: {new_inferences}")
+
+        # Step 3: Create Statement objects for new inferences
+        for pred_name, const_name, from_rule in new_inferences:
+            formula_str = f"{pred_name}({const_name})"
+
+            # Check if this exact formula already exists as a statement
+            if self._formula_exists(formula_str):
+                continue
+
+            stmt_id = f"I{self.next_id:04d}"
+            self.next_id += 1
+
+            nl = f"Inferred: {pred_name}({const_name}) is t"
+            metadata = {"source": "forward_chaining", "from_rule": from_rule}
+
+            stmt = Statement(
+                id=stmt_id,
+                natural_language=nl,
+                formula=formula_str,
+                sign="t",
+                is_inferred=True,
+                metadata=metadata,
+            )
+
+            inferred.append(stmt)
+            self.statements[stmt.id] = stmt
+            logger.info(f"Added inference: {stmt_id} t:{formula_str}")
+
+        # Step 4: Run LLM verification on newly inferred atoms (if LLM evaluator available)
+        # This verifies deductive inferences against LLM knowledge
+        if self.llm_evaluator:
+            llm_verifications = self._verify_inferences_with_llm(new_inferences)
+            inferred.extend(llm_verifications)
 
         return inferred
 
-    def _is_new_fact(self, predicate: str, truth_value: Any) -> bool:
-        """Check if a fact is new to the theory."""
-        # Check if this exact predicate with this truth value already exists
-        formula_to_check = predicate if str(truth_value) == "t" else f"~{predicate}"
+    def _verify_inferences_with_llm(
+        self, inferences: list[tuple[str, str, str]]
+    ) -> list[Statement]:
+        """Verify inferred atoms with LLM and add evidence statements.
 
+        Args:
+            inferences: List of (predicate_name, constant_name, from_rule) tuples
+
+        Returns:
+            List of LLM evidence statements
+        """
+        import logging
+
+        from .acrq_parser import SyntaxMode
+        from .semantics import FALSE, TRUE
+
+        logger = logging.getLogger(__name__)
+        llm_statements: list[Statement] = []
+
+        if not self.llm_evaluator:
+            return llm_statements
+
+        for pred_name, const_name, from_rule in inferences:
+            formula_str = f"{pred_name}({const_name})"
+
+            try:
+                # Parse the formula
+                formula = parse_acrq_formula(formula_str, SyntaxMode.MIXED)
+
+                # Only evaluate atomic formulas
+                if not formula.is_atomic():
+                    continue
+
+                # Call LLM evaluator
+                result = self.llm_evaluator(formula)
+
+                if result is None:
+                    logger.debug(f"LLM returned None for {formula_str}")
+                    continue
+
+                # Interpret the bilateral truth value and create appropriate statements
+                # In ACrQ bilateral logic:
+                # - Verified <t,f>: assert t:P(c) - confirms inference
+                # - Refuted <f,t>: assert t:P*(c) - creates glut with inference (paraconsistent)
+                # - Glut <t,t>: assert both t:P(c) and t:P*(c)
+                # - Gap <f,f>: don't assert (no evidence) - just report
+
+                metadata: dict[str, Any] = {
+                    "source": "llm_verification",
+                    "verified_inference": from_rule,
+                    "bilateral": {
+                        "positive": str(result.positive),
+                        "negative": str(result.negative),
+                    },
+                }
+                if hasattr(self.llm_evaluator, "model_info"):
+                    metadata.update(self.llm_evaluator.model_info)
+
+                if result.positive == TRUE and result.negative == FALSE:
+                    # LLM confirms: <t,f> → assert t:P(c)
+                    verdict = "verified"
+                    logger.info(f"LLM verified inference {formula_str}")
+
+                    stmt_id = f"E{self.next_id:04d}"
+                    self.next_id += 1
+                    stmt = Statement(
+                        id=stmt_id,
+                        natural_language=f"LLM: {formula_str} confirmed <t,f>",
+                        formula=formula_str,
+                        sign="t",
+                        is_inferred=True,
+                        metadata={**metadata, "verdict": verdict},
+                    )
+                    llm_statements.append(stmt)
+                    self.statements[stmt.id] = stmt
+
+                elif result.positive == FALSE and result.negative == TRUE:
+                    # LLM refutes: <f,t> → assert t:P*(c) (bilateral negative evidence)
+                    # This creates a GLUT with the inference t:P(c), which ACrQ tolerates
+                    verdict = "refuted"
+                    star_formula = f"{pred_name}*({const_name})"
+                    logger.info(
+                        f"LLM refuted inference {formula_str} → asserting {star_formula}"
+                    )
+
+                    stmt_id = f"E{self.next_id:04d}"
+                    self.next_id += 1
+                    stmt = Statement(
+                        id=stmt_id,
+                        natural_language=f"LLM: {star_formula} (refutes {pred_name}) <f,t>",
+                        formula=star_formula,
+                        sign="t",
+                        is_inferred=True,
+                        metadata={**metadata, "verdict": verdict, "refutes": formula_str},
+                    )
+                    llm_statements.append(stmt)
+                    self.statements[stmt.id] = stmt
+
+                elif result.positive == TRUE and result.negative == TRUE:
+                    # LLM has conflicting evidence: <t,t> → assert both t:P(c) and t:P*(c)
+                    verdict = "glut"
+                    star_formula = f"{pred_name}*({const_name})"
+                    logger.info(f"LLM glut for {formula_str}")
+
+                    # Positive evidence
+                    stmt_id = f"E{self.next_id:04d}"
+                    self.next_id += 1
+                    stmt = Statement(
+                        id=stmt_id,
+                        natural_language=f"LLM: {formula_str} (glut positive) <t,t>",
+                        formula=formula_str,
+                        sign="t",
+                        is_inferred=True,
+                        metadata={**metadata, "verdict": verdict},
+                    )
+                    llm_statements.append(stmt)
+                    self.statements[stmt.id] = stmt
+
+                    # Negative evidence
+                    stmt_id2 = f"E{self.next_id:04d}"
+                    self.next_id += 1
+                    stmt2 = Statement(
+                        id=stmt_id2,
+                        natural_language=f"LLM: {star_formula} (glut negative) <t,t>",
+                        formula=star_formula,
+                        sign="t",
+                        is_inferred=True,
+                        metadata={**metadata, "verdict": verdict, "glut_pair": stmt.id},
+                    )
+                    llm_statements.append(stmt2)
+                    self.statements[stmt2.id] = stmt2
+
+                elif result.positive == FALSE and result.negative == FALSE:
+                    # LLM has no evidence: <f,f> → GAP, don't assert anything
+                    # Just record the gap for reporting purposes
+                    verdict = "gap"
+                    logger.info(f"LLM gap for {formula_str} (no evidence)")
+
+                    # Create a gap record but with a special marker
+                    # We use sign "v" (variable) to indicate unknown/gap without conflict
+                    stmt_id = f"E{self.next_id:04d}"
+                    self.next_id += 1
+                    stmt = Statement(
+                        id=stmt_id,
+                        natural_language=f"LLM: {formula_str} has no evidence <f,f>",
+                        formula=formula_str,
+                        sign="v",  # Variable sign = unknown, doesn't conflict
+                        is_inferred=True,
+                        metadata={**metadata, "verdict": verdict},
+                    )
+                    llm_statements.append(stmt)
+                    self.statements[stmt.id] = stmt
+
+                else:
+                    # UNDEFINED or complex state
+                    verdict = "undefined"
+                    logger.info(f"LLM undefined for {formula_str}")
+                    # Don't assert anything for undefined states
+
+            except Exception as e:
+                logger.warning(f"Error verifying {formula_str} with LLM: {e}")
+                continue
+
+        return llm_statements
+
+    def _extract_constants(self, formula: Any) -> set[str]:
+        """Extract all constant names from a formula."""
+        from .formula import (
+            BilateralPredicateFormula,
+            CompoundFormula,
+            Constant,
+            PredicateFormula,
+            RestrictedQuantifierFormula,
+        )
+
+        constants: set[str] = set()
+
+        if isinstance(formula, (PredicateFormula, BilateralPredicateFormula)):
+            for term in formula.terms:
+                if isinstance(term, Constant):
+                    constants.add(term.name)
+        elif isinstance(formula, CompoundFormula):
+            for subformula in formula.subformulas:
+                constants.update(self._extract_constants(subformula))
+        elif isinstance(formula, RestrictedQuantifierFormula):
+            constants.update(self._extract_constants(formula.restriction))
+            constants.update(self._extract_constants(formula.matrix))
+
+        return constants
+
+    def _is_ground_atomic(self, formula: Any) -> bool:
+        """Check if formula is a ground atomic predicate (no variables)."""
+        from .formula import (
+            BilateralPredicateFormula,
+            PredicateFormula,
+            Variable,
+        )
+
+        if isinstance(formula, (PredicateFormula, BilateralPredicateFormula)):
+            # Check all terms are constants (not variables)
+            for term in formula.terms:
+                if isinstance(term, Variable):
+                    return False
+            return True
+        return False
+
+    def _extract_predicate_constant(
+        self, formula: Any
+    ) -> tuple[Optional[str], Optional[str]]:
+        """Extract predicate name and constant from a ground atomic formula."""
+        from .formula import BilateralPredicateFormula, Constant, PredicateFormula
+
+        if isinstance(formula, BilateralPredicateFormula):
+            if len(formula.terms) == 1 and isinstance(formula.terms[0], Constant):
+                return formula.predicate_name, formula.terms[0].name
+        elif isinstance(formula, PredicateFormula):
+            if len(formula.terms) == 1 and isinstance(formula.terms[0], Constant):
+                return formula.predicate_name, formula.terms[0].name
+
+        return None, None
+
+    def _get_predicate_name(self, formula: Any) -> Optional[str]:
+        """Get predicate name from an atomic formula or formula with single predicate."""
+        from .formula import BilateralPredicateFormula, PredicateFormula
+
+        if isinstance(formula, (PredicateFormula, BilateralPredicateFormula)):
+            return formula.predicate_name
+        return None
+
+    def _formula_exists(self, formula_str: str) -> bool:
+        """Check if a formula string already exists in statements."""
         for stmt in self.statements.values():
-            if stmt.formula == formula_to_check:
-                return False
-            # Also check if the predicate itself is the formula (without sign prefix)
-            if stmt.formula == predicate:
-                return False
-        return True
+            if stmt.formula == formula_str:
+                return True
+        return False
 
     def save(self) -> None:
         """Save theory to file."""
@@ -674,5 +1001,12 @@ class TheoryManager:
             if stmt.formula and not stmt.formula.startswith("//"):
                 # Show the actual sign from the statement
                 report.append(f"        → {stmt.sign}:{stmt.formula}")
+
+            # Show bilateral truth values for LLM evidence
+            if stmt.id.startswith("E") and stmt.metadata.get("bilateral"):
+                bilateral = stmt.metadata["bilateral"]
+                pos = bilateral.get("positive", "?")
+                neg = bilateral.get("negative", "?")
+                report.append(f"        <{pos},{neg}>")
 
         return "\n".join(report)
