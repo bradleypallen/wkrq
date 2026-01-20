@@ -725,7 +725,11 @@ class TheoryManager:
                         formula=star_formula,
                         sign="t",
                         is_inferred=True,
-                        metadata={**metadata, "verdict": verdict, "refutes": formula_str},
+                        metadata={
+                            **metadata,
+                            "verdict": verdict,
+                            "refutes": formula_str,
+                        },
                     )
                     llm_statements.append(stmt)
                     self.statements[stmt.id] = stmt
