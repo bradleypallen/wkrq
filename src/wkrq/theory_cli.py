@@ -220,7 +220,13 @@ class TheoryCLI(cmd.Cmd):
         print("Checking satisfiability...")
         satisfiable, info_states = self.manager.check_satisfiability()
 
-        print(f"{'✓ Satisfiable' if satisfiable else '✗ Unsatisfiable'}")
+        # Show timing
+        if self.manager.last_check_time is not None:
+            print(
+                f"{'✓ Satisfiable' if satisfiable else '✗ Unsatisfiable'} ({self.manager.last_check_time:.3f}s)"
+            )
+        else:
+            print(f"{'✓ Satisfiable' if satisfiable else '✗ Unsatisfiable'}")
 
         # Report gluts and gaps
         gluts = [s for s in info_states if s.state == "glut"]
@@ -292,8 +298,16 @@ class TheoryCLI(cmd.Cmd):
         print("Inferring consequences...")
         inferred = self.manager.infer_consequences()
 
+        # Build timing string
+        timing_str = ""
+        if self.manager.last_infer_time is not None:
+            timing_str = f" ({self.manager.last_infer_time:.3f}s"
+            if self.manager.last_llm_time is not None:
+                timing_str += f", LLM: {self.manager.last_llm_time:.3f}s"
+            timing_str += ")"
+
         if inferred:
-            print(f"✓ Inferred {len(inferred)} new statement(s):")
+            print(f"✓ Inferred {len(inferred)} new statement(s):{timing_str}")
             for stmt in inferred:
                 # Determine the marker based on ID prefix
                 if stmt.id.startswith("E"):
@@ -307,7 +321,7 @@ class TheoryCLI(cmd.Cmd):
                 else:
                     print(f"  {stmt.id} {marker}: [no formula]")
         else:
-            print("No new consequences could be inferred")
+            print(f"No new consequences could be inferred{timing_str}")
 
     def do_report(self, arg: str) -> None:
         """report - Generate a comprehensive analysis report."""

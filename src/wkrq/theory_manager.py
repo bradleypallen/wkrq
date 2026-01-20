@@ -12,6 +12,7 @@ This module provides a complete system for:
 
 import json
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -187,6 +188,11 @@ class TheoryManager:
         self.statements: dict[str, Statement] = {}
         self.next_id = 1
 
+        # Timing data
+        self.last_infer_time: Optional[float] = None
+        self.last_check_time: Optional[float] = None
+        self.last_llm_time: Optional[float] = None  # LLM verification time within infer
+
         # Don't auto-load - let user explicitly load if desired
 
     def assert_statement(
@@ -262,6 +268,8 @@ class TheoryManager:
 
     def check_satisfiability(self) -> tuple[bool, list[InformationState]]:
         """Check if the current theory is satisfiable."""
+        start_time = time.perf_counter()
+
         # Collect valid formulas with their signs
         formulas = []
         for stmt in self.statements.values():
@@ -292,6 +300,7 @@ class TheoryManager:
         if self.llm_evaluator:
             self._store_llm_evidence_from_tableau(result.tableau)
 
+        self.last_check_time = time.perf_counter() - start_time
         return result.satisfiable, info_states
 
     def _analyze_information_states(self, tableau: Any) -> list[InformationState]:
@@ -490,6 +499,9 @@ class TheoryManager:
         """
         import logging
 
+        start_time = time.perf_counter()
+        llm_start_time: Optional[float] = None
+
         logger = logging.getLogger(__name__)
         inferred: list[Statement] = []
 
@@ -627,9 +639,14 @@ class TheoryManager:
         # Step 4: Run LLM verification on newly inferred atoms (if LLM evaluator available)
         # This verifies deductive inferences against LLM knowledge
         if self.llm_evaluator:
+            llm_start_time = time.perf_counter()
             llm_verifications = self._verify_inferences_with_llm(new_inferences)
             inferred.extend(llm_verifications)
+            self.last_llm_time = time.perf_counter() - llm_start_time
+        else:
+            self.last_llm_time = None
 
+        self.last_infer_time = time.perf_counter() - start_time
         return inferred
 
     def _verify_inferences_with_llm(
@@ -950,6 +967,17 @@ class TheoryManager:
         report.append(f"  - Asserted: {asserted}")
         report.append(f"  - Inferred: {inferred}")
         report.append("")
+
+        # Timing information
+        if self.last_infer_time is not None or self.last_check_time is not None:
+            report.append("Execution Time:")
+            if self.last_infer_time is not None:
+                report.append(f"  - Inference: {self.last_infer_time:.3f}s")
+                if self.last_llm_time is not None:
+                    report.append(f"    (LLM verification: {self.last_llm_time:.3f}s)")
+            if self.last_check_time is not None:
+                report.append(f"  - Satisfiability check: {self.last_check_time:.3f}s")
+            report.append("")
 
         # Satisfiability
         report.append(
